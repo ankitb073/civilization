@@ -6,7 +6,9 @@ import type { Gen } from '../artifacts/gen.ts';
 import { localDate } from '../archive/doc.ts';
 
 const FORM_SUB: [RegExp, string][] = [
-  [/poem|lament|panegyric|verses|praise|song|hymn/, 'poem'],
+  [/poem|lament|panegyric|verses|praise|song|hymn|satir/, 'poem'],
+  [/proclamation|declaration|edict|curse|apology|memorandum|minutes|charter|testament|decree/, 'decree'],
+  [/\blog\b|diary/, 'diary'],
   [/exercise/, 'treatise'],
   [/biograph|essay|lecture|preface|article/, 'paper'],
   [/\bletter\b|dispatch|report|petition|complaint/, 'letter'],
