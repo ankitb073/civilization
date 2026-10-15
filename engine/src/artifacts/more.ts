@@ -13,6 +13,8 @@ import { tenetText } from '../archive/pages.ts';
 import { MOBILIZATION } from '../sim/tech.ts';
 import { genModern } from './modern.ts';
 import { genGenres } from './genres.ts';
+import { genOmens } from './omens.ts';
+import { genTrade } from './trade.ts';
 
 const GRAIN = GOODS.findIndex((g) => g.key === 'grain');
 
@@ -27,6 +29,8 @@ export function genMore(g: Gen): void {
   genScriptures(g);
   genModern(g);
   genGenres(g);
+  genOmens(g);
+  genTrade(g);
 }
 
 function literate(g: Gen, p: Polity, year: number): boolean {

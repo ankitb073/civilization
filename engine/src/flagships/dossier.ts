@@ -315,7 +315,7 @@ function stanceOf(a: Archive, p: Person, e: SimEvent | null): string {
   void a;
 }
 
-function startOf(a: Archive, ref: string): number | null {
+export function startOf(a: Archive, ref: string): number | null {
   const s = a.ctx.s;
   const id = a.ctx.idNum(ref);
   switch (ref.slice(0, 3)) {
@@ -334,11 +334,11 @@ function startOf(a: Archive, ref: string): number | null {
   }
 }
 
-function stripLinks(x: string): string {
+export function stripLinks(x: string): string {
   return x.replace(/\[\[[^|\]]+\|([^\]]+)\]\]/g, '$1');
 }
 
-const GUIDANCE = `Write ONE primary source in English translation, as it would appear in a modern scholarly edition.
+export const GUIDANCE = `Write ONE primary source in English translation, as it would appear in a modern scholarly edition.
 
 Rules (the archive is machine-checked; breaking them gets the document rejected):
 - Stay consistent with every fact in the dossier: names, dates, numbers, who won, who died. You may add texture (weather, smells, feelings, unnamed people, speech, ritual, rumours), and an author may be biased, boastful, mistaken or silent, as real authors are, but do not invent new named people, places, states, gods, events or precise statistics that contradict the record.

@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { simulate } from '../sim/run.ts';
 import { buildArchive } from '../archive/build.ts';
 import { buildDossiers, buildHistoriography, buildWave2, buildLives, buildVoices } from '../flagships/dossier.ts';
+import { buildHistory } from '../flagships/history.ts';
 import { worldFingerprint } from '../export/export.ts';
 
 const seed = Number(process.argv[2] ?? 5);
@@ -11,7 +12,9 @@ const r = simulate(seed, 5000);
 const a = buildArchive(r);
 const wave = process.argv.find((x) => x.startsWith('--wave='))?.slice(7) ?? '1';
 let ds;
-if (wave === '4') {
+if (wave === '5') {
+  ds = buildHistory(a);
+} else if (wave === '4') {
   const { readdirSync, readFileSync } = await import('node:fs');
   const exclude = new Set<string>();
   for (const f of readdirSync('build/dossiers')) { const j = JSON.parse(readFileSync(`build/dossiers/${f}`, 'utf8')); exclude.add(j.subject.id); }

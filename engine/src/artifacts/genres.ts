@@ -15,7 +15,7 @@ import { domainPhrase } from '../archive/naming.ts';
 
 const GRAIN = GOODS.findIndex((x) => x.key === 'grain');
 
-const QTY: Record<string, [number, number]> = {
+export const QTY: Record<string, [number, number]> = {
   grain: [40, 900], salt: [10, 200], copper: [20, 400], tin: [5, 80], bronze: [20, 200], iron: [20, 500], cloth: [10, 300],
   timber: [20, 400], horses: [2, 30], spice: [2, 60], oil: [20, 300], gold: [1, 6], coal: [100, 4000], steel: [10, 600],
   petroleum: [100, 8000], machinery: [2, 40],
@@ -33,15 +33,15 @@ export function genGenres(g: Gen): void {
 }
 
 // ---------------------------------------------------------------- shared helpers
-function alive(p: Polity, year: number): boolean {
+export function alive(p: Polity, year: number): boolean {
   return p.born <= year && (p.died === null || p.died > year);
 }
 
-function literate(g: Gen, p: Polity, year: number): boolean {
+export function literate(g: Gen, p: Polity, year: number): boolean {
   return g.ctx.scriptOf(p, year) >= 0;
 }
 
-function med(era: number, kind: 'clay' | 'soft' | 'stone' | 'print', r: Rng): { medium: string; durable: number; tau: number } {
+export function med(era: number, kind: 'clay' | 'soft' | 'stone' | 'print', r: Rng): { medium: string; durable: number; tau: number } {
   if (kind === 'stone') return { medium: 'stone', durable: 0.8, tau: 5000 };
   if (era <= 1) return { medium: 'clay tablet', durable: 0.7, tau: 3500 };
   if (kind === 'clay') return r.pick([{ medium: 'wax tablet', durable: 0.3, tau: 1200 }, { medium: 'potsherd', durable: 0.7, tau: 4000 }, { medium: 'clay tablet', durable: 0.65, tau: 3500 }]);
@@ -51,7 +51,7 @@ function med(era: number, kind: 'clay' | 'soft' | 'stone' | 'print', r: Rng): { 
 }
 
 /** An ordinary person's name, unlinked: realized in the document's language. */
-function commoner(g: Gen, d: Doc, culture: number, year: number, key: string, female = false): string {
+export function commoner(g: Gen, d: Doc, culture: number, year: number, key: string, female = false): string {
   const s = g.ctx.s;
   const lang = s.cultures[culture].lang;
   const born = Math.max(year - 30, s.lang.info(lang).born);
@@ -59,27 +59,27 @@ function commoner(g: Gen, d: Doc, culture: number, year: number, key: string, fe
   return g.ctx.name(id, d.lang, year);
 }
 
-function units(qty: number, gd: number): string {
+export function units(qty: number, gd: number): string {
   const u = goodUnit(gd);
   return `${fmt(qty)} ${u}${qty === 1 || u === 'head' ? '' : 's'}`;
 }
 
-function money(g: Gen, d: Doc, grams: number, polity: number, year: number): string {
+export function money(g: Gen, d: Doc, grams: number, polity: number, year: number): string {
   const ctx = g.ctx;
   const cur = ctx.currencyAt(polity, year);
   if (cur < 0 || ctx.s.currencies[cur].born > year) return `${fmt(grams / 8.3)} shekels of silver`;
   return `${fmtPrice(grams / ctx.contentAt(cur, year))} ${d.link(`cur:${cur}`, d.nameOf(`cur:${cur}`))}`;
 }
 
-function grainGrams(g: Gen, settlement: number, year: number): number {
+export function grainGrams(g: Gen, settlement: number, year: number): number {
   return g.price(settlement, GRAIN, year) ?? 8;
 }
 
-function capitalAlive(g: Gen, p: Polity, year: number): number {
+export function capitalAlive(g: Gen, p: Polity, year: number): number {
   return g.ctx.capitalAt(p, Math.min(year, (p.died ?? 5000) - 1));
 }
 
-function addDoc(g: Gen, o: {
+export function addDoc(g: Gen, o: {
   sub: string; year: number; title: string; author: number | null; p: Polity; d: Doc; body: string[]; settlement: number | null; cell?: number;
   about: number[]; m: { medium: string; durable: number; tau: number };
 }): void {
