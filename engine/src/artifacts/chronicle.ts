@@ -184,13 +184,26 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
     outcomeClaim = `${g.T.short.get(`pol:${own.id}`)} victorious`;
     const claimed = Math.round((cede?.cells?.length ?? 0) * (1.5 + (cede ? rng.next() : 0)));
     territoryClaim = cede ? `${claimed} district${claimed === 1 ? '' : 's'} won` : 'tribute and submission';
-    if (conquest) lines.push(`${cap(peaceDate)}, ${d.pick(['the last stronghold of', 'the royal city of', 'the gates of'])} ${enemyName} ${d.pick(['fell to our army', `were opened to the ${king(t.war.end)}`, 'could hold out no longer'])}. ${enemyName} is no more, and its people serve ${ownName}. ${d.pick([hasGod ? `Thanks were given to ${god}.` : `Thanks were given in the houses of the ${god}.`, hasGod ? `A stele was raised to ${god} in the capital.` : 'A stele was raised in the capital.', 'The land rested.'])}`);
-    else lines.push(`${cap(peaceDate)}, ${enemyName} ${d.pick(['came to beg for peace', `bowed to the feet of the ${king(t.war.end)}`, 'sent envoys with gifts and pleas'])}${t.treaty ? `, and the ${d.n(`evt:${t.treaty.id}`)} was sworn` : ''}. ${cede && cede.kind === 'cede' ? `The land which they had stolen was returned to ${ownName}.` : cede ? `${enemyName} is no more, and its people serve ${ownName}.` : 'Their pride was broken.'} ${d.pick([hasGod ? `Thanks were given to ${god}.` : `Thanks were given in the houses of the ${god}.`, hasGod ? `A stele was raised to ${god} in the capital.` : 'A stele was raised in the capital.', 'The land rested.'])}`);
+    const won = cede ? ` ${cap(fmt(claimed))} district${claimed === 1 ? ' was' : 's were'} joined to the realm.` : '';
+    if (conquest) lines.push(`${cap(peaceDate)}, ${d.pick(['the last stronghold of', 'the royal city of', 'the gates of'])} ${enemyName} ${d.pick(['fell to our army', `were opened to the ${king(t.war.end)}`, 'could hold out no longer'])}. ${enemyName} is no more, and its people serve ${ownName}.${won} ${d.pick([hasGod ? `Thanks were given to ${god}.` : `Thanks were given in the houses of the ${god}.`, hasGod ? `A stele was raised to ${god} in the capital.` : 'A stele was raised in the capital.', 'The land rested.'])}`);
+    else lines.push(`${cap(peaceDate)}, ${enemyName} ${d.pick(['came to beg for peace', `bowed to the feet of the ${king(t.war.end)}`, 'sent envoys with gifts and pleas'])}${t.treaty ? `, and the ${d.n(`evt:${t.treaty.id}`)} was sworn` : ''}. ${cede && cede.kind === 'cede' ? `The land which they had stolen was returned to ${ownName}, ${fmt(claimed)} district${claimed === 1 ? '' : 's'} in all.` : cede ? `${enemyName} is no more, and its people serve ${ownName}.${won}` : 'Their pride was broken.'} ${d.pick([hasGod ? `Thanks were given to ${god}.` : `Thanks were given in the houses of the ${god}.`, hasGod ? `A stele was raised to ${god} in the capital.` : 'A stele was raised in the capital.', 'The land rested.'])}`);
   } else if (ownDefeat) {
     outcomeClaim = rng.chance(0.6) ? 'honourable peace' : 'stalemate';
-    territoryClaim = cede ? (rng.chance(0.5) ? 'none' : 'a few villages') : 'none';
-    if (conquest) lines.push(`${cap(peaceDate)}, ${d.pick(['the royal city was taken', 'the gates were opened to the enemy', 'the last of the strongholds fell'])}. ${d.pick(['The gods had turned their faces from us.', 'Who will now remember the kings of old?', 'Let this record keep what the sword has taken.'])}`);
-    else lines.push(`${cap(peaceDate)}, ${d.pick(['wearied of bloodshed', 'out of mercy for the common folk', 'at the urging of the priests'])}, the ${king(t.war.end)} ${d.pick(['granted peace to', 'agreed to terms with', 'accepted the pleas of'])} ${enemyName}${t.treaty ? `, and the ${d.n(`evt:${t.treaty.id}`)} was sworn` : ''}. ${cede ? d.pick(['Some villages of no account were given up, which had always been poor.', 'The border was settled.', 'Nothing of worth was lost.']) : 'The honour of the realm was preserved.'}`);
+    if (cede) rng.chance(0.5); // formerly chose the claim independently of the text; kept so later draws do not move
+    territoryClaim = 'none';
+    if (conquest) {
+      territoryClaim = 'the realm fell';
+      lines.push(`${cap(peaceDate)}, ${d.pick(['the royal city was taken', 'the gates were opened to the enemy', 'the last of the strongholds fell'])}. ${d.pick(['The gods had turned their faces from us.', 'Who will now remember the kings of old?', 'Let this record keep what the sword has taken.'])}`);
+    } else {
+      // evaluated in the original order, so every draw stays where it was
+      const why = d.pick(['wearied of bloodshed', 'out of mercy for the common folk', 'at the urging of the priests']);
+      const ruler = king(t.war.end);
+      const verb = d.pick(['granted peace to', 'agreed to terms with', 'accepted the pleas of']);
+      const sworn = t.treaty ? `, and the ${d.n(`evt:${t.treaty.id}`)} was sworn` : '';
+      const admits = cede ? d.pick(['Some villages of no account were given up, which had always been poor.', 'The border was settled.', 'Nothing of worth was lost.']) : 'The honour of the realm was preserved.';
+      if (admits.startsWith('Some villages')) territoryClaim = 'a few villages';
+      lines.push(`${cap(peaceDate)}, ${why}, the ${ruler} ${verb} ${enemyName}${sworn}. ${admits}`);
+    }
   } else {
     outcomeClaim = `${g.T.short.get(`pol:${own.id}`)} victorious`;
     territoryClaim = 'none';
