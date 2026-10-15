@@ -71,6 +71,17 @@ function era(a: Archive, p: Polity | null, year: number): number {
   return [...counts].sort((x, z) => z[1] - x[1] || x[0] - z[0])[0]?.[0] ?? 6;
 }
 
+const techCache = new WeakMap<Archive, Map<number, number>>();
+function techFirst(a: Archive): Map<number, number> {
+  let m = techCache.get(a);
+  if (!m) {
+    m = new Map();
+    for (const p of a.ctx.s.polities) for (const [t, y] of p.techs) if (y < (m.get(t) ?? Infinity)) m.set(t, y);
+    techCache.set(a, m);
+  }
+  return m;
+}
+
 const PERSONA_FORMS = ['queen mother', 'bride', 'martyr', 'hostage', 'refugee', 'survivor', 'envoy', 'delegate', 'courtier', 'physician', 'settler', 'natives', 'colonized', 'colonial soldier', 'merchant', 'creditor', 'old gods', 'convert', 'priest’s account', 'ruined trader', 'smuggled', 'secretary', 'starving'];
 
 const REGISTER = [
@@ -212,6 +223,13 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
   let subject: Dossier['subject'];
   const facts: string[] = [];
   const context: string[] = [];
+  {
+    // what the author's world could and could not know: technologies by first adoption anywhere
+    const first = techFirst(a);
+    const known = TECHS.filter((t) => (first.get(t.id) ?? Infinity) <= year).sort((x, z) => first.get(z.id)! - first.get(x.id)!).slice(0, 6).map((t) => t.name.toLowerCase());
+    const unknown = TECHS.filter((t) => (first.get(t.id) ?? Infinity) > year).sort((x, z) => (first.get(x.id) ?? 9e9) - (first.get(z.id) ?? 9e9)).slice(0, 5).map((t) => t.name.toLowerCase());
+    context.push(`Technology: the newest known anywhere are ${known.join(', ') || 'none'}.${unknown.length ? ` NOT yet invented (never mention them or their products): ${unknown.join(', ')}.` : ''}`);
+  }
   if (e) {
     allow(`evt:${e.id}`, 'the subject event');
     for (const [r, role] of e.parts) {
