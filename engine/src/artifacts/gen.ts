@@ -47,6 +47,7 @@ export const CATALOG_CODE: Record<string, string> = {
   treaty: 'TR', chronicle: 'CH', inscription: 'IN', ledger: 'LE', letter: 'LT', decree: 'DE', annals: 'AN',
   census: 'CE', scripture: 'SC', treatise: 'PH', record: 'RE', coin: 'NU', travelogue: 'TV', newspaper: 'NP',
   telegram: 'TG', debate: 'PD', market: 'MR', yearbook: 'YB', excavation: 'EX', paper: 'SP', pamphlet: 'PM', patent: 'PT', poem: 'PO', diary: 'DI',
+  lawsuit: 'LS', will: 'WL', muster: 'MU', manifest: 'SM', glossary: 'GL', exercise: 'SX', almanac: 'AL', graffito: 'GR',
 };
 
 export class Gen {

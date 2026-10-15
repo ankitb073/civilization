@@ -12,6 +12,7 @@ import { fmtPrice } from './ledger.ts';
 import { tenetText } from '../archive/pages.ts';
 import { MOBILIZATION } from '../sim/tech.ts';
 import { genModern } from './modern.ts';
+import { genGenres } from './genres.ts';
 
 const GRAIN = GOODS.findIndex((g) => g.key === 'grain');
 
@@ -25,6 +26,7 @@ export function genMore(g: Gen): void {
   genDiplomaticLetters(g);
   genScriptures(g);
   genModern(g);
+  genGenres(g);
 }
 
 function literate(g: Gen, p: Polity, year: number): boolean {

@@ -86,7 +86,9 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
   const omitDefeats = rng.next() < 0.6;
   const rel = ctx.religionOf(own.id, t.war.year);
   const m = rel >= 0 ? s.movements[rel] : s.movements[s.cultures[own.culture].pantheon];
-  const god = m.deities.length ? d.n(`dei:${rng.pick(m.deities)}`) : d.n(`mov:${m.id}`);
+  // a faith without gods is not invoked as if it were one
+  const hasGod = m.deities.length > 0;
+  const god = hasGod ? d.n(`dei:${rng.pick(m.deities)}`) : d.n(`mov:${m.id}`);
   const enemyRuler = ctx.rulerAt(enemy.id, t.war.year);
   const ownRuler = ctx.rulerAt(own.id, t.war.year);
   const lines: string[] = [];
@@ -144,8 +146,10 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
         ? d.pick([`${cap(ourMan)} held the heights against them`, `${cap(ourMan)} turned their flank at noon`, `${cap(ourMan)} brought up the guns at the decisive moment`, `${cap(ourMan)} met them in the field`, `${cap(ourMan)} threw in the reserves at the right hour`])
         : d.pick([`${cap(ourMan)} met them in the field`, `${cap(ourMan)} fell upon them at dawn`, `${cap(ourMan)} held the ford against them`, `${cap(ourMan)} drew them into the hills`, `${cap(ourMan)} broke their line at the first charge`, `${cap(ourMan)} waited until their water ran out`]);
       const divine = era >= 4
-        ? d.pick([`providence favoured our arms`, `the enemy's courage failed before the end of the day`, `the discipline of our troops told`, `${god} was with us`])
-        : d.pick([`${god} fought before our ranks`, `${god} gave them into our hands`, `${god} sent a wind against them`, `${god} darkened their eyes`, `${god} kept faith with us`]);
+        ? d.pick([`providence favoured our arms`, `the enemy's courage failed before the end of the day`, `the discipline of our troops told`, hasGod ? `${god} was with us` : 'heaven was with us'])
+        : hasGod
+          ? d.pick([`${god} fought before our ranks`, `${god} gave them into our hands`, `${god} sent a wind against them`, `${god} darkened their eyes`, `${god} kept faith with us`])
+          : d.pick([`the faithful of the ${god} prevailed`, `by the grace of the One whom the ${god} teach, the day was ours`, `the prayers of the ${god} priests were answered`]);
       const tally = d.pick([`Of the enemy ${fmt(el)} were slain; of ours, ${fmt(ol)}.`, `${fmt(el)} of them lay dead on the field, and of ours only ${fmt(ol)}.`, `The scribes counted ${fmt(el)} enemy dead; we lost ${fmt(ol)}.`]);
       lines.push(`${opening} ${action}, and ${divine}. ${tally}${enemyDeadCmd ? ` ${d.n(enCmd!)} ${s.persons[ctx.idNum(enCmd!)].sex === 'f' ? 'herself' : 'himself'} was killed${era <= 2 ? `, and ${s.persons[ctx.idNum(enCmd!)].sex === 'f' ? 'her' : 'his'} head was brought to the king` : ''}.` : ''}`);
     } else {
@@ -170,8 +174,8 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
   if (ownVictory) {
     outcomeClaim = `${g.T.short.get(`pol:${own.id}`)} victorious`;
     territoryClaim = cede ? `${Math.round((cede.cells?.length ?? 0) * (1.5 + rng.next()))} districts won` : 'tribute and submission';
-    if (conquest) lines.push(`${cap(peaceDate)}, ${d.pick(['the last stronghold of', 'the royal city of', 'the gates of'])} ${enemyName} ${d.pick(['fell to our army', 'were opened to the king', 'could hold out no longer'])}. ${enemyName} is no more, and its people serve ${ownName}. ${d.pick([`Thanks were given to ${god}.`, `A stele was raised to ${god} in the capital.`, 'The land rested.'])}`);
-    else lines.push(`${cap(peaceDate)}, ${enemyName} ${d.pick(['came to beg for peace', 'bowed to the feet of the king', 'sent envoys with gifts and pleas'])}${t.treaty ? `, and the ${d.n(`evt:${t.treaty.id}`)} was sworn` : ''}. ${cede && cede.kind === 'cede' ? `The land which they had stolen was returned to ${ownName}.` : cede ? `${enemyName} is no more, and its people serve ${ownName}.` : 'Their pride was broken.'} ${d.pick([`Thanks were given to ${god}.`, `A stele was raised to ${god} in the capital.`, 'The land rested.'])}`);
+    if (conquest) lines.push(`${cap(peaceDate)}, ${d.pick(['the last stronghold of', 'the royal city of', 'the gates of'])} ${enemyName} ${d.pick(['fell to our army', 'were opened to the king', 'could hold out no longer'])}. ${enemyName} is no more, and its people serve ${ownName}. ${d.pick([hasGod ? `Thanks were given to ${god}.` : `Thanks were given in the houses of the ${god}.`, hasGod ? `A stele was raised to ${god} in the capital.` : 'A stele was raised in the capital.', 'The land rested.'])}`);
+    else lines.push(`${cap(peaceDate)}, ${enemyName} ${d.pick(['came to beg for peace', 'bowed to the feet of the king', 'sent envoys with gifts and pleas'])}${t.treaty ? `, and the ${d.n(`evt:${t.treaty.id}`)} was sworn` : ''}. ${cede && cede.kind === 'cede' ? `The land which they had stolen was returned to ${ownName}.` : cede ? `${enemyName} is no more, and its people serve ${ownName}.` : 'Their pride was broken.'} ${d.pick([hasGod ? `Thanks were given to ${god}.` : `Thanks were given in the houses of the ${god}.`, hasGod ? `A stele was raised to ${god} in the capital.` : 'A stele was raised in the capital.', 'The land rested.'])}`);
   } else if (ownDefeat) {
     outcomeClaim = rng.chance(0.6) ? 'honourable peace' : 'stalemate';
     territoryClaim = cede ? (rng.chance(0.5) ? 'none' : 'a few villages') : 'none';

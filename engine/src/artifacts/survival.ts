@@ -45,10 +45,10 @@ export function applySurvival(g: Gen): void {
     }
     // provenance
     const durableMedium = a.durable >= 0.6 && a.sub !== 'newspaper' && a.sub !== 'telegram' && a.sub !== 'yearbook' && a.sub !== 'market' && a.sub !== 'debate' && a.sub !== 'paper' && a.sub !== 'pamphlet';
-    if (a.year >= 4500) {
+    if (a.year >= 4500 && a.sub !== 'graffito') {
       a.provenance = `State archive of ${refName(g, a.polity)}; catalogued AY ${Math.min(4999, a.year + r.int(1, 40))}.`;
       a.foundYear = null;
-    } else if (durableMedium && (a.year < 3800 || a.sub === 'inscription' || a.sub === 'coin')) {
+    } else if ((durableMedium || a.sub === 'graffito') && (a.year < 3800 || a.sub === 'inscription' || a.sub === 'coin' || a.sub === 'graffito')) {
       const site = a.settlement ?? nearestSite(g, a.cell, a.year);
       let ex = site !== null ? excavations.get(site) : undefined;
       if (site !== null && !ex) {
@@ -60,7 +60,12 @@ export function applySurvival(g: Gen): void {
         ex = { year, by, event: ev };
         excavations.set(site, ex);
       }
-      if (ex && site !== null) {
+      if (ex && site !== null && ex.year <= a.year + 5) {
+        // the dig came before (or hard on) the object's own date: it stands where it was made
+        const seen = Math.min(4999, a.year + r.int(0, 20));
+        a.foundYear = null;
+        a.provenance = `${a.sub === 'graffito' ? 'Recorded' : 'Catalogued'} in situ at ${g.T.short.get(`set:${site}`)}, AY ${seen}.`;
+      } else if (ex && site !== null) {
         a.foundYear = ex.year;
         a.provenance = `Excavated at ${g.T.short.get(`set:${site}`)} in AY ${ex.year} by ${g.T.short.get(`per:${ex.by}`)}.`;
         a.mentions.add(`evt:${ex.event}`);
@@ -68,7 +73,7 @@ export function applySurvival(g: Gen): void {
         a.mentions.add(`set:${site}`);
         s.events[ex.event].data.finds = ((s.events[ex.event].data.finds as number) ?? 0) + 1;
       } else {
-        a.foundYear = r.int(4790, 4985);
+        a.foundYear = Math.min(4999, Math.max(a.year + 5, r.int(4790, 4985)));
         a.provenance = `Chance find, AY ${a.foundYear}.`;
       }
     } else {
