@@ -132,7 +132,7 @@ function Page({ page }: { page: PageJson }) {
             {page.kind === 'language' && <a class="btn btn--ghost" href="#/languages">Tree of Tongues</a>}
             {page.kind === 'language' && <a class="btn btn--ghost" href={`#/words/water?l=${page.id}`}>Word Machine</a>}
             {a && <CiteButton page={page} label={label} />}
-            <ShareButton title={page.title} />
+            <ShareButton title={page.title} path={a?.permalink} />
           </div>
         </header>
 
@@ -215,10 +215,13 @@ function YearSpan({ t0, t1 }: { t0: number; t1: number }) {
   return <><a class="ylink" href={`#/year/${t0}`}>{t0}</a>–<a class="ylink" href={`#/year/${t1}`}>{t1}</a> AY</>;
 }
 
-export function ShareButton({ title, hash }: { title: string; hash?: string }) {
+/** Share this view. A flagship shares its static reading page (`path`, relative to the site root), whose
+ *  social card shows the document; anything else shares the atlas link. */
+export function ShareButton({ title, hash, path }: { title: string; hash?: string; path?: string }) {
   const [done, setDone] = useState(false);
   const share = async () => {
-    const url = hash ? location.href.replace(/#.*$/, '') + hash : location.href;
+    const page = location.href.replace(/#.*$/, '');
+    const url = path ? page.replace(/[?].*$/, '').replace(/[^/]*$/, '') + path : hash ? page + hash : location.href;
     try {
       if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ title, url });
       else { await navigator.clipboard.writeText(url); setDone(true); setTimeout(() => setDone(false), 1600); }

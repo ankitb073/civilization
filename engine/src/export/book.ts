@@ -13,6 +13,13 @@ const MODIFIED = '2026-01-01T00:00:00Z';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/** A document's date as plain text, in its own calendar with the AY year once: "in the 27th year of Nuwanan
+ *  (AY 442)", "AY 4999". The archive writes local dates with links and a bracketed AY year. */
+export function plainDate(x: Pick<Artifact, 'dateText' | 'year'>): string {
+  const local = (x.dateText ?? '').replace(/\[\[[^|\]]+\|([^\]]+)\]\]/g, '$1').replace(/\s*\[AY -?\d+\]\s*$/, '').trim();
+  return !local || local === `AY ${x.year}` ? `AY ${x.year}` : `${local} (AY ${x.year})`;
+}
+
 function inline(src: string): string {
   const tokens: string[] = [];
   const stash = (html: string) => `\u0000${tokens.push(html) - 1}\u0000`;
@@ -152,7 +159,7 @@ export function writeReader(r: SimResult, a: Archive, path: string, opts: { cove
     const [text, ...rest] = x.body.split('\n---\n');
     const verse = /poem|verse|song|hymn|elegy|lament|ode|epic/.test(`${x.sub} ${String((x.data as { form?: string } | undefined)?.form ?? '')}`);
     const author = x.author !== null ? T.short.get(`per:${x.author}`) ?? '' : '';
-    const meta = [x.catalog, x.dateText && x.dateText !== `AY ${x.year}` ? `${x.dateText} (AY ${x.year})` : `AY ${x.year}`, author ? `by ${author}` : '', x.medium, T.short.get(`lan:${x.lang}`) ?? ''].filter(Boolean).map(esc).join(' · ');
+    const meta = [x.catalog, plainDate(x), author ? `by ${author}` : '', x.medium, T.short.get(`lan:${x.lang}`) ?? ''].filter(Boolean).map(esc).join(' · ');
     return `<section class="doc" id="d${x.id}"><${head}>${esc(x.title)}</${head}>
 <p class="meta">${meta}</p>
 ${render(text, verse, head === 'h1' ? 1 : 2)}
@@ -309,3 +316,6 @@ function zip(files: { name: string; data: Buffer; store?: boolean }[]): Buffer {
   end.writeUInt16LE(files.length, 10); end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(off, 16); end.writeUInt16LE(0, 20);
   return Buffer.concat([...chunks, cd, end]);
 }
+
+/** The archive's Markdown subset as HTML (well-formed XHTML), for the reading pages too. */
+export { render as renderMarkdown };

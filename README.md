@@ -73,7 +73,7 @@ npm run check              # audit build/world.sqlite (exits non-zero on any vio
 npm test                   # determinism, invariants, archive and checker tests
 ```
 
-`npm run build:data` also writes `build/vault/` (an Obsidian vault with a "Start here" note), the EPUB Reader, share pages with Open Graph cards (`s/art-N.html`), and the downloads offered on the site. The database schema is described in [docs/data-dictionary.md](docs/data-dictionary.md).
+`npm run build:data` also writes `build/vault/` (an Obsidian vault with a "Start here" note), the EPUB Reader, static reading pages for every flagship with Open Graph cards (`s/fl-NNN.html`, contents at `s/`, listed in `sitemap.xml`), and the downloads offered on the site. The database schema is described in [docs/data-dictionary.md](docs/data-dictionary.md).
 
 ## How it fits together
 
