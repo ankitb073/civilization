@@ -132,3 +132,33 @@ test('every ceded district appears in the territory log under its treaty', () =>
   }
   assert.ok(n > 0, 'no cessions in a 1,500-year history');
 });
+
+test('the EPUB reader is a valid zip with mimetype first and well-formed XHTML', async () => {
+  const { writeReader } = await import('../src/export/book.ts');
+  const { execFileSync } = await import('node:child_process');
+  const { readFileSync } = await import('node:fs');
+  const dir = mkdtempSync(join(tmpdir(), 'palimpsest-epub-'));
+  try {
+    const path = join(dir, 'r.epub');
+    writeReader(r, a, path);
+    const buf = readFileSync(path);
+    // mimetype must be the first entry, stored uncompressed, so readers can sniff it at offset 38
+    assert.equal(buf.subarray(30, 38).toString(), 'mimetype');
+    assert.equal(buf.readUInt16LE(8), 0);
+    assert.equal(buf.subarray(38, 58).toString(), 'application/epub+zip');
+    const names = execFileSync('unzip', ['-Z1', path], { encoding: 'utf8' }).trim().split('\n');
+    assert.ok(names.includes('OEBPS/content.opf') && names.includes('OEBPS/nav.xhtml'));
+    for (const n of names.filter((x) => x.endsWith('.xhtml') || x.endsWith('.opf'))) {
+      const xml = execFileSync('unzip', ['-p', path, n], { encoding: 'utf8', maxBuffer: 1 << 26 });
+      const stack: string[] = [];
+      for (const m of xml.matchAll(/<(\/?)([a-zA-Z][\w:-]*)[^>]*?(\/?)>/g)) {
+        if (m[3]) continue;
+        if (m[1]) assert.equal(stack.pop(), m[2], `${n}: </${m[2]}> closes the wrong element`);
+        else stack.push(m[2]);
+      }
+      assert.deepEqual(stack, [], `${n}: unclosed ${stack.join(', ')}`);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
