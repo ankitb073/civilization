@@ -95,6 +95,9 @@ export class MapRenderer {
   /** Screen-space insets covered by UI (side panel, bottom sheet). */
   insetRight = 0;
   insetBottom = 0;
+  insetLeft = 0;
+  /** Disable the portrait 'fill the height' zoom (social cards want the whole world). */
+  wholeWorld = false;
   private landCx = 0;
   private landCy = 0;
   private deepWater = '#92acb8';
@@ -250,7 +253,7 @@ export class MapRenderer {
     this.invalidate();
   }
 
-  private get availW() { return Math.max(120, this.w - this.insetRight); }
+  private get availW() { return Math.max(120, this.w - this.insetRight - this.insetLeft); }
   private get availH() { return Math.max(120, this.h - this.insetBottom); }
 
   private updateFitScale() {
@@ -258,14 +261,15 @@ export class MapRenderer {
     this.fitScale = Math.min(this.availW / width, this.availH / height) * 0.98;
   }
 
-  setInsets(right: number, bottom: number) {
-    if (right === this.insetRight && bottom === this.insetBottom) return;
-    const cx = (this.availW / 2 - this.tx) / this.scale, cy = (this.availH / 2 - this.ty) / this.scale;
+  setInsets(right: number, bottom: number, left = 0) {
+    if (right === this.insetRight && bottom === this.insetBottom && left === this.insetLeft) return;
+    const cx = (this.insetLeft + this.availW / 2 - this.tx) / this.scale, cy = (this.availH / 2 - this.ty) / this.scale;
     this.insetRight = right;
     this.insetBottom = bottom;
+    this.insetLeft = left;
     if (this.w === 0) return;
     this.updateFitScale();
-    this.tx = this.availW / 2 - cx * this.scale;
+    this.tx = this.insetLeft + this.availW / 2 - cx * this.scale;
     this.ty = this.availH / 2 - cy * this.scale;
     this.clampPan();
     this.invalidate();
@@ -276,11 +280,11 @@ export class MapRenderer {
     this.updateFitScale();
     const aw = this.availW, ah = this.availH;
     // On portrait screens, zoom in so the land fills the height and crop the sides.
-    const portrait = ah / height > (aw / width) * 1.25;
+    const portrait = !this.wholeWorld && ah / height > (aw / width) * 1.25;
     const k = portrait ? Math.min(3, Math.max(1, ((ah / height) / (aw / width)) * 0.94)) : 1;
     this.scale = this.fitScale * k;
     const cx = portrait ? this.landCx : width / 2, cy = portrait ? this.landCy : height / 2;
-    this.tx = aw / 2 - cx * this.scale;
+    this.tx = this.insetLeft + aw / 2 - cx * this.scale;
     this.ty = ah / 2 - cy * this.scale;
     this.clampPan();
   }
@@ -306,16 +310,16 @@ export class MapRenderer {
     const { width, height } = this.d.geo;
     const ww = width * this.scale, wh = height * this.scale;
     const aw = this.availW, ah = this.availH;
-    const m = 48;
-    if (ww <= aw) this.tx = Math.min(aw - ww + m, Math.max(-m, this.tx));
-    else this.tx = Math.min(m, Math.max(aw - ww - m, this.tx));
+    const m = 48, L = this.insetLeft;
+    if (ww <= aw) this.tx = Math.min(L + aw - ww + m, Math.max(L - m, this.tx));
+    else this.tx = Math.min(L + m, Math.max(L + aw - ww - m, this.tx));
     if (wh <= ah) this.ty = Math.min(ah - wh + m, Math.max(-m, this.ty));
     else this.ty = Math.min(m, Math.max(ah - wh - m, this.ty));
   }
 
   centerOn(wx: number, wy: number, zoom?: number) {
     if (zoom) this.scale = Math.max(this.scale, this.fitScale * zoom);
-    this.tx = this.availW / 2 - wx * this.scale;
+    this.tx = this.insetLeft + this.availW / 2 - wx * this.scale;
     this.ty = this.availH / 2 - wy * this.scale;
     this.clampPan();
     this.invalidate();
@@ -324,7 +328,7 @@ export class MapRenderer {
   /** Is a world point comfortably inside the unobstructed area? */
   inView(wx: number, wy: number, margin = 60): boolean {
     const [x, y] = this.toScreen(wx, wy);
-    return x > margin && y > margin && x < this.availW - margin && y < this.availH - margin;
+    return x > this.insetLeft + margin && y > margin && x < this.insetLeft + this.availW - margin && y < this.availH - margin;
   }
 
   toWorld(sx: number, sy: number): [number, number] {

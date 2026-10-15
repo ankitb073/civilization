@@ -834,6 +834,8 @@ const meta: MetaJson = {
     { label: 'World database (SQLite)', href: 'downloads/world.sqlite.gz', bytes: 48_200_000 },
     { label: 'Obsidian vault (zip)', href: 'downloads/vault.zip', bytes: 31_400_000 },
   ],
+  flagships: artIds.filter((a) => pages.get(a)!.artifact?.flagship),
+  world: 'mock',
   featured: [
     { id: firstWar.id, title: pages.get(firstWar.id)!.title, why: 'Two chronicles, one war, and they disagree about everything. Compare them against the ground truth.' },
     { id: artIds.find((a) => pages.get(a)!.sub === 'inscription')!, title: 'A dedication stele', why: 'Read an inscription in transliteration, gloss and translation.' },

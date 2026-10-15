@@ -4,11 +4,26 @@ import { eraAt, mapData, meta } from '../store.ts';
 
 const SPEEDS = [25, 50, 100, 200];
 
+/** "1,567 wars and 238 collapses. Largest state: …" → "1,567 wars · 238 collapses". */
+export function eraStat(blurb: string): string {
+  const w = blurb.match(/([\d,]+)\s+wars?/i)?.[1];
+  const c = blurb.match(/([\d,]+)\s+collapses?/i)?.[1];
+  if (w || c) return [w && `${w} wars`, c && `${c} collapses`].filter(Boolean).join(' · ');
+  return blurb.length > 80 ? blurb.slice(0, 78) + '…' : blurb;
+}
+
 export function TimeSlider({ compact = false }: { compact?: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [speedIdx, setSpeedIdx] = useState(1);
   const [editing, setEditing] = useState(false);
+  const [eraOpen, setEraOpen] = useState(false);
+  useEffect(() => {
+    if (!eraOpen) return;
+    const close = () => setEraOpen(false);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [eraOpen]);
   const [w, setW] = useState(0);
   const m = meta.value;
   const d = mapData.value;
@@ -214,8 +229,22 @@ export function TimeSlider({ compact = false }: { compact?: boolean }) {
           <span class="slider__unit">{m?.yearLabel ?? 'AY'}</span>
         </div>
         <div class="slider__era">
-          <span class="slider__era-name">{era?.name ?? ''}</span>
-          {!compact && <span class="slider__era-blurb">{era?.blurb ?? ''}</span>}
+          <button class="slider__era-name" aria-expanded={eraOpen} aria-label={`${era?.name ?? ''}: about this age`} title={era?.blurb}
+            onClick={(e) => { e.stopPropagation(); setEraOpen(!eraOpen); }}>
+            {era?.name ?? ''}
+          </button>
+          {!compact && era && <span class="slider__era-stat" title={era.blurb}>{eraStat(era.blurb)}</span>}
+          {eraOpen && era && (
+            <div class="erapop" role="dialog" aria-label={era.name} onClick={(e) => e.stopPropagation()}>
+              <div class="erapop__k">{era.start}–{era.end} {m?.yearLabel ?? 'AY'}</div>
+              <div class="erapop__n">{era.name}</div>
+              <p class="erapop__b">{era.blurb}</p>
+              <div class="erapop__a">
+                <button class="btn btn--ghost" onClick={() => { setYear(era.start); setEraOpen(false); }}>Go to its start</button>
+                <a class="btn btn--ghost" href={`#/browse?kind=event&from=${era.start}&to=${era.end}`}>Its events</a>
+              </div>
+            </div>
+          )}
         </div>
         <div class="slider__tools">
           <button class="btn-ghost slider__step" aria-label="Back 100 years" onClick={() => setYear(year.value - 100)}>−100</button>

@@ -12,6 +12,8 @@ const MAP_SELECTABLE = new Set(['polity', 'settlement', 'event', 'culture', 'mov
 
 export function docStyle(sub: string): string {
   const s = sub.toLowerCase();
+  if (/poem|verse|song|hymn|elegy|lament|ode|epic/.test(s)) return 'verse';
+  if (/diary|journal|day-?book of/.test(s)) return 'diary';
   if (/inscription|stele|epitaph|dedication|boundary|votive|monument|graffit/.test(s)) return 'stone';
   if (/ledger|account|day-?book|tax|census|roll|register/.test(s)) return 'ledger';
   if (/treaty|charter|accord|pact|alliance|truce/.test(s)) return 'treaty';
@@ -55,9 +57,14 @@ export function labeler(page: PageJson) {
 
 function Page({ page }: { page: PageJson }) {
   const label = labeler(page);
-  const bodyHtml = useMemo(() => render(page.body, label), [page]);
   const a = page.artifact;
   const style = page.kind === 'artifact' ? docStyle(page.sub) : '';
+  const bodyHtml = useMemo(() => {
+    let md = page.body;
+    // the structured language panel below replaces the plain sound-change list
+    if (page.language) md = md.replace(/^##\s+(Sound changes|Daughter languages)\s*\n[\s\S]*?(?=^##\s|(?![\s\S]))/gm, '');
+    return render(md, label, { breaks: style === 'verse' });
+  }, [page]);
   const y = year.value;
   const mapYear = y >= page.t0 && y <= page.t1 ? y : page.t0;
   const mapLink = page.cell >= 0 || MAP_SELECTABLE.has(page.kind)
@@ -74,7 +81,12 @@ function Page({ page }: { page: PageJson }) {
           <h1 class="reader__title">{page.title}</h1>
           <div class="reader__meta">
             <span class="reader__span">{page.kind === 'artifact' && a ? <>{a.date ? <><span class="reader__local">{a.date}</span> · </> : null}{fmtYear(page.t0)}</> : fmtSpan(page.t0, page.t1)}</span>
-            {a?.flagship && <span class="badge badge--flag" title="Written by hand from the archive's dossier">Flagship</span>}
+            {a?.flagship && (
+              <a class="badge badge--flag" href="#/browse?kind=artifact&flag=1" title="A flagship source: written in full from the archive’s dossier and checked against the record like every other document">
+                <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M8 1.5l1.9 4.1 4.5.5-3.4 3 1 4.4L8 11.3 4 13.5l1-4.4-3.4-3 4.5-.5z" fill="currentColor" /></svg>
+                Flagship source
+              </a>
+            )}
           </div>
           {page.summary && <Html tag="p" class="reader__summary" html={inline(page.summary, label)} />}
           <div class="actions">
@@ -94,10 +106,10 @@ function Page({ page }: { page: PageJson }) {
 
         {a?.interlinear && <Interlinear it={a.interlinear} />}
 
-        {page.body.trim() && (
+        {bodyHtml.trim() && (
           <section class={`doc${style ? ` doc--${style}` : ''}`} aria-label={page.kind === 'artifact' ? 'Text' : 'Article'}>
             {page.kind === 'artifact' && a?.interlinear && <div class="doc__label">Commentary</div>}
-            {page.kind === 'artifact' && !a?.interlinear && <div class="doc__label">{style === 'stone' ? 'Text' : 'Translation'}</div>}
+            {page.kind === 'artifact' && !a?.interlinear && <div class="doc__label">{style === 'stone' ? 'Text' : style === 'verse' ? 'Verse, in translation' : style === 'diary' ? 'Entries, in translation' : 'Translation'}</div>}
             <Html class="doc__body prose" html={bodyHtml} />
           </section>
         )}
@@ -106,7 +118,7 @@ function Page({ page }: { page: PageJson }) {
 
         {page.accounts && page.accounts.sources.length > 0 && <AccountsTeaser page={page} label={label} />}
 
-        {page.language && <LanguagePanel lang={page.language} label={label} />}
+        {page.language && <LanguagePanel page={page} lang={page.language} label={label} />}
 
         <LinkLists page={page} />
       </div>
@@ -297,18 +309,34 @@ function Names({ names }: { names: NonNullable<PageJson['names']> }) {
   );
 }
 
-function LanguagePanel({ lang, label }: { lang: NonNullable<PageJson['language']>; label: (id: string) => string | undefined }) {
+const STAGE_COLORS = ['#8e2f1f', '#b5683a', '#a88a3a', '#5f7f45', '#3e7a86', '#4d5f9a', '#7a4f8f', '#9a4a6a'];
+
+function LanguagePanel({ page, lang, label }: { page: PageJson; lang: NonNullable<PageJson['language']>; label: (id: string) => string | undefined }) {
   const [all, setAll] = useState(false);
-  const changes = lang.soundChanges.slice().sort((a, b) => a.year - b.year);
-  const shown = all ? changes : changes.slice(0, 14);
+  const changes = useMemo(() => lang.soundChanges.slice().sort((a, b) => a.year - b.year), [lang]);
+  // name -> id for languages linked from this page (body links carry the short names)
+  const nameToId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const mm of page.body.matchAll(/\[\[(lan:\d+)\|([^\]]+)\]\]/g)) m.set(mm[2], mm[1]);
+    for (const [id, t] of Object.entries(page.labels ?? {})) if (id.startsWith('lan:')) { m.set(t, id); m.set(t.replace(/ language$/, ''), id); }
+    return m;
+  }, [page]);
+  // lineage = the languages the changes happened in, oldest first
+  const stages = useMemo(() => {
+    const out: { name: string; id?: string; from: number; changes: typeof changes }[] = [];
+    for (const c of changes) {
+      let st = out.find((x) => x.name === c.lang);
+      if (!st) { st = { name: c.lang, id: nameToId.get(c.lang), from: c.year, changes: [] }; out.push(st); }
+      st.changes.push(c);
+    }
+    return out;
+  }, [changes, nameToId]);
+  const ownName = page.title.replace(/ language$/, '');
+  const shown = all ? stages : null;
   return (
     <section class="langpanel">
-      <div class="langpanel__fam">
-        {lang.parent && <div><span class="muted">Descends from </span><a href={`#/p/${lang.parent}`}>{label(lang.parent) ?? lang.parent}</a></div>}
-        {lang.daughters.length > 0 && (
-          <div><span class="muted">Daughter languages: </span>{lang.daughters.map((d, i) => <>{i > 0 && ', '}<a href={`#/p/${d}`}>{label(d) ?? d}</a></>)}</div>
-        )}
-      </div>
+      <FamilyTree page={page} lang={lang} label={label} stages={stages} ownName={ownName} />
+
       {lang.words.length > 0 && (
         <>
           <h2 class="sect">Words through time</h2>
@@ -323,7 +351,7 @@ function LanguagePanel({ lang, label }: { lang: NonNullable<PageJson['language']
                       {w.forms.map(([yy, f], i) => (
                         <>
                           {i > 0 && <span class="arrow" aria-hidden="true">→</span>}
-                          <span class="wf" title={fmtYear(yy)}><i>{f}</i><small>{yy}</small></span>
+                          <span class="wf" title={fmtYear(yy)}><i>{f}</i><small>{yy < 0 ? `${-yy} BAY` : yy}</small></span>
                         </>
                       ))}
                     </td>
@@ -334,23 +362,113 @@ function LanguagePanel({ lang, label }: { lang: NonNullable<PageJson['language']
           </div>
         </>
       )}
+
       {changes.length > 0 && (
         <>
-          <h2 class="sect">Sound changes <span class="muted small">({changes.length})</span></h2>
-          <ol class="sc-list">
-            {shown.map((c) => (
-              <li class="sc-item">
-                <span class="sc-item__y">{c.year}</span>
-                <code class="sc-item__r">{c.rule}</code>
-                <span class="sc-item__l">{c.label}</span>
-                <span class="sc-item__lang">{c.lang}</span>
-              </li>
-            ))}
+          <h2 class="sect">Sound changes <span class="muted small">({changes.length}, inherited and own)</span></h2>
+          <SoundStrip stages={stages} end={Math.min(5000, page.t1)} />
+          <ol class="sctl">
+            {(shown ?? stages).map((st, si) => {
+              const items = all ? st.changes : st.changes.slice(-Math.max(2, Math.ceil(14 / stages.length)));
+              const hidden = st.changes.length - items.length;
+              return (
+                <li class="sctl__stage" style={{ '--stage': STAGE_COLORS[si % STAGE_COLORS.length] }}>
+                  <div class="sctl__head">
+                    <span class="sctl__dot" aria-hidden="true" />
+                    {st.id && st.id !== page.id ? <a href={`#/p/${st.id}`}>{st.name}</a> : <strong>{st.name}</strong>}
+                    <span class="muted small">{st.name === ownName ? 'this language' : si === 0 ? 'ancestor · proto-language' : 'ancestor'} · {st.changes.length} change{st.changes.length === 1 ? '' : 's'} from {fmtYear(st.from)}</span>
+                  </div>
+                  <ol class="sctl__items">
+                    {hidden > 0 && <li class="sctl__more muted small">… {hidden} earlier change{hidden === 1 ? '' : 's'}</li>}
+                    {items.map((c) => (
+                      <li class="sctl__item">
+                        <span class="sctl__y">{c.year < 0 ? `${-c.year} BAY` : c.year}</span>
+                        <span class="sctl__l">{c.label}</span>
+                        <code class="sctl__r">{c.rule}</code>
+                      </li>
+                    ))}
+                  </ol>
+                </li>
+              );
+            })}
           </ol>
-          {changes.length > 14 && <button class="btn btn--ghost" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${changes.length}`}</button>}
+          <button class="btn btn--ghost" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${changes.length} changes`}</button>
+          <p class="muted small sctl__key">BAY = years before AY 0. Rules read <code>input &gt; output / environment</code>; <code>V</code> vowel, <code>C</code> consonant, <code>#</code> word edge, <code>∅</code> loss.</p>
         </>
       )}
     </section>
+  );
+}
+
+function SoundStrip({ stages, end }: { stages: { name: string; from: number; changes: { year: number; rule: string; label: string }[] }[]; end: number }) {
+  if (!stages.length) return null;
+  const first = stages[0].from;
+  const x0 = Math.floor((first - 100) / 100) * 100, x1 = Math.max(end, stages[stages.length - 1].changes.at(-1)!.year + 50);
+  const W = 800, H = 58;
+  const X = (y: number) => ((y - x0) / Math.max(1, x1 - x0)) * W;
+  return (
+    <svg class="sstrip" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Sound changes from ${fmtYear(first)} to ${fmtYear(x1)}`}>
+      {stages.map((st, i) => {
+        const a = X(st.from), b = i + 1 < stages.length ? X(stages[i + 1].from) : W;
+        const c = STAGE_COLORS[i % STAGE_COLORS.length];
+        return (
+          <g>
+            <rect x={a} y={22} width={Math.max(1, b - a)} height={10} fill={c} opacity="0.22" />
+            {st.changes.map((ch) => <line x1={X(ch.year)} x2={X(ch.year)} y1={12} y2={42} stroke={c} stroke-width="2" vector-effect="non-scaling-stroke"><title>{`${fmtYear(ch.year)} · ${st.name}: ${ch.label} (${ch.rule})`}</title></line>)}
+          </g>
+        );
+      })}
+      {x0 < 0 && <line class="sstrip__zero" x1={X(0)} x2={X(0)} y1={4} y2={50} vector-effect="non-scaling-stroke" />}
+    </svg>
+  );
+}
+
+function FamilyTree({ page, lang, label, stages, ownName }: {
+  page: PageJson; lang: NonNullable<PageJson['language']>; label: (id: string) => string | undefined;
+  stages: { name: string; id?: string }[]; ownName: string;
+}) {
+  const parent = usePage(lang.parent);
+  const siblings = parent.page?.language?.daughters.filter((d) => d !== page.id) ?? [];
+  const sibLabel = (id: string) => parent.page?.labels?.[id] ?? titleOf(id) ?? id;
+  // ancestors: lineage stages before this language (oldest first); make sure the parent is last
+  const ancestors = stages.filter((s) => s.name !== ownName).map((s) => ({ id: s.id, name: s.name }));
+  if (lang.parent && !ancestors.some((a) => a.id === lang.parent)) ancestors.push({ id: lang.parent, name: label(lang.parent) ?? lang.parent });
+  const SIB = 8;
+  const self = (
+    <li class="ftree__self">
+      <span class="ftree__node is-self">{page.title}</span>
+      {lang.daughters.length > 0 && (
+        <ol>
+          {lang.daughters.map((d) => <li><a class="ftree__node" href={`#/p/${d}`}>{label(d) ?? d}</a></li>)}
+        </ol>
+      )}
+    </li>
+  );
+  let tree = (
+    <ol>
+      {siblings.slice(0, Math.ceil(SIB / 2)).map((d) => <li><a class="ftree__node is-sib" href={`#/p/${d}`}>{sibLabel(d)}</a></li>)}
+      {self}
+      {siblings.slice(Math.ceil(SIB / 2), SIB).map((d) => <li><a class="ftree__node is-sib" href={`#/p/${d}`}>{sibLabel(d)}</a></li>)}
+      {siblings.length > SIB && <li class="muted small">+ {siblings.length - SIB} more</li>}
+    </ol>
+  );
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    const a = ancestors[i];
+    tree = (
+      <ol>
+        <li>
+          {a.id ? <a class={`ftree__node${i === 0 ? ' is-root' : ''}`} href={`#/p/${a.id}`}>{a.name}</a> : <span class="ftree__node">{a.name}</span>}
+          {i === 0 && <span class="ftree__tag">proto</span>}
+          {tree}
+        </li>
+      </ol>
+    );
+  }
+  return (
+    <div class="ftree" aria-label="Family tree">
+      <h2 class="sect">Family tree</h2>
+      {ancestors.length === 0 && lang.daughters.length === 0 && siblings.length === 0 ? <p class="muted small">An isolate: no recorded relatives.</p> : <div class="ftree__body">{tree}</div>}
+    </div>
   );
 }
 

@@ -38,10 +38,13 @@ const ids = {
   settlement: firstOf('settlement'),
   climate: featured('cli:'),
   movement: firstOf('movement'),
+  poem: firstOf('artifact', /^poem$/),
+  diary: firstOf('artifact', /^diary$/),
+  flagship: (meta.flagships ?? []).find((id) => !/^(poem|diary)$/.test(search.find((e) => e[0] === id)?.[5] ?? '')) ?? meta.flagships?.[0],
 };
 console.log('pages:', JSON.stringify(ids));
 
-const views: { name: string; hash: string; dark?: boolean; wait?: number }[] = [
+const views: { name: string; hash: string; dark?: boolean; wait?: number; full?: boolean }[] = [
   ...[300, 1500, 3200, 4600, 4990].map((y) => ({ name: `map-${y}`, hash: `#/map?y=${y}&l=political` })),
   { name: 'map-culture', hash: `#/map?y=2500&l=culture`, wait: 1500 },
   { name: 'map-religion', hash: `#/map?y=3800&l=religion`, dark: true, wait: 1500 },
@@ -60,10 +63,15 @@ const views: { name: string; hash: string; dark?: boolean; wait?: number }[] = [
   { name: 'inscription', hash: `#/p/${ids.inscription}`, dark: true },
   { name: 'ledger', hash: `#/p/${ids.ledger}` },
   { name: 'letter', hash: `#/p/${ids.letter}` },
-  { name: 'language', hash: `#/p/${ids.language}` },
+  { name: 'language', hash: `#/p/${ids.language}`, full: true },
   { name: 'settlement', hash: `#/p/${ids.settlement}` },
   { name: 'climate', hash: `#/p/${ids.climate}` },
   { name: 'browse', hash: `#/browse?kind=artifact&sub=treaty`, wait: 1500 },
+  { name: 'browse-flag', hash: `#/browse?kind=artifact&flag=1`, wait: 1500 },
+  { name: 'tour', hash: ``, wait: 3200 },
+  ...(ids.poem ? [{ name: 'poem', hash: `#/p/${ids.poem}` }] : []),
+  ...(ids.diary ? [{ name: 'diary', hash: `#/p/${ids.diary}` }] : []),
+  ...(ids.flagship ? [{ name: 'flagship', hash: `#/p/${ids.flagship}` }] : []),
   { name: 'about', hash: `#/about` },
   { name: 'search', hash: `#/search` },
 ];
@@ -94,7 +102,7 @@ try {
       const ms = Date.now() - t0;
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       const file = `${v.name}-${vp.tag}${v.dark ? '-dark' : ''}.png`;
-      await page.screenshot({ path: join(OUT, file), fullPage: false });
+      await page.screenshot({ path: join(OUT, file), fullPage: !!v.full });
       console.log(`${file.padEnd(34)} ${String(ms).padStart(5)}ms${overflow > 0 ? `  !! horizontal overflow ${overflow}px` : ''}`);
       await ctx.close();
     }
@@ -102,12 +110,14 @@ try {
   // social card: 1200×630 of the map (writes atlas/public/og.png; run after a real export + build)
   if (only.includes('og')) {
     const year = Number(process.argv.find((a) => a.startsWith('--year='))?.slice(7) ?? Math.round(meta.yearEnd * 0.55));
-    const ctx = await browser.newContext({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 2 });
+    const scale = Number(process.argv.find((a) => a.startsWith('--scale='))?.slice(8) ?? 1);
+    const out = process.argv.find((a) => a.startsWith('--out='))?.slice(6) ?? join(ROOT, 'public', 'og.png');
+    const ctx = await browser.newContext({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: scale, colorScheme: process.argv.includes('--dark') ? 'dark' : 'light' });
     const page = await ctx.newPage();
-    await page.goto(BASE + `#/map?y=${year}&l=political&clean=1`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(900);
-    await page.screenshot({ path: join(ROOT, 'public', 'og.png') });
-    console.log(`og.png written (year ${year})`);
+    await page.goto(BASE + `#/map?y=${year}&l=political&og=1`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: out });
+    console.log(`${out} written (year ${year})`);
     await ctx.close();
   }
 

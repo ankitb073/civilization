@@ -139,3 +139,7 @@ export const PANEL_W = 384;
 export const SHEET_PEEK = 72;
 
 export const sheetSnap = signal<'peek' | 'half' | 'full'>('peek');
+
+/** True when the visitor arrived without a year in the URL (a fresh landing, not a shared permalink). */
+export const freshLanding = !/[?&]y=/.test(location.hash) && !/^#\/(p|compare|browse|about|search|graph)/.test(location.hash);
+export const reducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;

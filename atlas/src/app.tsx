@@ -34,8 +34,9 @@ export function App() {
 
   const active = r.view === 'page' || r.view === 'compare' ? 'browse' : r.view;
   const clean = r.params.get('clean') === '1';
+  const og = r.params.get('og') === '1';
   return (
-    <div class={`app app--${r.view}${clean ? ' is-clean' : ''}`}>
+    <div class={`app app--${r.view}${clean || og ? ' is-clean' : ''}${og ? ' is-og' : ''}`}>
       <a class="skip" href="#main">Skip to content</a>
       <header class="topbar">
         <a class="brand" href={mapHref({})} aria-label={`${m?.title ?? 'Palimpsest'} — home`}>

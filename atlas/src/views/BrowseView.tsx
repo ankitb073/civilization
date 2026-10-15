@@ -15,11 +15,13 @@ export function BrowseView() {
   const [to, setTo] = useState<number>(Number(p.get('to') ?? 5000));
   const [sort, setSort] = useState<'date' | 'title'>((p.get('sort') as 'date' | 'title') ?? 'date');
   const [sub, setSub] = useState<string>(p.get('sub') ?? '');
+  const [flag, setFlag] = useState(p.get('flag') === '1');
   const [limit, setLimit] = useState(PAGE);
   const idx = searchIndex.value;
   const m = meta.value;
+  const flagSet = useMemo(() => new Set(m?.flagships ?? []), [m]);
   useEffect(() => { ensureSearch().catch(() => {}); }, []);
-  useEffect(() => { setLimit(PAGE); }, [kind, q, from, to, sort, sub]);
+  useEffect(() => { setLimit(PAGE); }, [kind, q, from, to, sort, sub, flag]);
   useEffect(() => {
     const t = setTimeout(() => {
       const sp = new URLSearchParams();
@@ -29,10 +31,11 @@ export function BrowseView() {
       if (to < 5000) sp.set('to', String(to));
       if (sort !== 'date') sp.set('sort', sort);
       if (sub) sp.set('sub', sub);
+      if (flag) sp.set('flag', '1');
       history.replaceState(null, '', `#/browse?${sp.toString()}`);
     }, 250);
     return () => clearTimeout(t);
-  }, [kind, q, from, to, sort, sub]);
+  }, [kind, q, from, to, sort, sub, flag]);
 
   const { rows, facets, hist, subFacets } = useMemo(() => {
     if (!idx) return { rows: [] as number[], facets: new Map<string, number>(), hist: [] as number[], subFacets: [] as [string, number][] };
@@ -44,6 +47,7 @@ export function BrowseView() {
     const bins = 50;
     const hist = new Array(bins).fill(0);
     for (let i = 0; i < idx.ids.length; i++) {
+      if (flag && !flagSet.has(idx.ids[i])) continue;
       const t0 = idx.t0[i];
       if (words.length && !words.every((w) => idx.lower[i].includes(w) || idx.aliasLower[i].includes(w))) continue;
       const inRange = t0 >= from && t0 <= to;
@@ -60,7 +64,7 @@ export function BrowseView() {
     else rows.sort(cmpTitle);
     const subFacets = [...subCounts.entries()].filter(([k]) => k).sort((a, b) => b[1] - a[1]);
     return { rows, facets, hist, subFacets };
-  }, [idx, kind, q, from, to, sort, sub]);
+  }, [idx, kind, q, from, to, sort, sub, flag, flagSet]);
 
   const total = [...facets.values()].reduce((s, n) => s + n, 0);
   const hmax = Math.max(1, ...hist);
@@ -82,6 +86,15 @@ export function BrowseView() {
           <button role="radio" aria-checked={sort === 'title'} class={`seg${sort === 'title' ? ' is-on' : ''}`} onClick={() => setSort('title')}>A–Z</button>
         </div>
       </div>
+      {flagSet.size > 0 && (
+        <div class="flagrow">
+          <button class={`chip chip--flag${flag ? ' is-on' : ''}`} aria-pressed={flag} onClick={() => { setFlag(!flag); if (!flag) { setKind('artifact'); setSub(''); } }}>
+            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 1.5l1.9 4.1 4.5.5-3.4 3 1 4.4L8 11.3 4 13.5l1-4.4-3.4-3 4.5-.5z" fill="currentColor" /></svg>
+            Flagship sources <span>{flagSet.size.toLocaleString('en-US')}</span>
+          </button>
+          <span class="muted small">Long-form sources written in full from the archive’s dossiers, checked like every other document.</span>
+        </div>
+      )}
       <div class="chips" role="radiogroup" aria-label="Kind">
         <button role="radio" aria-checked={kind === 'all'} class={`chip${kind === 'all' ? ' is-on' : ''}`} onClick={() => { setKind('all'); setSub(''); }}>All <span>{total.toLocaleString('en-US')}</span></button>
         {KINDS.filter((k) => facets.has(k)).map((k) => (
@@ -118,7 +131,7 @@ export function BrowseView() {
                 <a class="row" href={`#/p/${idx.ids[i]}`}>
                   <span class="row__y">{idx.t0[i]}</span>
                   <span class={`kdot k-${idx.kinds[i]}`} aria-hidden="true" />
-                  <span class="row__t">{idx.titles[i]}{idx.subs[i] && kind === 'all' || (idx.subs[i] && !sub) ? <span class="row__sub">{subLabel(idx.subs[i])}</span> : null}</span>
+                  <span class="row__t">{flagSet.has(idx.ids[i]) && <span class="row__flag" title="Flagship source">✦</span>}{idx.titles[i]}{idx.subs[i] && kind === 'all' || (idx.subs[i] && !sub) ? <span class="row__sub">{subLabel(idx.subs[i])}</span> : null}</span>
                   {idx.aliases[i] && <span class="row__a">{idx.aliases[i].split('|').slice(0, 3).join(' · ')}</span>}
                 </a>
               </li>

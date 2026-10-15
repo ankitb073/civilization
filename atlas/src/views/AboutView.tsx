@@ -44,6 +44,12 @@ export function AboutView() {
               <span class="stat__l"><span class={`kdot k-${k}`} aria-hidden="true" />{KIND_LABEL[k][1]}</span>
             </a>
           ))}
+          {m.flagships?.length ? (
+            <a class="stat stat--flag" href="#/browse?kind=artifact&flag=1">
+              <span class="stat__n">{m.flagships.length.toLocaleString('en-US')}</span>
+              <span class="stat__l">✦ Flagship sources</span>
+            </a>
+          ) : null}
           {m.counts.links ? (
             <div class="stat">
               <span class="stat__n">{m.counts.links.toLocaleString('en-US')}</span>

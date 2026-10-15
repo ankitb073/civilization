@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { effect } from '@preact/signals';
 import { route, layer, selection, showRoutes, theme, year, type LayerName, isMobile, panelCollapsed, PANEL_W, SHEET_PEEK, sheetSnap } from '../state.ts';
-import { ensureLayer, ensureMapData, layersVersion, legendOf, mapData } from '../store.ts';
+import { ensureLayer, ensureMapData, eraAt, layersVersion, legendOf, mapData, meta } from '../store.ts';
 import { MapRenderer, type Hit } from './mapRenderer.ts';
 import { MapPanel } from './MapPanel.tsx';
 import { TimeSlider } from './TimeSlider.tsx';
 import { Sheet } from '../components/Sheet.tsx';
+import { maybeAutoTour, TourOverlay, touring } from '../components/Tour.tsx';
 
 const LAYERS: { id: LayerName; label: string }[] = [
   { id: 'political', label: 'Political' },
@@ -28,8 +29,10 @@ export function MapView() {
     const r = new MapRenderer(canvasRef.current, d, theme.peek());
     rendRef.current = r;
     (window as unknown as { __palimpsestMap?: MapRenderer }).__palimpsestMap = r;
-    const insets = () => (route.peek().params.get('clean') === '1' ? [0, 0] : isMobile.peek() ? [0, sheetSnap.peek() === 'peek' ? SHEET_PEEK : Math.round((wrapRef.current?.clientHeight ?? 600) * 0.5)] : [panelCollapsed.peek() ? 0 : PANEL_W + 24, 0]);
+    const ogMode = route.peek().params.get('og') === '1';
+    const insets = () => (route.peek().params.get('clean') === '1' || ogMode ? [0, 0] : isMobile.peek() ? [0, sheetSnap.peek() === 'peek' ? SHEET_PEEK : Math.round((wrapRef.current?.clientHeight ?? 600) * 0.5)] : [panelCollapsed.peek() ? 0 : PANEL_W + 24, 0]);
     [r.insetRight, r.insetBottom] = insets();
+    if (ogMode) { r.insetLeft = 390; r.wholeWorld = true; }
     r.year = year.peek();
     r.layer = layer.peek();
     r.selected = selection.peek();
@@ -37,6 +40,7 @@ export function MapView() {
     r.resize();
     // focus selection on first load if it has a location
     focusSelection(r, selection.peek(), false);
+    if (!selection.peek()) requestAnimationFrame(() => maybeAutoTour());
     const ro = new ResizeObserver(() => r.resize());
     ro.observe(wrapRef.current!);
     const disposeInsets = effect(() => {
@@ -44,7 +48,7 @@ export function MapView() {
       panelCollapsed.value;
       sheetSnap.value;
       const [ir, ib] = insets();
-      r.setInsets(ir, ib);
+      r.setInsets(ir, ib, ogMode ? 390 : 0);
     });
     const dispose = effect(() => {
       r.year = year.value;
@@ -195,15 +199,19 @@ export function MapView() {
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
           </button>
         </div>
-        {tip && !isMobile.value && (
+        <TourOverlay />
+        {route.value.params.get('og') === '1' && <OgPlate />}
+        {tip && !isMobile.value && !touring.value && (
           <div class="maptip" style={{ transform: `translate(${tip.x + 14}px, ${tip.y + 14}px)` }}>
             <div class="maptip__t">{tip.text}</div>
             {tip.sub && <div class="maptip__s">{tip.sub}</div>}
           </div>
         )}
-        <Sheet>
-          <MapPanel />
-        </Sheet>
+        <div class={touring.value ? 'is-touring' : ''}>
+          <Sheet>
+            <MapPanel />
+          </Sheet>
+        </div>
       </div>
       <TimeSlider compact={isMobile.value} />
     </div>
@@ -232,4 +240,27 @@ function focusSelection(r: MapRenderer, sel: string | null, animate: boolean) {
     return;
   }
   if (cell >= 0 && (!animate || !r.inView(d.geo.sx[cell], d.geo.sy[cell]))) r.centerOn(d.geo.sx[cell], d.geo.sy[cell], 1.8);
+}
+
+/** Title plate for the social card (og=1). */
+function OgPlate() {
+  const m = meta.value;
+  if (!m) return null;
+  const facts = m.check.invariants.reduce((s, i) => s + i.checked, 0);
+  const viol = m.check.invariants.reduce((s, i) => s + i.violations, 0);
+  const docs = m.counts.artifact ?? m.counts.documents ?? 0;
+  const era = eraAt(year.value);
+  return (
+    <div class="ogplate">
+      <div class="wordmark ogplate__w">{m.title}</div>
+      <div class="ogplate__s">A 5,000-year archive of {m.worldName}, a world that never existed</div>
+      <div class="ogplate__n">
+        <div><strong>5,000</strong> years, decade by decade</div>
+        <div><strong>{docs.toLocaleString('en-US')}</strong> primary sources</div>
+        <div><strong>{facts.toLocaleString('en-US')}</strong> facts checked · <strong>{viol}</strong> violations</div>
+      </div>
+      <div class="ogplate__y">The map at {year.value} {m.yearLabel}{era ? ` · ${era.name}` : ''}</div>
+      <div class="ogplate__u">ankitb073.github.io/civilization</div>
+    </div>
+  );
 }

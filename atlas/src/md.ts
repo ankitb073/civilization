@@ -28,7 +28,7 @@ export function inline(src: string, title: TitleLookup = () => undefined): strin
   return s;
 }
 
-export function render(md: string, title: TitleLookup = () => undefined): string {
+export function render(md: string, title: TitleLookup = () => undefined, opts: { breaks?: boolean } = {}): string {
   const lines = md.replace(/\r\n?/g, '\n').split('\n');
   const out: string[] = [];
   let i = 0;
@@ -47,7 +47,7 @@ export function render(md: string, title: TitleLookup = () => undefined): string
     if (/^\s*>/.test(l)) {
       const buf: string[] = [];
       while (i < lines.length && /^\s*>/.test(lines[i])) { buf.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
-      out.push(`<blockquote>${render(buf.join('\n'), title)}</blockquote>`);
+      out.push(`<blockquote>${render(buf.join('\n'), title, opts)}</blockquote>`);
       continue;
     }
     if (/^\s*\|/.test(l) && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i + 1])) {
@@ -84,7 +84,8 @@ export function render(md: string, title: TitleLookup = () => undefined): string
       i++;
     }
     if (!buf.length) { buf.push(lines[i]); i++; }
-    out.push(`<p>${inline(buf.join('\n'), title).replace(/\n/g, ' ')}</p>`);
+    // verse keeps its line breaks; prose joins lines
+    out.push(`<p>${inline(buf.join('\n'), title).replace(/\n/g, opts.breaks ? '<br>' : ' ')}</p>`);
   }
   return out.join('\n');
 }
