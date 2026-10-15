@@ -26,7 +26,9 @@ export function applySurvival(g: Gen): void {
       if (fires.length) p *= 0.15;
     }
     p = Math.min(0.97, p * 1.6);
-    const r = rng.fork(a.id);
+    // a flagship's condition and provenance are drawn from its own frozen id, so a change to the generated archive
+    // (which shifts every later artifact id) never re-rolls what its essays and the History say about it
+    const r = a.flagship ? rng.fork('flagship', String(a.data?.flagshipId ?? a.id)) : rng.fork(a.id);
     if (!a.flagship && !r.chance(p)) {
       a.status = 'lost';
       continue;
