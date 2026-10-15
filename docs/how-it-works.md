@@ -23,6 +23,7 @@ The systems interlock:
 - **Climate:** an autoregressive temperature series, punctuated by eruptions (a VEI 7 cools the world by about 1 °C for years), droughts that sit on regions for decades, and industrial warming at the end.
 - **People:** harvests depend on climate and soil. Famine kills and drives migration. Plagues travel along trade routes, worst where they arrive for the first time.
 - **States:** states form, expand, fight, sign treaties, fracture in civil wars, and collapse when crises pile up. They follow secular cycles: long reigns, then usurpations and secessions, then breakup.
+- **War:** armies count men: every state musters at least a few hundred, and a rebellion raises its province. Arms and numbers set the odds. The beaten side loses far more men than the victor, most of all in a rout.
 - **Money and trade:** prices are set per market and per decade from harvests and silver stocks. Coins are debased when treasuries run dry. Merchant houses rise and go bankrupt. A panic can bring down trade across an ocean.
 - **Ideas:** religions and philosophies have tenet vectors. They spread, split in schisms, hold councils and persecute their rivals. Technologies spread from a calibrated hazard, from writing (AY 60) to computer networks (AY 4960).
 
@@ -42,7 +43,7 @@ About 35 document generators read the record and write what a society of that ag
 
 - treaties whose terms are the simulation's terms;
 - ledgers priced from the market series;
-- victory steles that inflate the enemy dead about sixfold;
+- victory steles that inflate the enemy dead about fivefold;
 - chronicles from both sides of a war, each lying in its own way;
 - omen tablets, customs tariffs, itineraries, wills, lawsuits, school exercises with corrections, newspapers and telegrams.
 
@@ -87,7 +88,7 @@ Continuous integration runs the checker on every push, and any violation fails t
 ## 7. What it doesn't do
 
 - **Prose is not fully checked.** Unlinked text in a flagship could still mention something too early. Dossiers, fact-checkers and the technology line in each dossier make this rare, not impossible.
-- **The simulation has known simplifications,** filed as issues: early armies can be implausibly small, and army strength is not headcount.
+- **The simulation has known simplifications,** filed as issues. Rebels almost never win, and a third of all wars are declared on states less than ten years old. A second edition of the simulation fixes both (decision 0015), but it changes the world, so every flagship would have to be rewritten.
 - **It is one world.** Other seeds build and pass the checker, but only seed 5 has the agent-written literature, because flagships are tied to that world's ids.
 
 ## Run it yourself

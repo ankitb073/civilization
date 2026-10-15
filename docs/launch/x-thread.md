@@ -16,7 +16,7 @@ All of it goes into a SQLite database: about 200k border changes and 1M market p
 
 **3/** Then it writes the documents that world would leave behind.
 
-A treaty cedes exactly the districts the map shows changing hands. A merchant's ledger prices grain from the simulated harvest. A victory stele claims 6× the enemy dead the battle record shows.
+A treaty cedes exactly the districts the map shows changing hands. A merchant's ledger prices grain from the simulated harvest. A victory stele claims 5× the enemy dead the battle record shows.
 
 [image: docs/img/inscription.png]
 
