@@ -66,7 +66,7 @@ Fact-checker agents then compare every file with the database. The commonest sli
 
 ## 6. The checker
 
-The checker reads only `world.sqlite`. It shares no code with the simulation, so it is an independent audit. On the current build it verifies 16 invariants across about 1.9 million facts:
+The checker reads only `world.sqlite`. It shares no code with the simulation, so it is an independent audit. On the current build it verifies 17 invariants across about 1.95 million facts:
 
 | Invariant | Facts checked |
 |---|---|
@@ -74,14 +74,15 @@ The checker reads only `world.sqlite`. It shares no code with the simulation, so
 | Every territorial change is in order and held by a living state | 199,575 and 140,313 |
 | Replaying the logs reproduces the final map | 7,910 cells |
 | Every ceded district changes hands at the treaty date | 28,830 |
-| Every office is held only while alive, and no state has two heads at once | 94,668 and 7,599 |
-| No document mentions anything that didn't yet exist | 202,025 links |
-| Every author was alive and at least 12 | 14,453 |
-| Every document's language and script existed at its date | 18,490 |
+| Every office is held only while alive, and no state has two heads at once | 94,650 and 7,599 |
+| No document mentions anything that didn't yet exist | 202,262 links |
+| Every author was alive and at least 12 | 14,415 |
+| Every document's language and script existed at its date | 18,471 |
 | Every ledger price is within 20% of the market | 13,002 |
-| Every catalogue number a document cites exists and predates the citation | 8,079 |
-| Every quotation placed before its citation is verbatim in the cited document | 77 |
-| Every link resolves, and backlink counts match | 1,053,185 |
+| Every document has its own catalogue number | 18,471 |
+| Every catalogue number a document cites exists and predates the citation | 8,158 |
+| Every quotation placed before its citation is verbatim in the cited document | 86 |
+| Every link resolves, and backlink counts match | 1,053,411 |
 
 Continuous integration runs the checker on every push, and any violation fails the deploy. The citations invariant earned its place on its first day. A change to how reigns were computed would have renumbered dozens of documents that the *History* cites, and it was caught before it shipped.
 
