@@ -106,7 +106,7 @@ function artifactPage(ctx: Ctx, T: Titles, a: Artifact): PageJson {
   const langName = langLabel(ctx, a.lang);
   const infobox: [string, string][] = [
     ['Catalogue', a.catalog],
-    ['Date', `${a.dateText.replace(/\s*\[AY \d+\]$/, '')} (AY ${a.year})`],
+    ['Date', (() => { const d = a.dateText.replace(/\s*\[AY \d+\]$/, ''); return d === `AY ${a.year}` ? d : `${d} (AY ${a.year})`; })()],
     ...(a.author !== null ? [['Author', `[[per:${a.author}|${T.short.get(`per:${a.author}`) ?? ''}]]`] as [string, string]] : []),
     ...(a.polity !== null ? [['Issued by', `[[pol:${a.polity}|${T.title.get(`pol:${a.polity}`) ?? ''}]]`] as [string, string]] : []),
     ['Language', `[[lan:${a.lang}|${langName}]]`],
