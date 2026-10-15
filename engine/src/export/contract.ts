@@ -182,6 +182,8 @@ export interface PageJson {
     provenance: string;
     translatorId?: string;
     flagship: boolean;
+    /** A flagship's static reading page with its social card, relative to the site root ("s/fl-905.html"). */
+    permalink?: string;
     interlinear?: InterlinearText;
     ledger?: { columns: string[]; rows: string[][]; notes: string[] };
     rival?: { eventId: string; side: string };

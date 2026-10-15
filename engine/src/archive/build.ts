@@ -126,7 +126,7 @@ function artifactPage(ctx: Ctx, T: Titles, a: Artifact): PageJson {
     artifact: {
       catalog: a.catalog, date: a.dateText.replace(/\[\[[^|\]]+\|([^\]]+)\]\]/g, '$1'), language: langName, script: scriptName, medium: a.medium,
       authorId: a.author !== null ? `per:${a.author}` : undefined, condition: a.condition, provenance: a.provenance,
-      translatorId: a.translator !== null ? `per:${a.translator}` : undefined, flagship: a.flagship,
+      translatorId: a.translator !== null ? `per:${a.translator}` : undefined, flagship: a.flagship, permalink: a.flagship && a.data?.flagshipId ? `s/${a.data.flagshipId}.html` : undefined,
       interlinear: a.interlinear, ledger: a.ledger, rival: a.rival ? { eventId: `evt:${a.rival.eventId}`, side: a.rival.side } : undefined,
     },
   };

@@ -1,6 +1,6 @@
 # Launch thread (draft)
 
-Numbers refer to the canonical build (seed 5). Refresh them from `atlas/public/data/meta.json` before posting. Attach images from `docs/img/` and `atlas/public/og/`. Share links to documents should use the share pages (`https://ankitb073.github.io/civilization/s/art-N.html`), so they unfurl as cards.
+Numbers refer to the canonical build (seed 5). Refresh them from `atlas/public/data/meta.json` before posting. Attach images from `docs/img/` and `atlas/public/og/`. Link documents by their reading pages (`https://ankitb073.github.io/civilization/s/fl-905.html`, the atlas's Share button gives the link), so they unfurl as cards and open fast on a phone.
 
 ---
 
