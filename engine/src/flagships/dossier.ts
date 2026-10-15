@@ -325,3 +325,90 @@ Rules (the archive is machine-checked; breaking them gets the document rejected)
 - Match the register of the era (see register) and the form. Bronze Age texts are formulaic; industrial texts read like newspapers or speeches; poems are in lines.
 - Length: 350–750 words. Use Markdown: paragraphs, short headings only if the form has them (e.g. a log), > quotes for inscriptions or quoted speech when apt, line breaks for verse.
 - No editorial commentary in the body. Do not mention "simulation", "AY", "dossier" or the modern editors (except in the modern editorial essays, which are written by those editors and may use AY dates).`;
+
+/** Modern historiography: essays by the archive's own scholars (fl-201 onward). */
+export function buildHistoriography(a: Archive): Dossier[] {
+  const ctx = a.ctx;
+  const s = ctx.s;
+  const T = a.T;
+  const g = a.gen;
+  const ed = s.polities[ctx.editorialPolity];
+  const lang = ctx.editorialLang;
+  const rng = new Rng(s.seed).fork('historiography');
+  const out: Dossier[] = [];
+  const simPersons = a.ctx.r.simPersons ?? s.persons.length;
+  const isOk = (ref: string) => !ref.startsWith('per:') || ctx.idNum(ref) < simPersons;
+  const scholarAt = (k: number) => {
+    const pool = g.scholars.filter((id) => s.persons[id].born + 28 <= 4990 && s.persons[id].died >= 4950);
+    const id = pool[k % pool.length];
+    const p = s.persons[id];
+    const year = Math.min(4999, Math.max(4950, p.born + 30 + (k % 9)), p.died);
+    return { id, year };
+  };
+  const make = (k: number, form: string, subjectId: string, title: string, facts: string[], links: string[], context: string[]): void => {
+    const { id: who, year } = scholarAt(k);
+    const d = g.doc(lang, year, `hist:${k}`);
+    const allowed: Dossier['allowedLinks'] = [];
+    const seen = new Set<string>();
+    for (const ref of links) {
+      if (seen.has(ref) || !T.pageRefs.has(ref) || !isOk(ref)) continue;
+      seen.add(ref);
+      allowed.push({ id: ref, text: T.short.get(ref) ?? d.nameOf(ref), what: T.title.get(ref) ?? '' });
+      if (allowed.length >= 45) break;
+    }
+    const id = `fl-${String(201 + out.length).padStart(3, '0')}`;
+    const p = s.persons[who];
+    out.push({
+      id, form, register: 'Modern scholarship: clear, precise, argumentative; footnote-like asides in parentheses; may cite AY dates and catalogue numbers in prose.',
+      year, localDate: `AY ${year}`, language: T.short.get(`lan:${lang}`) ?? '', script: 'print', medium: 'journal article',
+      author: { id: `per:${who}`, name: T.short.get(`per:${who}`) ?? '', role: p.roles.map((r) => r.role).join(', '), polity: T.short.get(`pol:${ed.id}`) ?? null, born: p.born, died: p.died, stance: 'a modern scholar: sceptical of royal propaganda, careful with numbers, writing for colleagues' },
+      subject: { id: subjectId, title, summary: title, facts }, context, allowedLinks: allowed,
+      guidance: GUIDANCE.replace('Do not mention "simulation", "AY", "dossier" or the modern editors (except in the modern editorial essays, which are written by those editors and may use AY dates).', 'This is modern scholarship: you MAY use AY dates. Never mention "simulation", "dossier" or "ground truth" — call the reconstructed record "the documentary consensus" or "the record". Refer to surviving sources by their titles in plain text (do not link documents).'),
+      frontmatter: [`id: ${id}`, `subject: ${subjectId}`, `form: ${form}`, `year: ${year}`, `author: per:${who}`, `polity: pol:${ed.id}`, `lang: ${lang}`, `script: ${ctx.scriptOf(ed, year)}`, `medium: journal article`].join('\n'),
+    });
+  };
+  let k = 0;
+  // 1. rival accounts revisited
+  const rivals = [...a.pages.values()].filter((p) => p.accounts && p.accounts.sources.length >= 2).sort((x, y) => s.events[Number(y.id.slice(4))].sig - s.events[Number(x.id.slice(4))].sig).slice(0, 22);
+  for (const pg of rivals) {
+    const e = s.events[Number(pg.id.slice(4))];
+    const facts = [stripLinks(pg.summary), ...pg.accounts!.truth.map(([f, v]) => `Record — ${f}: ${v}`), ...pg.accounts!.sources.map((src) => `${src.side} chronicle by ${src.author}: ${src.claims.map(([f, v]) => `${f}: ${v}`).join('; ')}`)];
+    const links = [pg.id, ...e.parts.map(([r]) => r), ...(ctx.eventsByRef.get(pg.id) ?? []).slice(0, 12).map((i) => `evt:${i}`), ...e.causes.map((c) => `evt:${c}`)];
+    make(k++, 'journal article re-examining rival chronicles', pg.id, `Revisiting the ${T.short.get(pg.id)}: two chronicles against the record`, facts, links, []);
+  }
+  // 2. era overviews
+  const eras = computeErasLite(a);
+  for (const er of eras) {
+    const evs = s.events.filter((e) => e.year >= er.start && e.year < er.end && T.pageRefs.has(`evt:${e.id}`)).sort((x, y) => y.sig - x.sig).slice(0, 18);
+    const facts = [`${er.name}: AY ${er.start}–${er.end}`, ...evs.map((e) => `${T.title.get(`evt:${e.id}`)} (AY ${e.year})`)];
+    make(k++, 'survey lecture on an age', `era:${er.id}`, `${er.name}: a survey`, facts, evs.flatMap((e) => [`evt:${e.id}`, ...e.parts.slice(0, 3).map(([r]) => r)]), []);
+  }
+  // 3. language families
+  for (const root of s.lang.languages().filter((l) => l.parent === null)) {
+    const daughters = s.lang.languages().filter((l) => l.family === root.family && l.parent !== null).slice(0, 12);
+    const facts = [`Family root: ${T.title.get(`lan:${root.id}`)}`, ...daughters.map((l) => `${T.short.get(`lan:${l.id}`)} (AY ${l.born}–${l.died ?? 'present'})`), ...['water', 'king', 'god', 'mother', 'silver'].map((c) => `*${c}*: proto ${s.lang.protoForm(root.id, c)}; ${daughters.slice(0, 5).map((l) => `${T.short.get(`lan:${l.id}`)} ${s.lang.word(l.id, c, Math.min(l.died ?? 5000, 5000)).conventional}`).join(', ')}`), ...s.lang.soundChanges(daughters[0]?.id ?? root.id).slice(0, 8).map((c) => `Sound law c. AY ${c.year}: ${c.label} (${c.rule})`)];
+    make(k++, 'philological essay', `lan:${root.id}`, `The ${T.short.get(`lan:${root.id}`)} languages and their ancestor`, facts, [`lan:${root.id}`, ...daughters.map((l) => `lan:${l.id}`)], []);
+  }
+  // 4. great collapses
+  const collapses = s.events.filter((e) => e.sub === 'collapse' && T.pageRefs.has(`evt:${e.id}`)).sort((x, y) => y.sig - x.sig).slice(0, 6);
+  for (const e of collapses) {
+    const facts = [stripLinks(a.pages.get(`evt:${e.id}`)?.summary ?? ''), ...e.causes.map((c) => `Cause: ${T.title.get(`evt:${c}`)} (AY ${s.events[c].year})`), ...e.parts.filter(([, r]) => r === 'successor').map(([r]) => `Successor: ${T.title.get(r)}`)];
+    make(k++, 'journal article on a state collapse', `evt:${e.id}`, `Why did the ${T.short.get(e.parts[0][0])} fall?`, facts, [`evt:${e.id}`, ...e.parts.map(([r]) => r), ...e.causes.map((c) => `evt:${c}`)], []);
+  }
+  // 5. founders of faiths
+  const founders = s.movements.filter((m) => m.founder !== null && (m.kind === 'religion' || m.kind === 'philosophy') && T.pageRefs.has(`per:${m.founder}`)).sort((x, y) => y.peak - x.peak).slice(0, 8);
+  for (const m of founders) {
+    const facts = [stripLinks(a.pages.get(`mov:${m.id}`)?.summary ?? ''), `Teachings: ${tenetText(m.kind, m.tenets)}`, `Founder: ${T.title.get(`per:${m.founder}`)} (AY ${s.persons[m.founder!].born}–${s.persons[m.founder!].died})`];
+    make(k++, 'biographical essay', `per:${m.founder}`, `The historical ${T.short.get(`per:${m.founder}`)}`, facts, [`per:${m.founder}`, `mov:${m.id}`, ...(m.foundEvent !== null ? [`evt:${m.foundEvent}`] : []), ...s.movements.filter((x) => x.parent === m.id).map((x) => `mov:${x.id}`)], []);
+  }
+  void rng;
+  return out;
+}
+
+function computeErasLite(a: Archive): { id: string; name: string; start: number; end: number }[] {
+  const s = a.ctx.s;
+  const first = (key: string) => { let b = 5000; for (const p of s.polities) { const y = p.techs.get(TECHS.findIndex((t) => t.key === key)); if (y !== undefined && y < b) b = y; } return b; };
+  const m: [string, string, number][] = [['bronze', 'The Age of Bronze', 0], ['iron', 'The Age of Iron', first('iron')], ['coin', 'The Age of Coin and Creed', first('coinage')], ['parchment', 'The Age of Parchment and Plough', first('paper')], ['print', 'The Age of Sail and Print', first('printing')], ['engines', 'The Age of Engines', first('steam')], ['networks', 'The Age of Networks', first('computing')]];
+  m.sort((x, y) => x[2] - y[2]);
+  return m.map(([id, name, start], i) => ({ id, name, start, end: i + 1 < m.length ? m[i + 1][2] : 5000 })).filter((e) => e.end > e.start);
+}

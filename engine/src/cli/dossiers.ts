@@ -2,15 +2,14 @@
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { simulate } from '../sim/run.ts';
 import { buildArchive } from '../archive/build.ts';
-import { buildDossiers } from '../flagships/dossier.ts';
+import { buildDossiers, buildHistoriography } from '../flagships/dossier.ts';
 import { worldFingerprint } from '../export/export.ts';
 
 const seed = Number(process.argv[2] ?? 5);
 const limit = Number(process.argv[3] ?? 240);
 const r = simulate(seed, 5000);
 const a = buildArchive(r);
-const ds = buildDossiers(a, limit);
-if (existsSync('build/dossiers')) rmSync('build/dossiers', { recursive: true });
+const ds = [...buildDossiers(a, limit), ...buildHistoriography(a)];
 mkdirSync('build/dossiers', { recursive: true });
 const world = worldFingerprint(r);
 for (const d of ds) { d.frontmatter += `\nworld: ${world}`; writeFileSync(`build/dossiers/${d.id}.json`, JSON.stringify(d, null, 2)); }

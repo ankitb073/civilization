@@ -45,10 +45,14 @@ export function ingestFlagships(g: Gen, dir: string, simPersons: number, world?:
     if (au && au.startsWith('per:')) {
       const id = Number(au.slice(4));
       const p = s.persons[id];
-      if (p && id < simPersons && p.born + 12 <= year && p.died >= year) author = id;
+      if (p && (id < simPersons || g.scholars.includes(id)) && p.born + 12 <= year && p.died >= year) author = id;
     }
     const pol = fm.get('polity');
     const polity = pol && pol.startsWith('pol:') ? Number(pol.slice(4)) : null;
+    if (polity !== null && !s.polities[polity]) { rep.rejected.push(`${f}: unknown polity ${pol}`); continue; }
+    const subj = fm.get('subject') ?? '';
+    if (subj.startsWith('evt:') && !s.events[Number(subj.slice(4))]) { rep.rejected.push(`${f}: unknown subject ${subj}`); continue; }
+    if (!Number.isFinite(Number(fm.get('lang'))) || !s.lang.languages().some((l) => l.id === Number(fm.get('lang')))) { rep.rejected.push(`${f}: unknown language`); continue; }
     const lang = Number(fm.get('lang') ?? ctx.editorialLang);
     const script = Number(fm.get('script') ?? -1);
     if (s.lang.info(lang).born > year) { rep.rejected.push(`${f}: language not yet born`); continue; }
