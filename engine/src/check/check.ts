@@ -246,6 +246,15 @@ export function runChecks(dbPath: string): CheckReport {
     }
   }
   {
+    const c = inv('catalogue-unique', 'Every document has its own catalogue number');
+    const seen = new Map<string, number>();
+    for (const r of all('SELECT id, catalog FROM artifacts')) {
+      const k = String(r.catalog), prev = seen.get(k);
+      if (prev !== undefined) c.bad(`art:${r.id} and art:${prev} share ${k}`);
+      else { seen.set(k, Number(r.id)); c.ok(); }
+    }
+  }
+  {
     const c = inv('citations-resolve', 'Every catalogue number a document cites exists and was written no later than the citing document');
     const cat = new Map<string, number>();
     for (const r of all('SELECT catalog, year FROM artifacts')) cat.set(String(r.catalog), Number(r.year));

@@ -11,6 +11,14 @@ import { newPerson } from '../sim/people.ts';
 import { Rng } from '../core/rng.ts';
 import { GOODS } from '../sim/economy.ts';
 import { TK } from '../sim/tech.ts';
+import { existsSync, readFileSync } from 'node:fs';
+
+/** Catalogue numbers frozen for flagships (flagships/catalog.json). Generated documents skip them, so a
+ *  generator that emits more documents of a kind never takes a number a flagship already holds. */
+function reservedNumbers(): Set<string> {
+  const path = new URL('../../../flagships/catalog.json', import.meta.url);
+  return existsSync(path) ? new Set(Object.values(JSON.parse(readFileSync(path, 'utf8')) as Record<string, string>)) : new Set();
+}
 
 /** Did polity `p` know technology `key` (a TECHS key such as 'chariot', 'printing') by `year`? */
 export function techAt(p: Polity | null | undefined, key: string, year: number): boolean {
@@ -81,6 +89,7 @@ export class Gen {
   readonly rng: Rng;
   artifacts: Artifact[] = [];
   counters = new Map<string, number>();
+  private reserved = reservedNumbers();
   private scribes = new Map<string, number[]>(); // `${polity}:${role}` -> persons
   scholars: number[] = [];
   priceIndex = new Map<string, number>();
@@ -111,7 +120,8 @@ export class Gen {
 
   add(a: Omit<Artifact, 'id' | 'catalog' | 'condition' | 'provenance' | 'translator' | 'foundYear' | 'status'>): Artifact {
     const code = CATALOG_CODE[a.sub] ?? 'MS';
-    const n = (this.counters.get(code) ?? 0) + 1;
+    let n = (this.counters.get(code) ?? 0) + 1;
+    while (!a.flagship && this.reserved.has(`PAL·${code}·${String(n).padStart(5, '0')}`)) n++;
     this.counters.set(code, n);
     const art: Artifact = {
       ...a, medium: a.flagship ? a.medium : periodMedium(a.polity !== null ? this.ctx.s.polities[a.polity] : null, a.medium, a.year),

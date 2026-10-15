@@ -127,6 +127,20 @@ function issueYear(s: State, p: Polity, kind: Currency['kind'], year: number): n
   return year;
 }
 
+/** The currency step runs before the decade's political years, at a nominal year inside the decade, so the
+ *  ruler it names can fall in battle before that year. After the run, the record drops such a ruler; nothing
+ *  in the simulation reads these parts, so no draw moves. */
+export function dropDeadIssuers(s: State): void {
+  for (const e of s.events) {
+    if (e.sub !== 'coinage' && e.sub !== 'weight-standard' && e.sub !== 'paper-money' && e.sub !== 'currency-reform') continue;
+    e.parts = e.parts.filter(([r, role]) => {
+      if (role !== 'ruler') return true;
+      const p = s.persons[Number(r.slice(4))];
+      return !(p.died < e.year || (p.died === e.year && p.deathEvent !== null && p.deathEvent < e.id));
+    });
+  }
+}
+
 export function newCurrency(s: State, p: Polity, kind: Currency['kind'], year: number, content: number, metal: Currency['metal'], sub: string, causes: number[] = [], parent?: Currency): Currency {
   year = issueYear(s, p, kind, year);
   const id = s.currencies.length;
