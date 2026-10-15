@@ -182,7 +182,9 @@ for (const fid of files) {
   const leads: string[] = [];
   for (const n of numbers(masked)) {
     const ctx = masked.slice(Math.max(0, n.at - 90), n.end + 90);
-    if (!MEN.test(ctx)) continue;
+    if (n.v < 20 || !MEN.test(ctx)) continue;
+    // ordinals, ages and durations are not figures
+    if (/^(st|nd|rd|th)\b|^[\s-]*(years?|summers?|winters?|harvests?|months?|days?|seasons?)\b/i.test(masked.slice(n.end, n.end + 12))) continue;
     const tol = evs.size && pairs.length < 400 ? 0.12 : 0.06;
     if (pairs.some((p) => near(n.v, p.old, tol) && !p.news.some((x) => near(n.v, x, tol)))) leads.push(`  "${n.s}" ≈ ${Math.round(n.v).toLocaleString('en-US')}: …${ctx.replace(/\s+/g, ' ')}…`);
   }
