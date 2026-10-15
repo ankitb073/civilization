@@ -25,13 +25,14 @@ From that record we generate thousands of interlinked primary-source documents: 
 ## Canon and flagships (read before changing the simulation)
 - The canonical world is seed 5 (decision 0009).
 - `flagships/*.md` are agent-written sources tied to simulation ids. Each carries a `world:` fingerprint of the simulation's events.
-- Any change under `engine/src/sim/**` changes ids. Ingestion then rejects every flagship as written for another world. Afterwards, regenerate the dossiers (`node engine/src/cli/dossiers.ts 5 240 [--wave=2|3]`) and rewrite or revalidate the flagships (docs/lld/flagships.md, decision 0010).
+- Any change under `engine/src/sim/**` changes ids. Ingestion then rejects every flagship as written for another world. Afterwards, regenerate the dossiers (`node engine/src/cli/dossiers.ts 5 240 [--wave=2|3|4|5]`) and rewrite or revalidate the flagships (docs/lld/flagships.md, decision 0010).
 - Archive-level changes are safe.
 - Modern essays quote existing procedural documents and their catalogue numbers. Don't reword existing generators except to fix bugs. Add new genres in new files with new catalogue codes.
 
 ## Exports (atlas/public/data, see engine/src/export/contract.ts)
 - meta, world, timeline (with lazy layer-culture and layer-religion), graph, search, pages/NNN;
 - story, histomap, languages, economy, collections, dynasties.
+- Downloads (full builds only): `palimpsest-reader.epub` (engine/src/export/book.ts), the Obsidian vault zip, and world.sqlite.gz.
 
 ## Commands
 - `npm run build:data [-- seed] [--no-downloads]`: simulate, archive, database, audit, atlas data, vault and downloads (about 1 min).
@@ -44,4 +45,5 @@ From that record we generate thousands of interlinked primary-source documents: 
 - `npm run stats -- <seed>`
 - Debug tools: `node engine/src/debug/stats.ts <seed>`, `node engine/src/debug/world-cli.ts <seed> out.png`, `node engine/src/debug/peek.ts <seed> <sub> <n>`, and `node engine/src/debug/scan.ts <from> <to>` (seed scoring).
 - Isolated build (avoids clobbering other builds): `node engine/src/cli/build.ts --no-downloads --db=/tmp/x.sqlite --out=/tmp/data`.
+- The EPUB alone: `node engine/src/cli/reader.ts [out.epub]`.
 - Atlas: `npm --prefix atlas run shoot`, `npm --prefix atlas run frames` (borders animation), `npm --prefix atlas run mock`.

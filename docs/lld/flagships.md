@@ -8,10 +8,12 @@
 | fl-201–249 | Historiography: rival chronicles revisited, era surveys, language families, collapses, founders | `buildHistoriography` | The archive's modern scholars |
 | fl-301–549 | Wave 2: sacks, sieges, debasements, conversions, persecutions, migrations, successions, usurpations, weddings, councils, bankruptcies, colonial and independence wars, reforms | `buildWave2` | As in wave 1 |
 | fl-601–640 | *Lives*: long-form biographies of the 40 most consequential people | `buildLives` | Modern scholars |
+| fl-701–807 | *Voices from below*: famines, plagues, sacks, migrations, debasements, conquests, colonies, revolutions, eruptions, droughts and wars, as ordinary people lived them | `buildVoices` | Anonymous: a farmer's wife, a conscript, an apprentice, a market woman, a refugee |
+| fl-900–920 | *A History of the World*: an introduction and twenty chapters of 250 years (decision 0013) | `buildHistory` (`history.ts`) | Modern historians, AY 4999 |
 
 ## Dossier → document → ingestion
 
-1. `node engine/src/cli/dossiers.ts 5 240 [--wave=2|3]` writes `build/dossiers/fl-NNN.json`. Each dossier has:
+1. `node engine/src/cli/dossiers.ts 5 240 [--wave=2|3|4|5]` writes `build/dossiers/fl-NNN.json`. Each dossier has:
    - the form and register;
    - the document year and its **local date**;
    - the language and script;
