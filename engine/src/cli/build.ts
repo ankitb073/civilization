@@ -6,6 +6,7 @@ import { buildArchive } from '../archive/build.ts';
 import { runChecks } from '../check/check.ts';
 import { exportAtlas, worldNameOf, storyOf, featuredOf } from '../export/export.ts';
 import { writeVault } from '../export/vault.ts';
+import { writeReader } from '../export/book.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, statSync, createReadStream, createWriteStream, rmSync, existsSync } from 'node:fs';
 import { createGzip } from 'node:zlib';
@@ -41,6 +42,9 @@ if (!skipDownloads) {
   if (existsSync(`${dl}/palimpsest-vault.zip`)) rmSync(`${dl}/palimpsest-vault.zip`);
   execFileSync('zip', ['-qr', '-9', '../atlas/public/downloads/palimpsest-vault.zip', 'vault'], { cwd: 'build' });
   await pipeline(createReadStream('build/world.sqlite'), createGzip({ level: 9 }), createWriteStream(`${dl}/world.sqlite.gz`));
+  const book = writeReader(r, archive, `${dl}/palimpsest-reader.epub`, { cover: 'atlas/public/og.png', facts: check.invariants.reduce((t, x) => t + x.checked, 0) });
+  log(`reader: ${book.docs} documents, ${(book.bytes / 1e6).toFixed(1)} MB`);
+  downloads.push({ label: `The Reader: history, sources and lives (EPUB)`, href: 'downloads/palimpsest-reader.epub', bytes: book.bytes });
   downloads.push({ label: 'Obsidian vault (Markdown, zip)', href: 'downloads/palimpsest-vault.zip', bytes: statSync(`${dl}/palimpsest-vault.zip`).size });
   downloads.push({ label: 'World database (SQLite, gzip)', href: 'downloads/world.sqlite.gz', bytes: statSync(`${dl}/world.sqlite.gz`).size });
   log(`downloads: ${downloads.map((d) => `${d.href} ${(d.bytes / 1e6).toFixed(1)} MB`).join(', ')}`);

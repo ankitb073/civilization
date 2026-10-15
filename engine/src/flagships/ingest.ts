@@ -78,7 +78,8 @@ export function ingestFlagships(g: Gen, dir: string, simPersons: number, world?:
     const about = subject.startsWith('evt:') ? [Number(subject.slice(4))] : [];
     const cell = about.length ? s.events[about[0]].cell : polity !== null ? s.settlements[ctx.capitalAt(s.polities[polity], Math.min(year, (s.polities[polity].died ?? 5000) - 1))].cell : -1;
     const seat = polity !== null ? ctx.capitalAt(s.polities[polity], Math.min(year, (s.polities[polity].died ?? 5000) - 1)) : null;
-    const editorial = `\n\n---\n\n**Editorial note.** A ${form}${subject.startsWith('evt:') ? ` concerning [[${subject}|${g.T.title.get(subject) ?? ''}]]` : subject.startsWith('per:') ? ` concerning [[${subject}|${g.T.title.get(subject) ?? ''}]]` : ''}. One of the archive’s flagship documents: a literary source, read with the usual caution about its author’s loyalties.`;
+    const modern = year >= 4800 && /essay|article|lecture|biograph|preface/.test(form);
+    const editorial = `\n\n---\n\n**Editorial note.** ${/^[aeiou]/i.test(form) ? 'An' : 'A'} ${form}${subject.startsWith('evt:') || subject.startsWith('per:') ? ` concerning [[${subject}|${g.T.title.get(subject) ?? ''}]]` : ''}. ${modern ? 'Modern scholarship by one of the archive’s own historians; it may cite documents by catalogue number.' : 'One of the archive’s flagship documents: a literary source, read with the usual caution about its author’s loyalties.'}`;
     g.add({
       sub, year, title, author, polity, lang, script: script >= 0 && s.scripts[script]?.born <= year ? script : -1, medium: fm.get('medium') ?? 'manuscript',
       cell, settlement: seat, about, body: body + editorial, mentions, dateText: dateFor(g, polity, lang, year, f), flagship: true, durable: 1, tau: 1e9, seat,
