@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { StoryJson } from '../../../engine/src/export/contract.ts';
 import { fetchJson } from '../data.ts';
 import { inline, render } from '../md.ts';
-import { isMobile, mapHref, theme } from '../state.ts';
+import { isMobile, mapHref, reducedMotion, theme } from '../state.ts';
 import { ensureMapData, ensureMeta, eraAt, layersVersion, mapData, meta, titleOf } from '../store.ts';
 import { MapRenderer } from './mapRenderer.ts';
 import { fmtYear } from '../format.ts';
@@ -14,7 +14,7 @@ function scrollToStop(key: string, smooth: boolean) {
   const narrow = matchMedia('(max-width: 899px)').matches;
   const top = el.getBoundingClientRect().top + window.scrollY;
   const offset = narrow ? window.innerHeight * 0.52 : window.innerHeight * 0.36;
-  window.scrollTo({ top: Math.max(0, top - offset), behavior: smooth ? 'smooth' : 'auto' });
+  window.scrollTo({ top: Math.max(0, top - offset), behavior: smooth && !reducedMotion ? 'smooth' : 'auto' });
 }
 
 let storyP: Promise<StoryJson> | null = null;
@@ -90,10 +90,10 @@ export function StoryView() {
     r.selected = st.cell >= 0 ? `cell:${st.cell}` : null;
     if (st.cell >= 0) r.flyTo(d.geo.sx[st.cell], d.geo.sy[st.cell], mobile ? 2.4 : 2.1, 1100);
     else r.flyTo(-1, -1, 1, 1100);
-    const from = yearRef.current, to = st.year, t0 = performance.now(), ms = Math.min(1600, 500 + Math.abs(to - from) * 0.6);
+    const from = yearRef.current, to = st.year, t0 = performance.now(), ms = reducedMotion ? 0 : Math.min(1600, 500 + Math.abs(to - from) * 0.6);
     let raf = 0;
     const tick = (now: number) => {
-      const t = Math.min(1, (now - t0) / ms);
+      const t = ms <= 0 ? 1 : Math.min(1, (now - t0) / ms);
       const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       const y = Math.round(from + (to - from) * e);
       yearRef.current = y;

@@ -7,7 +7,7 @@ import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, t
 import type { EntityKind } from '../../../engine/src/export/contract.ts';
 import { searchRank } from '../data.ts';
 import { KIND_LABEL, KINDS, kindColors } from '../kinds.ts';
-import { isMobile, panelCollapsed, route, selection, setRouteParam, sheetSnap, SHEET_PEEK, theme, year } from '../state.ts';
+import { isMobile, panelCollapsed, reducedMotion, route, selection, setRouteParam, sheetSnap, SHEET_PEEK, theme, year } from '../state.ts';
 import { ensureMapData, ensureSearch, searchIndex } from '../store.ts';
 import { DEFAULT_KINDS, budget, graphError, loadGraphData, selectSubset, type GraphData } from '../graph/store.ts';
 import { TimeSlider } from './TimeSlider.tsx';
@@ -38,6 +38,7 @@ export function GraphView() {
   return (
     <div class={`graphview${panelCollapsed.value ? ' is-collapsed' : ''}`}
       style={isMobile.value ? { '--sheet-inset': sheetSnap.value === 'peek' ? `${SHEET_PEEK}px` : sheetSnap.value === 'half' ? '50%' : '0px' } : undefined}>
+      <h1 class="sr-only">The web of history: a graph of every person, place, event and document</h1>
       <div class="graphview__stage">
         {!g && !graphError.value && <div class="center-load"><div class="spinner" /> Weaving the graph…</div>}
         {graphError.value && <div class="banner">Couldn’t load the graph: {graphError.value}</div>}
@@ -285,7 +286,7 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
         requestAnimationFrame(() => {
           if (cancelled) return;
           const d = r.getNodeDisplayData(s0);
-          if (d) r.getCamera().animate({ x: d.x, y: d.y, ratio: 0.3 }, { duration: 500 });
+          if (d) r.getCamera().animate({ x: d.x, y: d.y, ratio: 0.3 }, { duration: reducedMotion ? 0 : 500 });
         });
       }
     };
@@ -323,7 +324,7 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
     if (!r || !graph || !graph.hasNode(id)) { setRouteParam('focus', id); return; }
     selection.value = id;
     const d = r.getNodeDisplayData(id);
-    if (d) r.getCamera().animate({ x: d.x, y: d.y, ratio: 0.15 }, { duration: 600 });
+    if (d) r.getCamera().animate({ x: d.x, y: d.y, ratio: 0.15 }, { duration: reducedMotion ? 0 : 600 });
   };
   const toggleKind = (k: EntityKind) => {
     const next = new Set(kinds);
@@ -331,11 +332,26 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
     const key = [...next].sort().join(',');
     setRouteParam('k', key === [...DEFAULT_KINDS].sort().join(',') ? null : next.size === KINDS.length ? 'all' : key);
   };
-  const zoom = (f: number) => { const c = sigmaRef.current?.getCamera(); if (c) c.animatedZoom({ duration: 250, factor: f }); };
+  const zoom = (f: number) => { const c = sigmaRef.current?.getCamera(); if (c) c.animatedZoom({ duration: reducedMotion ? 0 : 250, factor: f }); };
 
   return (
     <>
-      <div class="graph-canvas" ref={ref} />
+      <div class="graph-canvas" ref={ref} tabIndex={0} aria-label="Graph canvas. Arrow keys pan, plus and minus zoom. Use Find a node to select." role="application"
+        onKeyDown={(e) => {
+          const r = sigmaRef.current;
+          if (!r) return;
+          const cam = r.getCamera(), st = cam.getState(), step = 0.08 * st.ratio;
+          const k = e.key;
+          if (k === 'ArrowLeft') cam.setState({ x: st.x - step });
+          else if (k === 'ArrowRight') cam.setState({ x: st.x + step });
+          else if (k === 'ArrowUp') cam.setState({ y: st.y + step });
+          else if (k === 'ArrowDown') cam.setState({ y: st.y - step });
+          else if (k === '+' || k === '=') cam.setState({ ratio: st.ratio / 1.4 });
+          else if (k === '-' || k === '_') cam.setState({ ratio: st.ratio * 1.4 });
+          else return;
+          e.preventDefault();
+          e.stopPropagation();
+        }} />
       {progress !== null && (
         <div class="graphprog" role="status">
           <div class="spinner" />
@@ -388,7 +404,7 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
       <div class="mapctl mapctl--zoom">
         <button class="btn-icon" aria-label="Zoom in" onClick={() => zoom(1.6)}>+</button>
         <button class="btn-icon" aria-label="Zoom out" onClick={() => zoom(1 / 1.6)}>−</button>
-        <button class="btn-icon" aria-label="Reset view" onClick={() => sigmaRef.current?.getCamera().animatedReset({ duration: 400 })}>
+        <button class="btn-icon" aria-label="Reset view" onClick={() => sigmaRef.current?.getCamera().animatedReset({ duration: reducedMotion ? 0 : 400 })}>
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
         </button>
       </div>
@@ -463,6 +479,12 @@ function EgoGraph({ g, focus }: { g: GraphData; focus: string }) {
       .force('center', forceCenter(0, 0).strength(0.05))
       .alphaDecay(0.035);
     let raf = 0;
+    if (reducedMotion) {
+      sim.stop();
+      sim.tick(300);
+      setTick((t) => t + 1);
+      return () => { sim.stop(); };
+    }
     sim.on('tick', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => setTick((t) => t + 1)); });
     return () => { sim.stop(); cancelAnimationFrame(raf); };
   }, [nodes, links]);

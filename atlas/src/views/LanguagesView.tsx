@@ -195,6 +195,21 @@ export function LanguagesView() {
           </div>
         )}
       </div>
+      {!exportMode && (
+        <details class="a11ylist">
+          <summary>All {ix.data.languages.length} languages, as a list</summary>
+          {ix.families.map((f) => (
+            <section>
+              <h2 class="sect">{f.name} family</h2>
+              <ul>
+                {lay.rows.filter((r) => ix.familyOf.get(r.lang.id)?.id === f.id).sort((a, b) => a.lang.born - b.lang.born).map((r) => (
+                  <li><a href={`#/p/${r.lang.id}`}>{r.lang.name}</a> <span class="muted small">{r.lang.born < 0 ? `${-r.lang.born} before AY 0` : `AY ${r.lang.born}`} – {r.lang.died === null ? 'still spoken' : `AY ${r.lang.died}`}{r.lang.parent ? ` · from ${ix.byId.get(r.lang.parent)?.name}` : ' · proto-language'}</span></li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </details>
+      )}
       {exportMode && m && (
         <footer class="tongues__foot">{m.title} · the archive of {m.worldName} · {(m.counts.artifact ?? 0).toLocaleString('en-US')} primary sources · ankitb073.github.io/civilization</footer>
       )}

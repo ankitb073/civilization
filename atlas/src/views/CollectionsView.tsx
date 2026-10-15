@@ -86,7 +86,7 @@ export function CollectionStrip({ ids }: { ids: string[] }) {
   if (!picks.length) return null;
   return (
     <section class="colstrip">
-      <h3 class="sect">Collections</h3>
+      <h2 class="sect">Collections</h2>
       {picks.map((c) => (
         <a class="colstrip__c" href={`#/collections/${c.id}`}>
           <span class="colstrip__t">{c.title}</span>

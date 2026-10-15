@@ -7,6 +7,8 @@ import { KIND_LABEL, KINDS, kindFromId } from '../kinds.ts';
 import { inline, render } from '../md.ts';
 import { isMobile, mapHref, year } from '../state.ts';
 import { PersonHouse, PolityDynasties } from './DynastyView.tsx';
+import { CiteButton } from '../components/Cite.tsx';
+import { Territory } from '../components/Territory.tsx';
 import { titleOf } from '../store.ts';
 
 const DOC_LABEL: Record<string, string> = {
@@ -87,7 +89,7 @@ function Page({ page }: { page: PageJson }) {
     : null;
 
   const mobile = isMobile.value;
-  const hasAside = (!mobile && page.infobox.length > 0) || (page.series?.length ?? 0) > 0 || (page.names?.length ?? 0) > 0;
+  const hasAside = (!mobile && page.infobox.length > 0) || (page.series?.length ?? 0) > 0 || (page.names?.length ?? 0) > 0 || page.kind === 'polity';
   return (
     <article class={`reader reader--${page.kind}${hasAside ? '' : ' reader--single'}`}>
       <div class="reader__main">
@@ -95,7 +97,9 @@ function Page({ page }: { page: PageJson }) {
           <Eyebrow kind={page.kind} sub={page.sub} />
           <h1 class="reader__title">{page.title}</h1>
           <div class="reader__meta">
-            <span class="reader__span">{page.kind === 'artifact' && a ? <>{a.date ? <><span class="reader__local">{a.date}</span> · </> : null}{fmtYear(page.t0)}</> : fmtSpan(page.t0, page.t1)}</span>
+            <span class="reader__span">{page.kind === 'artifact' && a
+              ? <>{a.date ? <><Html tag="span" class="reader__local" html={inline(a.date, label)} /> · </> : null}<YearLink y={page.t0} /></>
+              : <YearSpan t0={page.t0} t1={page.t1} />}</span>
             {a?.flagship && (
               <a class="badge badge--flag" href="#/browse?kind=artifact&flag=1" title="A flagship source: written in full from the archive’s dossier and checked against the record like every other document">
                 <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M8 1.5l1.9 4.1 4.5.5-3.4 3 1 4.4L8 11.3 4 13.5l1-4.4-3.4-3 4.5-.5z" fill="currentColor" /></svg>
@@ -113,6 +117,7 @@ function Page({ page }: { page: PageJson }) {
             {a?.rival && <a class="btn btn--accent" href={`#/compare/${a.rival.eventId}`}>Compare with rival accounts</a>}
             {(page.kind === 'currency' || (page.kind === 'artifact' && /ledger|market/.test(page.sub))) && <a class="btn btn--ghost" href="#/prices">Prices over 5,000 years</a>}
             {page.kind === 'language' && <a class="btn btn--ghost" href="#/languages">Tree of Tongues</a>}
+            {a && <CiteButton page={page} label={label} />}
             <ShareButton title={page.title} />
           </div>
         </header>
@@ -143,7 +148,8 @@ function Page({ page }: { page: PageJson }) {
         <LinkLists page={page} />
       </div>
 
-      {hasAside && <aside class="reader__aside">
+      {hasAside && <div class="reader__aside">
+        {page.kind === 'polity' && <Territory page={page} />}
         {!mobile && page.infobox.length > 0 && <Infobox page={page} label={label} />}
         {page.series && page.series.length > 0 && (
           <section class="aside-sect">
@@ -152,7 +158,7 @@ function Page({ page }: { page: PageJson }) {
           </section>
         )}
         {page.names && page.names.length > 0 && <Names names={page.names} />}
-      </aside>}
+      </div>}
     </article>
   );
 }
@@ -175,6 +181,18 @@ function Infobox({ page, label, inline: isInline = false }: { page: PageJson; la
       )}
     </section>
   );
+}
+
+/** A year that opens the year view (dates before AY 0 stay plain). */
+export function YearLink({ y }: { y: number }) {
+  if (y < 0 || y > 5000) return <>{fmtYear(y)}</>;
+  return <a class="ylink" href={`#/year/${y}`}>{fmtYear(y)}</a>;
+}
+function YearSpan({ t0, t1 }: { t0: number; t1: number }) {
+  if (t0 === t1) return <YearLink y={t0} />;
+  if (t1 >= 5000) return <><YearLink y={t0} /> – present</>;
+  if (t0 < 0) return <><YearLink y={t0} /> – <YearLink y={t1} /></>;
+  return <><a class="ylink" href={`#/year/${t0}`}>{t0}</a>–<a class="ylink" href={`#/year/${t1}`}>{t1}</a> AY</>;
 }
 
 function ShareButton({ title }: { title: string }) {

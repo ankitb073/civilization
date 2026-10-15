@@ -46,7 +46,7 @@ const ids = {
 };
 console.log('pages:', JSON.stringify(ids));
 
-const views: { name: string; hash: string; dark?: boolean; wait?: number; full?: boolean }[] = [
+const views: { name: string; hash: string; dark?: boolean; wait?: number; full?: boolean; reduced?: boolean; click?: string }[] = [
   ...[300, 1500, 3200, 4600, 4990].map((y) => ({ name: `map-${y}`, hash: `#/map?y=${y}&l=political` })),
   { name: 'map-culture', hash: `#/map?y=2500&l=culture`, wait: 1500 },
   { name: 'map-religion', hash: `#/map?y=3800&l=religion`, dark: true, wait: 1500 },
@@ -76,6 +76,10 @@ const views: { name: string; hash: string; dark?: boolean; wait?: number; full?:
   { name: 'prices', hash: `#/prices`, wait: 1800, full: true },
   { name: 'map-language', hash: `#/map?y=3200&l=language`, wait: 2000 },
   { name: 'collections', hash: `#/collections`, wait: 1200 },
+  { name: 'year', hash: `#/year/2310`, wait: 2500 },
+  { name: 'year-dark', hash: `#/year/4600`, wait: 2500, dark: true },
+  { name: 'explainer', hash: ``, wait: 1800, reduced: true },
+  { name: 'cite', hash: `#/p/${ids.inscription}`, wait: 900, click: 'button[aria-controls="cite-panel"]' },
   { name: 'collection-rival', hash: `#/collections/rival`, wait: 1200 },
   { name: 'collection-queens', hash: `#/collections/queens`, wait: 1200 },
   { name: 'dynasties', hash: `#/dynasties`, wait: 1500 },
@@ -106,7 +110,7 @@ try {
   for (const vp of [{ tag: 'phone', width: 390, height: 844, scale: 2, mobile: true }, { tag: 'desktop', width: 1440, height: 900, scale: 1, mobile: false }]) {
     for (const v of views) {
       if (only.length && !only.includes(v.name)) continue;
-      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: vp.scale, isMobile: vp.mobile, hasTouch: vp.mobile, colorScheme: v.dark ? 'dark' : 'light' });
+      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: vp.scale, isMobile: vp.mobile, hasTouch: vp.mobile, colorScheme: v.dark ? 'dark' : 'light', reducedMotion: v.reduced ? 'reduce' : 'no-preference' });
       const page = await ctx.newPage();
       page.on('console', (m) => { if (m.type() === 'error') { if (!m.text().startsWith('Failed to load resource')) errors.push(`[${vp.tag} ${v.name}] ${m.text()}`); }; });
       page.on('pageerror', (e) => errors.push(`[${vp.tag} ${v.name}] PAGEERROR ${e.message}`));
@@ -114,6 +118,7 @@ try {
       const t0 = Date.now();
       await page.goto(BASE + v.hash, { waitUntil: 'networkidle' });
       await page.waitForTimeout(v.wait ?? 700);
+      if (v.click) { await page.locator(v.click).first().click(); await page.waitForTimeout(300); }
       const ms = Date.now() - t0;
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       const file = `${v.name}-${vp.tag}${v.dark ? '-dark' : ''}.png`;
@@ -211,6 +216,25 @@ try {
       await page.locator('.graphbar__search input').fill('Kingdom');
       await page.locator('.graphbar .search__item').first().click();
       await page.locator('.panel .pagecard__title').waitFor({ timeout: 3000 });
+    });
+    await step('searching "AY 2310" opens the year view', async () => {
+      await page.goto(BASE + '#/browse', { waitUntil: 'networkidle' });
+      await page.locator('.topbar__search input').fill('AY 2310');
+      await page.locator('.topbar .search__item--year').waitFor({ timeout: 3000 });
+      await page.keyboard.press('Enter');
+      await page.locator('.yearview h1').waitFor({ timeout: 5000 });
+      if (!/#\/year\/2310/.test(page.url())) throw new Error(page.url());
+    });
+    await step('keyboard: tab reaches the map and arrows pan it', async () => {
+      await page.goto(BASE + '#/map?y=1000', { waitUntil: 'networkidle' });
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.waitForTimeout(600);
+      await page.locator('.mapview__canvas').focus();
+      const before = await page.evaluate(() => (window as unknown as { __palimpsestMap: { tx: number } }).__palimpsestMap.tx);
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForTimeout(100);
+      const after = await page.evaluate(() => (window as unknown as { __palimpsestMap: { tx: number } }).__palimpsestMap.tx);
+      if (before === after) throw new Error('map did not pan');
     });
     await step('play advances the year', async () => {
       await page.goto(BASE + '#/map?y=100', { waitUntil: 'networkidle' });

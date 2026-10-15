@@ -29,7 +29,7 @@ export function Featured({ limit = 4 }: { limit?: number }) {
   const items = all ? m.featured : m.featured.slice(0, limit);
   return (
     <section class="featured">
-      <h3 class="sect">Start here</h3>
+      <h2 class="sect">Start here</h2>
       {items.map((f) => {
         const k = kindFromId(f.id) ?? 'artifact';
         return (
@@ -101,12 +101,12 @@ function Intro() {
       {firstPaint.value && <CollectionStrip ids={['queens', 'rival', 'lives']} />}
       <div class="introdice"><SurpriseButton label="Surprise me: a random document" /></div>
       <section class="hmsect">
-        <h3 class="sect">The Histomap</h3>
+        <h2 class="sect">The Histomap</h2>
         {firstPaint.value ? <HistomapThumb height={86} /> : <div class="hmthumb hmthumb--wait" style={{ height: '120px' }} />}
       </section>
       {top.length > 0 && (
         <section class="legend">
-          <h3 class="sect">{L === 'political' ? `${total} powers in ${y}` : L === 'culture' ? `${total} peoples in ${y}` : L === 'language' ? `${total} languages spoken in ${y}` : `${total} faiths in ${y}`}</h3>
+          <h2 class="sect">{L === 'political' ? `${total} powers in ${y}` : L === 'culture' ? `${total} peoples in ${y}` : L === 'language' ? `${total} languages spoken in ${y}` : `${total} faiths in ${y}`}</h2>
           {L === 'language' && <FamilyLegend />}
           <ul>
             {top.map((t) => (
@@ -122,7 +122,7 @@ function Intro() {
         </section>
       )}
       <section class="glyphs" aria-label="Map symbols">
-        <h3 class="sect">On the map</h3>
+        <h2 class="sect">On the map</h2>
         <ul>
           <li><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0z" fill="#a3363a" /></svg>War, battle</li>
           <li><svg viewBox="-8 -8 16 16" aria-hidden="true"><rect x="-5" y="-5" width="10" height="10" fill="#2f5d7c" /></svg>Treaty</li>
@@ -268,7 +268,7 @@ function CellInfo({ cell }: { cell: number }) {
         <dt>Land</dt>
         <dd>{biome?.name ?? '—'}</dd>
       </dl>
-      <h3 class="sect">Nearby, {Math.max(0, y - 60)}–{y + 60}</h3>
+      <h2 class="sect">Nearby, {Math.max(0, y - 60)}–{y + 60}</h2>
       {near.length ? (
         <ul class="evlist">
           {near.map((e) => (

@@ -8,7 +8,7 @@
   text-decoration: none;
 }
 .prose td.dash {
-  color: var(--faint);
+  color: var(--muted);
 }
 .prose tr.total td {
   border-top: 3px double var(--ink-2);

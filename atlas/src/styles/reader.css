@@ -111,10 +111,10 @@
   margin: 1.5em 0 0.5em;
 }
 .prose h2 {
-  font-size: 1.32em;
+  font-size: 1.22em;
 }
 .prose h3 {
-  font-size: 1.1em;
+  font-size: 1.06em;
 }
 .prose h4 {
   font-size: 1em;
@@ -142,7 +142,7 @@
 }
 .prose hr::after {
   content: '❦';
-  color: var(--faint);
+  color: var(--muted);
 }
 .prose a.wl {
   color: var(--ink);
@@ -189,7 +189,7 @@
   -webkit-overflow-scrolling: touch;
 }
 .lac {
-  color: var(--faint);
+  color: var(--muted);
   letter-spacing: 0.05em;
   font-style: normal;
 }
@@ -289,7 +289,10 @@
   text-align: center;
   column-span: all;
 }
+.doc--news .prose h2:not(:first-child),
 .doc--news .prose h3 {
+  font-size: 1em;
+  text-align: left;
   text-transform: uppercase;
   font-size: 1em;
   letter-spacing: 0.04em;
@@ -689,7 +692,7 @@
   font-variant-numeric: tabular-nums;
 }
 .arrow {
-  color: var(--faint);
+  color: var(--muted);
 }
 .sc-list {
   list-style: none;
@@ -927,7 +930,7 @@
   font-size: 13px;
 }
 .cmp__silent {
-  color: var(--faint);
+  color: var(--muted);
   font-style: italic;
 }
 .cmp__ratio,

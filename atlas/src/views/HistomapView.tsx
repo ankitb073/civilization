@@ -196,6 +196,16 @@ export function HistomapView() {
         )}
         {!h && <div class="center-load"><div class="spinner" /> Drawing the streams…</div>}
       </div>
+      {!exportMode && geo && (
+        <details class="a11ylist">
+          <summary>All {geo.streams.length} states in the chart, as a list</summary>
+          <ul>
+            {geo.streams.slice().sort((a, b) => a.s.start - b.s.start).map((st) => (
+              <li><a href={`#/p/${st.s.id}`}>{st.s.name}</a> <span class="muted small">AY {st.s.start}–{st.s.end >= 5000 ? 'present' : st.s.end} · at most {(Math.max(...st.s.share) * 100).toFixed(0)}% of the world’s people</span></li>
+            ))}
+          </ul>
+        </details>
+      )}
       {exportMode && m && (
         <footer class="histomap__foot">
           {m.title} · {ROMANS(m.counts.artifact ?? 0)} primary sources · {ROMANS(m.check.invariants.reduce((s, i) => s + i.checked, 0))} facts checked · ankitb073.github.io/civilization

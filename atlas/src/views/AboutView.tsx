@@ -16,7 +16,7 @@ export function AboutView() {
   return (
     <div class="about">
       <header class="about__hero">
-        <div class="wordmark wordmark--xl">{m.title}</div>
+        <h1 class="wordmark wordmark--xl">{m.title}</h1>
         <p class="about__sub">{m.subtitle}</p>
         <p class="about__lede">
           One seed. Fifty centuries simulated one decade at a time — borders, harvests, coinage, sound laws, schisms and wars —

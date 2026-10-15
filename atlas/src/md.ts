@@ -20,6 +20,8 @@ export function inline(src: string, title: TitleLookup = () => undefined): strin
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, t: string, u: string) => stash(`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`));
   s = esc(s);
   s = s.replace(/\[(\.\.\.|…|x(?: x)*)\]/g, '<span class="lac" title="lacuna — text lost">[$1]</span>');
+  // dates open the year view
+  s = s.replace(/\bAY (\d{1,4})\b/g, (m0, yy: string) => (Number(yy) <= 5000 ? `<a class="ylink" href="#/year/${yy}">${m0}</a>` : m0));
   // ~~error~~ correction  → struck-through error followed by the correction (school exercises)
   s = s.replace(/~~([^~]+)~~(\s+)(\u0000\d+\u0000|[^\s<,.;:]+)?/g, (_m, err: string, sp: string, corr?: string) =>
     `<del class="err">${err}</del>${sp}${corr ? `<ins class="corr">${corr}</ins>` : ''}`);
@@ -41,7 +43,7 @@ export function render(md: string, title: TitleLookup = () => undefined, opts: {
     if (isBlank(l)) { i++; continue; }
     let m: RegExpMatchArray | null;
     if ((m = l.match(/^(#{1,4})\s+(.*)$/))) {
-      const lvl = Math.min(6, m[1].length + 1); // page h1 is the title
+      const lvl = Math.max(2, Math.min(6, m[1].length)); // the page title is the only h1
       out.push(`<h${lvl}>${inline(m[2], title)}</h${lvl}>`);
       i++;
       continue;

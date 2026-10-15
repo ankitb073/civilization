@@ -343,6 +343,7 @@ export class MapRenderer {
   /** Animate the camera to centre a world point at `zoom` × the fit scale (or fit the world when wx < 0). */
   flyTo(wx: number, wy: number, zoom: number, ms = 900) {
     cancelAnimationFrame(this.flight);
+    if (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) ms = 0;
     const { width, height } = this.d.geo;
     const s0 = this.scale, x0 = this.tx, y0 = this.ty;
     let s1: number, x1: number, y1: number;

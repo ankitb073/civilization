@@ -6,7 +6,7 @@
   --surface-2: #f6f1e6;
   --ink: #1f1a14;
   --ink-2: #4a4036;
-  --muted: #7b6f60;
+  --muted: #665b4c;
   --faint: #a69a88;
   --rule: #d9cfbc;
   --rule-2: #e6dece;
@@ -18,7 +18,7 @@
   --hl: #f2dc96;
   --diff-bg: #f6dccb;
   --diff-ink: #8a2b14;
-  --ok: #4f7a3d;
+  --ok: #3b6430;
   --shadow: 0 1px 2px rgb(60 40 20 / 0.06), 0 8px 24px rgb(60 40 20 / 0.08);
   --shadow-lg: 0 2px 6px rgb(60 40 20 / 0.08), 0 18px 48px rgb(60 40 20 / 0.16);
   --paper-grain: rgb(120 90 50 / 0.035);
@@ -61,7 +61,7 @@
   --surface-2: #1f262f;
   --ink: #ece3cf;
   --ink-2: #cdbfa5;
-  --muted: #958a77;
+  --muted: #a39884;
   --faint: #6d6658;
   --rule: #2d3540;
   --rule-2: #252c35;
@@ -105,7 +105,7 @@
     --surface-2: #1f262f;
     --ink: #ece3cf;
     --ink-2: #cdbfa5;
-    --muted: #958a77;
+    --muted: #a39884;
     --faint: #6d6658;
     --rule: #2d3540;
     --rule-2: #252c35;

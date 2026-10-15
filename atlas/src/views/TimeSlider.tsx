@@ -227,6 +227,9 @@ export function TimeSlider({ compact = false }: { compact?: boolean }) {
             <button class="slider__num" title="Type a year" aria-label={`Year ${y}. Click to type a year`} onClick={() => { playing.value = false; setEditing(true); }}>{y}</button>
           )}
           <span class="slider__unit">{m?.yearLabel ?? 'AY'}</span>
+          <a class="slider__yv" href={`#/year/${y}`} aria-label={`What happened in AY ${y}`} title="This year in detail">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </a>
         </div>
         <div class="slider__era">
           <button class="slider__era-name" aria-expanded={eraOpen} aria-label={`${era?.name ?? ''}: about this age`} title={era?.blurb}
@@ -242,6 +245,7 @@ export function TimeSlider({ compact = false }: { compact?: boolean }) {
               <div class="erapop__a">
                 <button class="btn btn--ghost" onClick={() => { setYear(era.start); setEraOpen(false); }}>Go to its start</button>
                 <a class="btn btn--ghost" href={`#/browse?kind=event&from=${era.start}&to=${era.end}`}>Its events</a>
+                <a class="btn btn--ghost" href={`#/year/${y}`}>AY {y} in detail</a>
               </div>
             </div>
           )}

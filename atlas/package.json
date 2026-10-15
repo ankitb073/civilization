@@ -13,7 +13,8 @@
     "frames": "node --disable-warning=ExperimentalWarning scripts/frames.ts",
     "fixtures": "node --disable-warning=ExperimentalWarning scripts/fixture-flagships.ts",
     "prepare-data": "node --disable-warning=ExperimentalWarning scripts/prepare-data.ts",
-    "loadprobe": "node --disable-warning=ExperimentalWarning scripts/loadprobe.ts"
+    "loadprobe": "node --disable-warning=ExperimentalWarning scripts/loadprobe.ts",
+    "a11y": "node --disable-warning=ExperimentalWarning scripts/a11y.ts"
   },
   "dependencies": {
     "@fontsource-variable/eb-garamond": "5.2.5",
@@ -32,6 +33,7 @@
     "@types/d3-delaunay": "6.0.4",
     "@types/d3-force": "3.0.10",
     "@types/node": "24.19.2",
+    "axe-core": "4.10.3",
     "playwright": "1.64.1",
     "typescript": "7.0.2",
     "vite": "7.3.7"

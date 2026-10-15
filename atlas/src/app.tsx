@@ -15,6 +15,7 @@ const HistomapView = lazy(() => import('./views/HistomapView.tsx').then((m) => (
 const LanguagesView = lazy(() => import('./views/LanguagesView.tsx').then((m) => ({ default: m.LanguagesView })));
 const CollectionsView = lazy(() => import('./views/CollectionsView.tsx').then((m) => ({ default: m.CollectionsView })));
 const DynastiesView = lazy(() => import('./views/DynastyView.tsx').then((m) => ({ default: m.DynastiesView })));
+const YearView = lazy(() => import('./views/YearView.tsx').then((m) => ({ default: m.YearView })));
 const PricesView = lazy(() => import('./views/PricesView.tsx').then((m) => ({ default: m.PricesView })));
 
 const NAV = [
@@ -42,7 +43,7 @@ export function App() {
   }, [r.view, m]);
   useEffect(() => { if (r.view !== 'map' && r.view !== 'graph') window.scrollTo(0, 0); }, [r.view, r.id]);
 
-  const active = r.view === 'page' || r.view === 'compare' || r.view === 'collections' || r.view === 'dynasties' ? 'browse' : r.view === 'prices' ? 'about' : r.view;
+  const active = r.view === 'page' || r.view === 'compare' || r.view === 'collections' || r.view === 'dynasties' ? 'browse' : r.view === 'prices' ? 'about' : r.view === 'year' ? 'map' : r.view;
   const tabActive = active === 'languages' || r.view === 'prices' ? 'browse' : active;
   const clean = r.params.get('clean') === '1';
   const og = r.params.get('og') === '1' || r.params.get('frames') === '1';
@@ -107,6 +108,11 @@ export function App() {
         {r.view === 'dynasties' && (
           <Suspense fallback={<div class="center-load"><div class="spinner" /> Unrolling the pedigrees…</div>}>
             <DynastiesView id={r.id} />
+          </Suspense>
+        )}
+        {r.view === 'year' && r.id && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Turning to the year…</div>}>
+            <YearView y={r.id} />
           </Suspense>
         )}
         {r.view === 'page' && r.id && <PageView id={r.id} />}

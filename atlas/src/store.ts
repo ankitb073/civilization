@@ -35,12 +35,24 @@ function whenIdle(fn: () => void, timeout = 1500) {
 }
 
 /** After the first paint: the rest of the political layer, event titles and routes. */
+let eventsP: Promise<void> | null = null;
+let eventsLoader: (() => Promise<void>) | null = null;
+/** Resolve when the timeline's events (markers and titles) are loaded. */
+export function ensureEvents(): Promise<void> {
+  return ensureMapData().then(() => {
+    if (!eventsLoader) return;
+    if (!eventsP) eventsP = eventsLoader();
+    return eventsP;
+  });
+}
+
 function loadDeferred(d: MapData, core: TlCore, political: ChunkedLayerState) {
   // events (markers, titles) come first and quickly; the rest when the browser is idle
-  const events = () => fetchJson<TlEvents>(`tl/${core.events}`).then((E) => {
+  eventsLoader = () => fetchJson<TlEvents>(`tl/${core.events}`).then((E) => {
     d.timeline.events = expandEvents(E);
     layersVersion.value++;
-  }).catch(() => {});
+  }).catch(() => { eventsP = null; });
+  const events = () => { if (!eventsP) eventsP = eventsLoader!(); return eventsP; };
   const go = () => whenIdle(() => {
     void political.prefetch(year.peek());
     fetchJson<TimelineJson['routes']>(`tl/${core.routes}`).then((routes) => {

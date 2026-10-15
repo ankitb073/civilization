@@ -6,7 +6,7 @@ import { MapRenderer, type Hit } from './mapRenderer.ts';
 import { MapPanel } from './MapPanel.tsx';
 import { TimeSlider } from './TimeSlider.tsx';
 import { Sheet } from '../components/Sheet.tsx';
-import { maybeAutoTour, TourOverlay, touring } from '../components/Tour.tsx';
+import { Explainer, maybeAutoTour, TourOverlay, touring } from '../components/Tour.tsx';
 
 const LAYERS: { id: LayerName; label: string }[] = [
   { id: 'political', label: 'Political' },
@@ -200,8 +200,26 @@ export function MapView() {
 
   return (
     <div class="mapview">
+      <h1 class="sr-only">{meta.value ? `Atlas of ${meta.value.worldName}, AY ${year.value}` : 'Atlas'}</h1>
       <div class="mapview__stage" ref={wrapRef}>
-        <canvas ref={canvasRef} class="mapview__canvas" aria-label="Map of the world at the selected year" role="img" />
+        <canvas ref={canvasRef} class="mapview__canvas" tabIndex={0} role="application"
+          aria-label={`Map at AY ${year.value}. Arrow keys pan, plus and minus zoom, 0 fits, Enter selects the territory at the centre.`}
+          onKeyDown={(e) => {
+            const r = rendRef.current;
+            if (!r) return;
+            const k = e.key;
+            if (k === 'ArrowLeft') r.pan(60, 0);
+            else if (k === 'ArrowRight') r.pan(-60, 0);
+            else if (k === 'ArrowUp') r.pan(0, 60);
+            else if (k === 'ArrowDown') r.pan(0, -60);
+            else if (k === '+' || k === '=') r.zoomAt(r.w / 2, r.h / 2, 1.4);
+            else if (k === '-' || k === '_') r.zoomAt(r.w / 2, r.h / 2, 1 / 1.4);
+            else if (k === '0') { r.fit(); r.invalidate(); }
+            else if (k === 'Enter' || k === ' ') tap(r, r.hit(r.w / 2, r.h / 2));
+            else return;
+            e.preventDefault();
+            e.stopPropagation();
+          }} />
         {!d && <div class="mapview__loading"><div class="spinner" /> Unrolling the map…</div>}
         {d && !d.layers[layer.value] && (layersVersion.value, true) && <div class="maptoast"><div class="spinner" /> Loading {layer.value === 'culture' ? 'peoples' : layer.value === 'language' ? 'languages' : 'faiths'}…</div>}
         <div class="mapctl mapctl--layers" role="radiogroup" aria-label="Map layer">
@@ -223,6 +241,7 @@ export function MapView() {
           </button>
         </div>
         <TourOverlay />
+        <Explainer docs={meta.value?.counts.artifact ?? 0} warId={meta.value?.featured.find((f) => f.id.startsWith('evt:'))?.id} world={meta.value?.worldName ?? 'This world'} />
         {route.value.params.get('og') === '1' && <OgPlate />}
         {route.value.params.get('frames') === '1' && <FramesPlate />}
         {tip && !isMobile.value && !touring.value && (

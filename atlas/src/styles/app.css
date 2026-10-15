@@ -1800,3 +1800,41 @@ button.slider__era-name {
   text-transform: uppercase;
   color: var(--muted);
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+h1.wordmark {
+  margin: 0;
+  font-weight: 600;
+}
+/* motion: honour the system setting everywhere */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* focus: visible on every interactive element, including SVG */
+.ego__n:focus-visible circle,
+.hm-s:focus-visible,
+.tt-hit:focus-visible {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.mapview__canvas:focus-visible,
+.graph-canvas:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
