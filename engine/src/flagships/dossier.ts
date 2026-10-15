@@ -466,3 +466,65 @@ export function buildWave2(a: Archive, exclude: Set<string>): Dossier[] {
   }
   return out;
 }
+
+/** Third wave: "Lives", long-form biographies of consequential people by modern scholars (fl-601+). */
+export function buildLives(a: Archive, exclude: Set<string>): Dossier[] {
+  const ctx = a.ctx;
+  const s = ctx.s;
+  const T = a.T;
+  const g = a.gen;
+  const ed = s.polities[ctx.editorialPolity];
+  const lang = ctx.editorialLang;
+  const simPersons = a.ctx.r.simPersons ?? s.persons.length;
+  const simEvents = a.ctx.r.simEvents ?? s.events.length;
+  const score = new Map<number, number>();
+  for (let i = 0; i < simEvents; i++) {
+    const e = s.events[i];
+    for (const [r, role] of e.parts) {
+      if (!r.startsWith('per:')) continue;
+      const id = ctx.idNum(r);
+      if (id >= simPersons) continue;
+      let w = e.sig;
+      if (e.sub === 'battle' && e.data.winner !== undefined && ((role === 'attacking commander' && e.parts.some(([x, rr]) => rr === 'attacker' && x === `pol:${e.data.winner}`)) || (role === 'defending commander' && e.parts.some(([x, rr]) => rr === 'defender' && x === `pol:${e.data.winner}`)))) w *= 2;
+      if (e.sub === 'movement-founding' || e.sub === 'invention' || e.sub === 'revolution' || e.sub === 'usurpation') w *= 3;
+      score.set(id, (score.get(id) ?? 0) + w);
+    }
+  }
+  for (const [pid, rs] of ctx.reigns) for (const r of rs) score.set(r.person, (score.get(r.person) ?? 0) + (r.end - r.start) / 10 * (1 + ((ctx.statsAt(pid, r.end)?.[2] as number) ?? 0) / 100));
+  const ranked = [...score].filter(([id]) => !exclude.has(`per:${id}`) && T.pageRefs.has(`per:${id}`)).sort((x, y) => y[1] - x[1]).slice(0, 40);
+  const out: Dossier[] = [];
+  ranked.forEach(([pid], k) => {
+    const p = s.persons[pid];
+    const pool = g.scholars.filter((id) => s.persons[id].born + 28 <= 4995 && s.persons[id].died >= 4955);
+    const who = pool[(k * 7) % pool.length];
+    const year = Math.min(4999, Math.max(4955, s.persons[who].born + 32 + (k % 11)), s.persons[who].died);
+    const d = g.doc(lang, year, `life:${pid}`);
+    const pg = a.pages.get(`per:${pid}`);
+    const evs = (ctx.eventsByRef.get(`per:${pid}`) ?? []).filter((i) => i < simEvents).map((i) => s.events[i]).sort((x, y) => x.year - y.year).slice(0, 30);
+    const facts = [stripLinks(pg?.summary ?? ''), `Sex: ${p.sex === 'f' ? 'woman (she/her)' : 'man (he/him)'}`, ...(pg?.infobox ?? []).map(([k2, v]) => `${k2}: ${stripLinks(v)}`), ...evs.map((e) => `${T.title.get(`evt:${e.id}`)} (AY ${e.year}): ${stripLinks(a.pages.get(`evt:${e.id}`)?.summary ?? '')}`)];
+    const links = new Set<string>([`per:${pid}`]);
+    for (const r of p.roles) if (r.polity !== null) links.add(`pol:${r.polity}`);
+    if (p.father !== null) links.add(`per:${p.father}`);
+    if (p.mother !== null) links.add(`per:${p.mother}`);
+    for (const x of [...p.spouses, ...p.children]) links.add(`per:${x}`);
+    for (const e of evs) { links.add(`evt:${e.id}`); for (const [r] of e.parts.slice(0, 6)) links.add(r); }
+    const allowed: Dossier['allowedLinks'] = [];
+    for (const ref of links) {
+      if (!T.pageRefs.has(ref) || (ref.startsWith('per:') && ctx.idNum(ref) >= simPersons) || (ref.startsWith('evt:') && ctx.idNum(ref) >= simEvents)) continue;
+      const sexNote = ref.startsWith('per:') ? ` (${s.persons[ctx.idNum(ref)].sex === 'f' ? 'woman; she/her' : 'man; he/him'})` : '';
+      allowed.push({ id: ref, text: T.short.get(ref) ?? d.nameOf(ref), what: (T.title.get(ref) ?? '') + sexNote });
+      if (allowed.length >= 60) break;
+    }
+    const id = `fl-${String(601 + out.length).padStart(3, '0')}`;
+    out.push({
+      id, form: 'biographical essay (Lives series)', register: 'Modern scholarship: a long-form life, narrative but critical; weighs legend against record; may cite AY dates.',
+      year, localDate: `AY ${year}`, language: T.short.get(`lan:${lang}`) ?? '', script: 'print', medium: 'book chapter',
+      author: { id: `per:${who}`, name: T.short.get(`per:${who}`) ?? '', role: `${s.persons[who].sex === 'f' ? 'woman' : 'man'}; ${s.persons[who].roles.map((r) => r.role).join(', ')}`, polity: T.short.get(`pol:${ed.id}`) ?? null, born: s.persons[who].born, died: s.persons[who].died, stance: 'a modern biographer: humane, sceptical of court propaganda, interested in how ordinary lives were shaped' },
+      subject: { id: `per:${pid}`, title: `The life of ${T.short.get(`per:${pid}`)}`, summary: stripLinks(pg?.summary ?? ''), facts },
+      context: [], allowedLinks: allowed,
+      guidance: GUIDANCE.replace('Do not mention "simulation", "AY", "dossier" or the modern editors (except in the modern editorial essays, which are written by those editors and may use AY dates).', 'This is modern scholarship: you MAY use AY dates. Never mention "simulation", "dossier" or "ground truth" — call it "the record". Do not link documents; name sources by title in plain text.').replace('Length: 350–750 words.', 'Length: 900–1,400 words, with 3–5 short section headings.'),
+      frontmatter: [`id: ${id}`, `subject: per:${pid}`, `form: biographical essay`, `year: ${year}`, `author: per:${who}`, `polity: pol:${ed.id}`, `lang: ${lang}`, `script: ${ctx.scriptOf(ed, year)}`, `medium: book chapter`].join('\n'),
+    });
+  });
+  return out;
+}
