@@ -3,7 +3,7 @@
 // atlas for every person, place and event it names. Hash routes can't carry per-page cards or be indexed,
 // so these are the links to post. The card image shows the map in the document's quarter-millennium
 // (og/chNN.jpg, from the atlas `og` script) when it exists, and the site card otherwise.
-import { mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { SimResult } from '../sim/run.ts';
 import type { Archive } from '../archive/build.ts';
@@ -66,7 +66,7 @@ footer a { color: var(--muted); }
 
 interface Series { name: string; docs: Artifact[] }
 
-export function writeSharePages(r: SimResult, a: Archive, dir: string, publicDir: string): number {
+export function writeSharePages(r: SimResult, a: Archive, dir: string, publicDir: string, dataDir = join(publicDir, 'data')): number {
   const world = worldNameOf(r, a);
   const T = a.T;
   const s = r.state;
@@ -158,6 +158,33 @@ ${foot}
     });
   }
 
+  // collections: one page each (s/c/<id>.html), so a shared link to a list unfurls as a card too
+  const colPath = join(dataDir, 'collections.json');
+  const cols = existsSync(colPath) ? (JSON.parse(readFileSync(colPath, 'utf8')) as { collections: { id: string; title: string; blurb: string; items: { id: string; title: string; note: string; year: number }[] }[] }).collections : [];
+  const byArt = new Map(flag.map((x) => [`art:${x.id}`, x]));
+  mkdirSync(join(dir, 'c'), { recursive: true });
+  for (const c of cols) {
+    const url = `${SITE}s/c/${c.id}.html`;
+    const items = c.items.map((it, k) => {
+      const f = byArt.get(it.id);
+      const href = f ? `../${page(f)}` : `../../#/p/${it.id}`;
+      return `<li><a href="${esc(href)}">${esc(it.title)}</a><span>${k + 1}. ${esc(it.note)}</span></li>`;
+    }).join('');
+    writeFileSync(join(dir, 'c', `${c.id}.html`), `${head(`${c.title}: from the archive of ${world}`, c.blurb, url, 'og.png', 'website').replace(/href="\.\.\/favicon\.svg"/, 'href="../../favicon.svg"')}
+</head><body>
+${top.replace('href="../"', 'href="../../"')}
+<main class="toc">
+<p class="kicker">A collection from the archive</p>
+<h1>${esc(c.title)}</h1>
+<p>${esc(c.blurb)}</p>
+<ol>${items}</ol>
+<a class="cta" href="${esc(`../../#/collections/${c.id}`)}">Open in the atlas →</a>
+</main>
+${foot.replace(/href="\.\/"/, 'href="../"').replace('href="../">The atlas', 'href="../../">The atlas')}
+</body></html>
+`);
+  }
+
   // contents
   const desc = `The literary sources, Lives, essays and the narrative History of ${world}: ${n} documents from a five-thousand-year archive of a world that never existed.`;
   writeFileSync(join(dir, 'index.html'), `${head(`Sources, Lives and essays from the archive of ${world}`, desc, `${SITE}s/`, 'og.png', 'website')}
@@ -166,6 +193,8 @@ ${top}
 <main class="toc">
 <h1>Sources, Lives and essays</h1>
 <p>${esc(desc)} The atlas holds all of them, with ${a.artifacts.filter((x) => x.status === 'extant').length.toLocaleString('en-US')} documents in all.</p>
+${cols.length ? `<h2>Collections</h2>
+<ol>${cols.map((c) => `<li><a href="c/${c.id}.html">${esc(c.title)}</a><span>${esc(c.blurb)}</span></li>`).join('')}</ol>` : ''}
 ${series.map((z) => `<h2>${esc(z.name)}</h2>
 <ol>${z.docs.map((x) => `<li><a href="${page(x)}">${esc(x.title)}</a><span>${esc([form(x), plainDate(x)].join(' · '))}</span></li>`).join('')}</ol>`).join('\n')}
 </main>
@@ -174,7 +203,7 @@ ${foot}
 `);
 
   // sitemap: the atlas, the contents and every reading page
-  const urls = [SITE, `${SITE}s/`, ...series.flatMap((z) => z.docs.map((x) => `${SITE}s/${page(x)}`))];
+  const urls = [SITE, `${SITE}s/`, ...cols.map((c) => `${SITE}s/c/${c.id}.html`), ...series.flatMap((z) => z.docs.map((x) => `${SITE}s/${page(x)}`))];
   writeFileSync(join(publicDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `<url><loc>${esc(u)}</loc></url>`).join('\n')}

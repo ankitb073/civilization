@@ -53,5 +53,5 @@ if (!skipDownloads) {
 }
 exportAtlas(r, archive, check, { outDir: out, log, downloads });
 log('atlas data written');
-log(`share pages: ${writeSharePages(r, archive, join(dirname(out), 's'), dirname(out))}`);
+log(`share pages: ${writeSharePages(r, archive, join(dirname(out), 's'), dirname(out), out)}`);
 if (!check.passed) process.exit(1);

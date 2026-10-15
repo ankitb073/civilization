@@ -35,7 +35,7 @@ The Word Machine traces 114 words through all 126 languages.
 
 Each side's historian writes up the same war, and each lies in its own way: blame flipped, defeats left out, losses shrunk, territory "returned". You can put them side by side with what actually happened.
 
-The worst offender, the Tlayiyan account of the Third Nis Trade War, admits 15 of its 5,772 dead. The archive ranks them: ankitb073.github.io/civilization/#/collections/spin
+The worst offender, the Tlayiyan account of the Third Nis Trade War, admits 15 of its 5,772 dead. The archive ranks them: ankitb073.github.io/civilization/s/c/spin.html
 
 [image: docs/img/compare.png]
 
