@@ -146,6 +146,17 @@ export class Ctx {
     return row ? (row[12] as number) : -1;
   }
 
+  /** The currency in use at an exact date: decadal rows are recorded at the decade's end, so skip coins not yet minted. */
+  currencyAtExact(polity: number, year: number): number {
+    const a = this.polityStats.get(polity) ?? [];
+    for (let i = a.length - 1; i >= 0; i--) {
+      if ((a[i][1] as number) > year) continue;
+      const c = a[i][12] as number;
+      if (c < 0 || this.s.currencies[c].born <= year) return c;
+    }
+    return -1;
+  }
+
   religionOf(polity: number, year: number): number {
     const row = this.statsAt(polity, year);
     return row ? (row[11] as number) : this.s.polities[polity].religion;

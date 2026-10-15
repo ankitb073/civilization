@@ -265,7 +265,7 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
       for (const dei of m.deities.slice(0, 6)) allow(`dei:${dei}`, `a god (${s.deities[dei].domain})`);
       context.push(`State religion: ${d.nameOf(`mov:${m.id}`)} (${m.kind}). ${tenetText(m.kind, m.tenets)}${m.deities.length ? ` Gods: ${m.deities.slice(0, 6).map((x) => `${d.nameOf(`dei:${x}`)} (${s.deities[x].domain})`).join(', ')}.` : ''}`);
     }
-    const cur = ctx.currencyAt(polity.id, year);
+    const cur = ctx.currencyAtExact(polity.id, year);
     if (cur >= 0 && s.currencies[cur].born <= year) {
       allow(`cur:${cur}`, 'currency');
       const grain = a.gen.price(capId, GOODS.findIndex((g) => g.key === 'grain'), year);
@@ -584,7 +584,8 @@ export function buildVoices(a: Archive, exclude: Set<string>): Dossier[] {
       if (!d0) continue;
       // an anonymous ordinary author, placed where the event happened
       const region = s.world.region[e.cell];
-      const place = s.settlementAt[e.cell] >= 0 ? `set:${s.settlementAt[e.cell]}` : `reg:${region}`;
+      const town = s.settlementAt[e.cell];
+      const place = town >= 0 && s.settlements[town].founded <= e.year ? `set:${town}` : `reg:${region}`; // only a town that already stood
       const placeName = T.short.get(place) ?? '';
       d0.form = form;
       d0.author = { id: null, name: 'anonymous', role: `an ordinary person: the voice of the form ("${form}"), living in or near ${placeName}`, polity: d0.author?.polity ?? null, born: null, died: null, stance: 'an ordinary person who suffered or witnessed the event; knows little of high politics, a great deal about prices, weather, family and fear; may misname distant powers or blame the wrong people' };
