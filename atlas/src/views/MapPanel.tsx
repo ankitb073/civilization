@@ -5,6 +5,7 @@ import { fmtCompact, fmtYear, subLabel } from '../format.ts';
 import { KIND_LABEL, kindFromId } from '../kinds.ts';
 import { PageCard } from '../components/PageCard.tsx';
 import { MapRenderer } from './mapRenderer.ts';
+import { indexLanguages, loadLanguages, type LangIndex } from '../languages.ts';
 import { startTour } from '../components/Tour.tsx';
 import { HistomapThumb } from './HistomapView.tsx';
 import { reducedMotion } from '../state.ts';
@@ -41,6 +42,20 @@ export function Featured({ limit = 4 }: { limit?: number }) {
         <button class="linkish small feat__more" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${m.featured.length} entry points`}</button>
       )}
     </section>
+  );
+}
+
+function FamilyLegend() {
+  const [ix, setIx] = useState<LangIndex | null>(null);
+  useEffect(() => { loadLanguages().then((d) => setIx(indexLanguages(d))).catch(() => {}); }, []);
+  if (!ix) return null;
+  return (
+    <div class="famlegend">
+      {ix.families.map((f) => (
+        <a class="famlegend__f" href={`#/p/${f.id}`}><span class="swatch" style={{ background: f.color }} />{f.name} <span class="muted">{f.size}</span></a>
+      ))}
+      <a class="famlegend__tree" href="#/languages">The Tree of Tongues →</a>
+    </div>
   );
 }
 
@@ -87,7 +102,8 @@ function Intro() {
       </section>
       {top.length > 0 && (
         <section class="legend">
-          <h3 class="sect">{L === 'political' ? `${total} powers in ${y}` : L === 'culture' ? `${total} peoples in ${y}` : `${total} faiths in ${y}`}</h3>
+          <h3 class="sect">{L === 'political' ? `${total} powers in ${y}` : L === 'culture' ? `${total} peoples in ${y}` : L === 'language' ? `${total} languages spoken in ${y}` : `${total} faiths in ${y}`}</h3>
+          {L === 'language' && <FamilyLegend />}
           <ul>
             {top.map((t) => (
               <li>
@@ -204,7 +220,7 @@ function CellInfo({ cell }: { cell: number }) {
   const d = mapData.value!;
   const y = year.value;
   layersVersion.value;
-  useEffect(() => { ensureLayer('culture').catch(() => {}); ensureLayer('religion').catch(() => {}); }, []);
+  useEffect(() => { ensureLayer('culture').catch(() => {}); ensureLayer('religion').catch(() => {}); ensureLayer('language').catch(() => {}); }, []);
   const row = (label: string, layerName: LayerName) => {
     const st = d.layers[layerName];
     if (!st) return (<><dt>{label}</dt><dd class="muted">…</dd></>);
@@ -242,6 +258,7 @@ function CellInfo({ cell }: { cell: number }) {
         {row('Held by', 'political')}
         {row('People', 'culture')}
         {row('Faith', 'religion')}
+        {row('Language', 'language')}
         <dt>Region</dt>
         <dd>{region ? <a href={`#/p/${region.id}`}>{region.name}</a> : '—'}</dd>
         <dt>Land</dt>

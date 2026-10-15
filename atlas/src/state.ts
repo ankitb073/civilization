@@ -1,7 +1,7 @@
 import { signal, effect, computed } from '@preact/signals';
 
-export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap';
-export type LayerName = 'political' | 'culture' | 'religion';
+export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap' | 'languages' | 'prices';
+export type LayerName = 'political' | 'culture' | 'religion' | 'language';
 
 export interface Route {
   view: View;
@@ -17,7 +17,7 @@ function parseHash(): Route {
   const head = parts[0] ?? 'map';
   if (head === 'p' && parts[1]) return { view: 'page', id: parts.slice(1).join('/'), params };
   if (head === 'compare' && parts[1]) return { view: 'compare', id: parts.slice(1).join('/'), params };
-  if (head === 'graph' || head === 'browse' || head === 'about' || head === 'search' || head === 'story' || head === 'histomap') return { view: head, id: null, params };
+  if (head === 'graph' || head === 'browse' || head === 'about' || head === 'search' || head === 'story' || head === 'histomap' || head === 'languages' || head === 'prices') return { view: head, id: null, params };
   return { view: 'map', id: null, params };
 }
 
@@ -27,7 +27,7 @@ export const route = signal<Route>(parseHash());
 const init = route.value.params;
 const clampYear = (y: number) => Math.max(0, Math.min(5000, Math.round(y)));
 export const year = signal<number>(init.has('y') ? clampYear(Number(init.get('y'))) : 1200);
-export const layer = signal<LayerName>((['political', 'culture', 'religion'].includes(init.get('l') ?? '') ? init.get('l') : 'political') as LayerName);
+export const layer = signal<LayerName>((['political', 'culture', 'religion', 'language'].includes(init.get('l') ?? '') ? init.get('l') : 'political') as LayerName);
 export const selection = signal<string | null>(init.get('sel'));
 export const playing = signal(false);
 export const yearEnd = signal(5000);
@@ -71,7 +71,7 @@ window.addEventListener('hashchange', () => {
   if (r.view === 'map' || r.view === 'graph') {
     if (r.params.has('y')) year.value = clampYear(Number(r.params.get('y')));
     const l = r.params.get('l');
-    if (l === 'political' || l === 'culture' || l === 'religion') layer.value = l;
+    if (l === 'political' || l === 'culture' || l === 'religion' || l === 'language') layer.value = l;
     if (r.params.has('sel')) selection.value = r.params.get('sel');
   }
 });
@@ -141,5 +141,5 @@ export const SHEET_PEEK = 72;
 export const sheetSnap = signal<'peek' | 'half' | 'full'>('peek');
 
 /** True when the visitor arrived without a year in the URL (a fresh landing, not a shared permalink). */
-export const freshLanding = !/[?&]y=/.test(location.hash) && !/^#\/(p|compare|browse|about|search|graph|story|histomap)/.test(location.hash);
+export const freshLanding = !/[?&]y=/.test(location.hash) && !/^#\/(p|compare|browse|about|search|graph|story|histomap|languages|prices)/.test(location.hash);
 export const reducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;

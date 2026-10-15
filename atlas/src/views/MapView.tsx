@@ -12,6 +12,7 @@ const LAYERS: { id: LayerName; label: string }[] = [
   { id: 'political', label: 'Political' },
   { id: 'culture', label: 'Peoples' },
   { id: 'religion', label: 'Faiths' },
+  { id: 'language', label: 'Languages' },
 ];
 
 export function MapView() {
@@ -188,7 +189,7 @@ export function MapView() {
       <div class="mapview__stage" ref={wrapRef}>
         <canvas ref={canvasRef} class="mapview__canvas" aria-label="Map of the world at the selected year" role="img" />
         {!d && <div class="mapview__loading"><div class="spinner" /> Unrolling the map…</div>}
-        {d && !d.layers[layer.value] && (layersVersion.value, true) && <div class="maptoast"><div class="spinner" /> Loading {layer.value === 'culture' ? 'peoples' : 'faiths'}…</div>}
+        {d && !d.layers[layer.value] && (layersVersion.value, true) && <div class="maptoast"><div class="spinner" /> Loading {layer.value === 'culture' ? 'peoples' : layer.value === 'language' ? 'languages' : 'faiths'}…</div>}
         <div class="mapctl mapctl--layers" role="radiogroup" aria-label="Map layer">
           {LAYERS.map((l) => (
             <button role="radio" aria-checked={layer.value === l.id} class={`seg${layer.value === l.id ? ' is-on' : ''}`} onClick={() => { layer.value = l.id; }}>

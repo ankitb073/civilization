@@ -67,6 +67,16 @@ export function AboutView() {
       </section>
 
       <section class="about__sect">
+        <h2 class="sect">More ways in</h2>
+        <nav class="explore explore--wide" aria-label="Explore">
+          <a href="#/story"><span>Story</span>Five thousand years in seven chapters</a>
+          <a href="#/languages"><span>Languages</span>The Tree of Tongues: every language and its descendants</a>
+          <a href="#/prices"><span>Prices</span>What things cost: grain, tin and iron over five millennia</a>
+          <a href="#/graph"><span>Graph</span>The web of every person, place and event</a>
+        </nav>
+      </section>
+
+      <section class="about__sect">
         <h2 class="sect">Start here</h2>
         <Featured limit={20} />
       </section>

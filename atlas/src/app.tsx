@@ -12,11 +12,14 @@ import { AboutView } from './views/AboutView.tsx';
 const GraphView = lazy(() => import('./views/GraphView.tsx').then((m) => ({ default: m.GraphView })));
 const StoryView = lazy(() => import('./views/StoryView.tsx').then((m) => ({ default: m.StoryView })));
 const HistomapView = lazy(() => import('./views/HistomapView.tsx').then((m) => ({ default: m.HistomapView })));
+const LanguagesView = lazy(() => import('./views/LanguagesView.tsx').then((m) => ({ default: m.LanguagesView })));
+const PricesView = lazy(() => import('./views/PricesView.tsx').then((m) => ({ default: m.PricesView })));
 
 const NAV = [
   { view: 'map', label: 'Atlas', href: () => mapHref({}), icon: 'M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14' },
   { view: 'story', label: 'Story', href: () => '#/story', icon: 'M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM17 7h2v13M8 9h6M8 13h6' },
   { view: 'histomap', label: 'Histomap', href: () => '#/histomap', icon: 'M5 3c2 4 0 7 2 11s-1 5 0 7M10 3c-1 4 2 6 1 10s1 5 0 8M15 3c1 3-2 6 0 10s-1 5 1 8M19 3c-1 4 1 8 0 12s1 4 0 6' },
+  { view: 'languages', label: 'Languages', href: () => '#/languages', icon: 'M4 12h5M9 12c3 0 3-6 7-6h4M9 12c3 0 3 6 7 6h4M14 6h0', desktopOnly: true },
   { view: 'graph', label: 'Graph', href: () => `#/graph?y=${year.value}`, icon: 'M6 6m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M18 8m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M10 18m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M8 7.5l7.5 0.8M7 8.2l2 7.5M16.3 10l-4.6 6' },
   { view: 'browse', label: 'Archive', href: () => '#/browse', icon: 'M4 5h16v4H4zM5 9v10h14V9M10 13h4' },
   { view: 'search', label: 'Search', href: () => '#/search', icon: 'M11 11m-6.5 0a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0M16 16l4.5 4.5', mobileOnly: true },
@@ -37,7 +40,8 @@ export function App() {
   }, [r.view, m]);
   useEffect(() => { if (r.view !== 'map' && r.view !== 'graph') window.scrollTo(0, 0); }, [r.view, r.id]);
 
-  const active = r.view === 'page' || r.view === 'compare' ? 'browse' : r.view;
+  const active = r.view === 'page' || r.view === 'compare' ? 'browse' : r.view === 'prices' ? 'about' : r.view;
+  const tabActive = active === 'languages' || r.view === 'prices' ? 'browse' : active;
   const clean = r.params.get('clean') === '1';
   const og = r.params.get('og') === '1' || r.params.get('frames') === '1';
   return (
@@ -83,6 +87,16 @@ export function App() {
             <HistomapView />
           </Suspense>
         )}
+        {r.view === 'languages' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Gathering the tongues…</div>}>
+            <LanguagesView />
+          </Suspense>
+        )}
+        {r.view === 'prices' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Opening the ledgers…</div>}>
+            <PricesView />
+          </Suspense>
+        )}
         {r.view === 'page' && r.id && <PageView id={r.id} />}
         {r.view === 'compare' && r.id && <CompareView id={r.id} />}
         {r.view === 'browse' && <BrowseView />}
@@ -96,7 +110,7 @@ export function App() {
       </main>
       <nav class="tabbar" aria-label="Sections">
         {NAV.filter((n) => !n.desktopOnly).map((n) => (
-          <a class={`tabbar__a${active === n.view ? ' is-on' : ''}`} href={n.href()} aria-current={active === n.view ? 'page' : undefined}>
+          <a class={`tabbar__a${tabActive === n.view ? ' is-on' : ''}`} href={n.href()} aria-current={tabActive === n.view ? 'page' : undefined}>
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d={n.icon} fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
             <span>{n.label}</span>
           </a>

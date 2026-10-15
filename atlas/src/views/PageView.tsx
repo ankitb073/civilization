@@ -96,6 +96,8 @@ function Page({ page }: { page: PageJson }) {
             <a class="btn btn--ghost" href={`#/graph?focus=${encodeURIComponent(page.id)}&y=${page.t0}`}>Graph</a>
             {page.accounts && page.accounts.sources.length > 0 && <a class="btn btn--accent" href={`#/compare/${page.id}`}>Compare accounts</a>}
             {a?.rival && <a class="btn btn--accent" href={`#/compare/${a.rival.eventId}`}>Compare with rival accounts</a>}
+            {(page.kind === 'currency' || (page.kind === 'artifact' && /ledger|market/.test(page.sub))) && <a class="btn btn--ghost" href="#/prices">Prices over 5,000 years</a>}
+            {page.kind === 'language' && <a class="btn btn--ghost" href="#/languages">Tree of Tongues</a>}
             <ShareButton title={page.title} />
           </div>
         </header>

@@ -70,6 +70,9 @@ const views: { name: string; hash: string; dark?: boolean; wait?: number; full?:
   { name: 'browse-flag', hash: `#/browse?kind=artifact&flag=1`, wait: 1500 },
   { name: 'tour', hash: ``, wait: 3200 },
   { name: 'histomap', hash: `#/histomap`, wait: 1500, full: true },
+  { name: 'languages', hash: `#/languages`, wait: 1500, full: true },
+  { name: 'prices', hash: `#/prices`, wait: 1800, full: true },
+  { name: 'map-language', hash: `#/map?y=3200&l=language`, wait: 2000 },
   { name: 'histomap-dark', hash: `#/histomap`, dark: true, wait: 1500 },
   { name: 'story', hash: `#/story`, wait: 2200 },
   { name: 'story-beat', hash: `#/story?at=c2b3`, wait: 3000 },
@@ -139,6 +142,7 @@ try {
       { file: 'phone.png', hash: '#/map?y=3200&l=political', vp: { width: 390, height: 844, scale: 3, mobile: true } },
       { file: 'story.png', hash: '#/story?at=c3b2', vp: { width: 1440, height: 900, scale: 2 }, wait: 3200 },
       { file: 'histomap.png', hash: '#/histomap?export=1', vp: { width: 1600, height: 1000, scale: 1 }, wait: 1500, full: true },
+      { file: 'languages.png', hash: '#/languages?export=1', vp: { width: 2400, height: 1400, scale: 1 }, wait: 1500 },
     ];
     for (const sh of shots) {
       const ctx = await browser.newContext({ viewport: { width: sh.vp.width, height: sh.vp.height }, deviceScaleFactor: sh.vp.scale, isMobile: !!sh.vp.mobile, hasTouch: !!sh.vp.mobile, colorScheme: sh.dark ? 'dark' : 'light', reducedMotion: 'reduce' });

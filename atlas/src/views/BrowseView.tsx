@@ -72,6 +72,12 @@ export function BrowseView() {
     <div class="browse">
       <header class="browse__head">
         <h1 class="h-page">The archive</h1>
+        <nav class="explore" aria-label="Explore">
+          <a href="#/story"><span>Story</span>Five thousand years in seven chapters</a>
+          <a href="#/histomap"><span>Histomap</span>Every state as a stream</a>
+          <a href="#/languages"><span>Languages</span>The Tree of Tongues</a>
+          <a href="#/prices"><span>Prices</span>What things cost</a>
+        </nav>
         <p class="muted">{m ? `${KINDS.reduce((s, k) => s + (m.counts[k] ?? 0), 0).toLocaleString('en-US')} pages` : ''}{m?.counts.links ? ` · ${m.counts.links.toLocaleString('en-US')} links` : ''}. Filter by kind, period and name.</p>
       </header>
       <div class="browse__filters">

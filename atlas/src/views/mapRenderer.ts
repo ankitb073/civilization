@@ -1,6 +1,6 @@
 import type { TimelineJson, WorldJson } from '../../../engine/src/export/contract.ts';
 import { addCellToPath, type Geo } from '../geo.ts';
-import type { LayerState } from '../layers.ts';
+import type { LayerLike, LayerState } from '../layers.ts';
 import type { LayerName } from '../state.ts';
 
 export interface MapData {
@@ -8,7 +8,7 @@ export interface MapData {
   timeline: TimelineJson;
   geo: Geo;
   /** political is always present; culture/religion load lazily. */
-  layers: { political: LayerState; culture?: LayerState; religion?: LayerState };
+  layers: { political: LayerState; culture?: LayerLike; religion?: LayerLike; language?: LayerLike };
   polityByIdx: Map<number, TimelineJson['polities'][number]>;
   settlementByIdx: Map<number, TimelineJson['settlements'][number]>;
 }
@@ -379,7 +379,7 @@ export class MapRenderer {
   }
 
   // ---------------------------------------------------------------- time-dependent geometry
-  layerState(): LayerState {
+  layerState(): LayerLike {
     return this.d.layers[this.layer] ?? this.d.layers.political;
   }
 
@@ -628,8 +628,8 @@ export class MapRenderer {
     const sel = this.selected;
     if (sel) {
       const accent = dark ? '#f0b08f' : '#7a1f12';
-      if (sel.startsWith('pol:') || sel.startsWith('cul:') || sel.startsWith('mov:')) {
-        const layerName: LayerName = sel.startsWith('pol:') ? 'political' : sel.startsWith('cul:') ? 'culture' : 'religion';
+      if (sel.startsWith('pol:') || sel.startsWith('cul:') || sel.startsWith('mov:') || sel.startsWith('lan:')) {
+        const layerName: LayerName = sel.startsWith('pol:') ? 'political' : sel.startsWith('cul:') ? 'culture' : sel.startsWith('lan:') ? 'language' : 'religion';
         const ls = this.d.layers[layerName];
         const idx = ls ? (layerName === 'political' ? this.polityIdx(sel) : ls.layer.legend.find((l) => l.id === sel)?.idx ?? -1) : -1;
         if (ls && idx >= 0) {

@@ -2,7 +2,8 @@ import { signal } from '@preact/signals';
 import type { Layer, MetaJson, TimelineJson } from '../../engine/src/export/contract.ts';
 import { fetchJson, loadMeta, loadTimeline, loadWorld, loadSearch, type SearchIndex } from './data.ts';
 import { buildGeo } from './geo.ts';
-import { LayerState } from './layers.ts';
+import { LayerState, type LayerLike } from './layers.ts';
+import { buildLanguageLayer, loadLanguages } from './languages.ts';
 import type { MapData } from './views/mapRenderer.ts';
 import type { LayerName } from './state.ts';
 import { yearEnd } from './state.ts';
@@ -44,13 +45,23 @@ export function ensureMapData(): Promise<MapData> {
   return mapP;
 }
 
-const layerP = new Map<LayerName, Promise<LayerState>>();
-/** Fetch the culture/religion layer on first use. */
-export function ensureLayer(name: LayerName): Promise<LayerState> {
+const layerP = new Map<LayerName, Promise<LayerLike>>();
+/** Fetch the culture/religion/language layer on first use. */
+export function ensureLayer(name: LayerName): Promise<LayerLike> {
   return ensureMapData().then((d) => {
     const have = d.layers[name];
     if (have) return have;
     let p = layerP.get(name);
+    if (!p && name === 'language') {
+      p = Promise.all([ensureLayer('culture'), loadLanguages()]).then(([culture, langs]) => {
+        const st = buildLanguageLayer(culture, langs);
+        d.layers.language = st;
+        layersVersion.value++;
+        return st;
+      });
+      p.catch(() => layerP.delete(name));
+      layerP.set(name, p);
+    }
     if (!p) {
       const file = d.timeline.layerFiles?.[name as 'culture' | 'religion'];
       if (!file) return Promise.reject(new Error(`no file for layer ${name}`));

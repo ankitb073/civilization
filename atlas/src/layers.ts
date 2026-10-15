@@ -81,3 +81,37 @@ export class LayerState {
     return arr;
   }
 }
+
+/** Anything the map can draw as a categorical layer. */
+export interface LayerLike {
+  readonly layer: { legend: Layer['legend'] };
+  readonly byIdx: Map<number, Layer['legend'][number]>;
+  at(year: number): Int16Array;
+}
+
+/** A layer derived from another by relabelling its values (e.g. culture → language). */
+export class MappedLayerState implements LayerLike {
+  readonly layer: { legend: Layer['legend'] };
+  readonly byIdx: Map<number, Layer['legend'][number]>;
+  private src: LayerLike;
+  private map: Int16Array;
+  private memo = new Map<number, Int16Array>();
+
+  constructor(src: LayerLike, map: Int16Array, legend: Layer['legend']) {
+    this.src = src;
+    this.map = map;
+    this.layer = { legend };
+    this.byIdx = new Map(legend.map((l) => [l.idx, l]));
+  }
+
+  at(year: number): Int16Array {
+    const m = this.memo.get(year);
+    if (m) return m;
+    const a = this.src.at(year);
+    const out = new Int16Array(a.length);
+    for (let i = 0; i < a.length; i++) out[i] = a[i] >= 0 && a[i] < this.map.length ? this.map[a[i]] : -1;
+    this.memo.set(year, out);
+    if (this.memo.size > 48) this.memo.delete(this.memo.keys().next().value as number);
+    return out;
+  }
+}
