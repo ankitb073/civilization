@@ -7,11 +7,12 @@ import type { SimResult } from '../sim/run.ts';
 import type { Archive } from '../archive/build.ts';
 import type { CheckReport } from '../check/check.ts';
 import type {
-  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson, StoryJson,
+  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson, StoryJson, LanguagesJson, EconomyJson,
 } from './contract.ts';
 import { SHARD_COUNT, shardOf, shardFile } from './contract.ts';
 import { BIOMES } from '../world/biomes.ts';
 import { TK } from '../sim/tech.ts';
+import { GOODS } from '../sim/economy.ts';
 import { Rng } from '../core/rng.ts';
 import type { SimEvent } from '../sim/state.ts';
 
@@ -205,6 +206,10 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
   for (let i = 0; i < SHARD_COUNT; i++) raw += write(shardFile(i), { pages: shards[i] });
   log(`pages: ${a.pages.size} in ${SHARD_COUNT} shards, ${(raw / 1e6).toFixed(0)} MB raw`);
 
+  // ---------------------------------------------------------------- languages & economy
+  writeSized('languages.json', languagesJson(r, a));
+  writeSized('economy.json', economyJson(r, a));
+
   // ---------------------------------------------------------------- story
   writeSized('story.json', story(r, a));
 
@@ -248,6 +253,59 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
 
 function trim(x: string, n: number): string {
   return x.length <= n ? x : x.slice(0, n - 1) + '…';
+}
+
+function languagesJson(r: SimResult, a: Archive): LanguagesJson {
+  const s = r.state;
+  const T = a.T;
+  const langs = s.lang.languages();
+  const rootOf = (id: number): number => { let l = id; for (;;) { const p = s.lang.info(l).parent; if (p === null) return l; l = p; } };
+  return {
+    languages: langs.map((l) => ({
+      id: `lan:${l.id}`, name: T.short.get(`lan:${l.id}`) ?? '', parent: l.parent !== null ? `lan:${l.parent}` : null, family: `lan:${rootOf(l.id)}`,
+      born: l.born, died: l.died, soundChanges: s.lang.soundChanges(l.id).filter((c) => c.lang === l.id).length, style: s.lang.familyStyle(l.id),
+      speakers: s.cultures.filter((c) => c.lang === l.id).map((c) => `cul:${c.id}`),
+      sample: ['water', 'king', 'god', 'mother'].map((c) => [c, s.lang.word(l.id, c, l.born).conventional, s.lang.word(l.id, c, Math.min(l.died ?? 5000, 5000)).conventional] as [string, string, string]),
+    })),
+    cultureLanguage: Object.fromEntries(s.cultures.map((c) => [c.id, `lan:${c.lang}`])),
+  };
+}
+
+function economyJson(r: SimResult, a: Archive): EconomyJson {
+  const s = r.state;
+  const T = a.T;
+  const pb = r.econ.priceBuf;
+  const byYear = new Map<number, Map<number, number[]>>();
+  for (let i = 0; i < pb.length; i += 4) {
+    const y = pb[i], g = pb[i + 2], p = pb[i + 3];
+    let m = byYear.get(y);
+    if (!m) byYear.set(y, (m = new Map()));
+    let arr = m.get(g);
+    if (!arr) m.set(g, (arr = []));
+    arr.push(p);
+  }
+  const med = (xs: number[] | undefined) => {
+    if (!xs || !xs.length) return null;
+    const v = xs.slice().sort((x, y) => x - y);
+    return Math.round(v[Math.floor(v.length / 2)] * 100) / 100;
+  };
+  const gi = (k: string) => GOODS.findIndex((g) => g.key === k);
+  const prices: EconomyJson['prices'] = [];
+  const level: [number, number][] = [];
+  for (const [y, m] of [...byYear].sort((x, z) => x[0] - z[0])) {
+    prices.push([y, med(m.get(gi('grain'))), med(m.get(gi('tin'))), med(m.get(gi('iron'))), m.get(gi('grain'))?.length ?? 0]);
+    const rel: number[] = [];
+    for (const [g, xs] of m) { const v = med(xs); if (v !== null) rel.push(v / GOODS[g].base); }
+    const l = med(rel);
+    if (l !== null) level.push([y, l]);
+  }
+  const big = s.currencies.filter((c) => c.history.length > 2 || c.kind !== 'weight').sort((x, y) => y.history.length - x.history.length).slice(0, 60);
+  return {
+    goods: GOODS.map((g) => ({ id: g.id, key: g.key, name: g.name, unit: g.unit })),
+    prices, priceLevel: level,
+    currencies: big.map((c) => ({ id: `cur:${c.id}`, name: T.short.get(`cur:${c.id}`) ?? '', issuer: `pol:${c.polity}`, kind: c.kind, history: c.history.map(([y, v]) => [y, Math.round(v * 10000) / 10000] as [number, number]) })),
+    events: s.events.filter((e) => ['debasement', 'panic', 'hyperinflation', 'trade-collapse', 'default', 'coinage', 'paper-money'].includes(e.sub) && T.pageRefs.has(`evt:${e.id}`) && (e.sub !== 'coinage' || e.sig >= 0.3)).map((e) => ({ id: `evt:${e.id}`, year: e.year, sub: e.sub, title: T.title.get(`evt:${e.id}`) ?? '' })),
+  };
 }
 
 export function storyOf(r: SimResult, a: Archive): StoryJson {

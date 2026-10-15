@@ -223,6 +223,32 @@ export interface StoryJson {
   }[];
 }
 
+// ---------------------------------------------------------------- languages.json
+/** The tree of tongues: every language with its parent, life span and speakers, for a dendrogram
+ *  through time and a languages map layer (culture idx → language). */
+export interface LanguagesJson {
+  languages: {
+    id: string; name: string; parent: string | null; family: string; born: number; died: number | null;
+    soundChanges: number; style: string; speakers: string[];   // culture ids
+    sample: [concept: string, early: string, late: string][];  // a few words at birth and at end
+  }[];
+  /** culture idx (as in layer-culture legend) → language id */
+  cultureLanguage: Record<number, string>;
+}
+
+// ---------------------------------------------------------------- economy.json
+/** Five millennia of prices: medians across markets, in grams of silver, plus every currency's
+ *  silver content over time. */
+export interface EconomyJson {
+  goods: { id: number; key: string; name: string; unit: string }[];
+  /** per decade: [year, median grain price, median tin price, median iron price, markets counted] */
+  prices: [number, number | null, number | null, number | null, number][];
+  /** world price level per decade (median of all goods relative to their base) */
+  priceLevel: [number, number][];
+  currencies: { id: string; name: string; issuer: string; kind: string; history: [number, number][] }[];
+  events: { id: string; year: number; sub: string; title: string }[];   // debasements, panics, hyperinflations, trade collapses
+}
+
 // ---------------------------------------------------------------- histomap.json
 /** A "Histomap": every state as a stream whose width is its share of the world's population.
  *  Streams are ordered west → east by capital, so neighbours flow side by side. */
