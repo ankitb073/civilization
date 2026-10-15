@@ -264,10 +264,14 @@ function collectionsJson(r: SimResult, a: Archive): CollectionsJson {
   const T = a.T;
   const ctx = a.ctx;
   const out: CollectionsJson['collections'] = [];
-  const add = (id: string, title: string, blurb: string, items: { id: string; note: string; year: number }[]) => {
+  const add = (id: string, title: string, blurb: string, items: { id: string; note: string; year: number }[], max = 40) => {
     const it = items.filter((x) => a.pages.has(x.id)).map((x) => ({ ...x, title: a.pages.get(x.id)!.title }));
-    if (it.length >= 3) out.push({ id, title, blurb, items: it.slice(0, 40) });
+    if (it.length >= 3) out.push({ id, title, blurb, items: it.slice(0, max) });
   };
+  // the narrative History comes first: it is the way in for new readers
+  const fnum = (x: (typeof a.artifacts)[number]) => Number(String(x.data?.flagshipId ?? '').slice(3)) || 0;
+  const hist = a.artifacts.filter((x) => x.flagship && fnum(x) >= 900 && fnum(x) < 1000).sort((x, y) => fnum(x) - fnum(y));
+  add('history', `A History of ${worldNameOf(r, a)}`, `Five thousand years in ${hist.length} chapters, by the archive’s modern historians: start here.`, hist.map((x) => ({ id: `art:${x.id}`, note: fnum(x) === 900 ? 'Introduction' : `Chapter ${fnum(x) - 900} · AY ${(fnum(x) - 901) * 250}–${(fnum(x) - 900) * 250}`, year: (fnum(x) - 901) * 250 })));
   const simEvents = r.simEvents ?? s.events.length;
   const evs = s.events.slice(0, simEvents);
   // rulers
@@ -289,8 +293,9 @@ function collectionsJson(r: SimResult, a: Archive): CollectionsJson {
   add('poems', 'Poems and songs', 'Epics, laments, hymns and satires from the flagship sources.', flag.filter((x) => x.sub === 'poem').sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
   add('letters', 'Letters', 'Flagship letters: from the front, from hostages, refugees, merchants and kings.', flag.filter((x) => x.sub === 'letter').sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
   const form = (x: (typeof flag)[number]) => String(x.data?.form ?? '');
-  add('lives', 'Lives', 'Long-form biographies by the archive’s modern scholars.', flag.filter((x) => form(x).startsWith('biographical')).sort((x, y) => x.title.localeCompare(y.title)).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
-  add('essays', 'Essays on the sources', 'Modern scholars weigh the chronicles against the record.', flag.filter((x) => /journal article|survey lecture|philological essay/.test(form(x))).sort((x, y) => x.title.localeCompare(y.title)).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
+  add('voices', 'Voices from below', 'Farmers, apprentices, conscripts, market women and refugees: ordinary people living through famines, plagues, sacks and revolutions.', flag.filter((x) => fnum(x) >= 700 && fnum(x) < 900).sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })), 120);
+  add('lives', 'Lives', 'Long-form biographies by the archive’s modern scholars.', flag.filter((x) => fnum(x) >= 600 && fnum(x) < 700).sort((x, y) => x.title.localeCompare(y.title)).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
+  add('essays', 'Essays on the sources', 'Modern scholars weigh the chronicles against the record.', flag.filter((x) => /journal article|survey lecture|philological essay|biographical essay$/.test(form(x)) && fnum(x) < 600).sort((x, y) => x.title.localeCompare(y.title)).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
   return { collections: out };
 }
 
