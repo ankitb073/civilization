@@ -106,7 +106,7 @@ Tools: `engine/src/debug/realism.ts <db…>` (every row below) and `engine/src/d
   | **All** | **656** |
 
   Seed 5 still qualifies as canon (scan 19.1). Its continental contact moves earlier, from AY 4623 to 4295, and it has 12 colonies instead of 20.
-- *Stage 1 only.* The world is identical and all 656 flagships are still accepted. The stale ones are the flagships that quote figures which changed, or cite documents that moved:
+- *Stage 1 only*, measured on main at `f7a5c96`. Both commits cherry-pick cleanly. The world is identical and all 656 flagships are still accepted. The stale ones are the flagships that quote figures which changed, or cite documents that moved:
 
   | Wave | Quote changed figures | Cite a vanished or different document | Cite a document whose text changed | Need revision |
   |---|---|---|---|---|
@@ -115,12 +115,15 @@ Tools: `engine/src/debug/realism.ts <db…>` (every row below) and `engine/src/d
   | fl-301–549 | 7 | 0 | 0 | 7 |
   | fl-601–640 | 37 | 3 | 13 | 37 |
   | fl-701–807 | 2 | 0 | 0 | 2 |
-  | fl-900–920 | 20 | 9 | 19 | 21 |
-  | **All** | **94** | **12** | **62** | **99** |
+  | fl-900–920 | 20 | 3 | 20 | 21 |
+  | **All** | **94** | **6** | **63** | **99** |
 
   - Six catalogue numbers move. Muster rolls and modern genres select on battle figures, and survival is keyed by generation order.
-    - Four no longer exist: PAL·GR·00137, PAL·MU·00669, PAL·TF·00017 and PAL·AL·00451. The checker fails on them until they are re-cited.
+    - Four no longer exist: PAL·GR·00137, PAL·MU·00669, PAL·TF·00017 and PAL·AL·00451.
     - Two now name other documents: PAL·AN·00352 and PAL·NP·00021.
+  - On main plus stage 1, the checker fails on exactly eight items, all on the flagship side. Fixing them is part of the revision:
+    - 4 × `citations-resolve`: the four vanished numbers.
+    - 4 × `quotations-verbatim`: three victory steles whose casualty claims changed ("He killed 100 soldiers"), and PAL·NP·00021.
   - The other 557 flagships are untouched.
   - `flagship-drift.ts --list` names each stale flagship with its figures and citations.
   - The fingerprint covers events, not their data. So this drift is silent unless the tool is run.
