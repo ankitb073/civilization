@@ -3,7 +3,7 @@
 **Context.** The map shows one year at a time. Nothing shows the whole arc at a glance: who rose, who fell, who lasted.
 
 **Decision.**
-- Export `histomap.json`: every state as a stream whose width is its share of the population living under states, sampled every 25 years, ordered west to east by founding capital.
+- Export `histomap.json`: every state as a stream whose width is its share of the population living under states, sampled every 20 years, ordered west to east by founding capital.
 - The 140 largest states are kept and the rest folded into "lesser states".
 - The atlas renders it as a vertical scroll, in the spirit of John B. Sparks's *Histomap* (1931).
 

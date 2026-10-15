@@ -300,7 +300,7 @@ function story(r: SimResult, a: Archive): StoryJson {
 
 function histomap(r: SimResult, a: Archive): HistomapJson {
   const s = r.state;
-  const STEP = 25;
+  const STEP = 20; // a multiple of the decadal statistics
   const years: number[] = [];
   for (let y = 0; y <= 4990; y += STEP) years.push(y);
   const idx = new Map(years.map((y, i) => [y, i]));

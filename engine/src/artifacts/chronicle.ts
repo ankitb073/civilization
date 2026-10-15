@@ -104,6 +104,8 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
   const claims: [string, string][] = [];
   claims.push(['Who began the war', g.T.short.get(`pol:${enemy.id}`)!]);
   let reportedOwnLoss = 0, reportedEnemyLoss = 0, reportedWins = 0, reportedLosses = 0, reported = 0;
+  const era2 = era;
+  const host = (n: number) => fmt(n) + (era2 <= 1 && n > 2000 ? ` men${d.chance(0.5) ? ' and chariots beyond counting' : ''}` : ' men');
   for (const b of t.battles) {
     const won = ownWon(b);
     if (!won && omitDefeats && rng.chance(0.7)) continue;
@@ -112,20 +114,47 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
     const place = near ? d.n(near) : `the land of ${d.n(`reg:${b.data.region}`)}`;
     const ownCmd = b.parts.find(([, r]) => r === (isA ? 'attacking commander' : 'defending commander'))?.[0];
     const enCmd = b.parts.find(([, r]) => r === (isA ? 'defending commander' : 'attacking commander'))?.[0];
-    const ol = Math.round(Number(b.data[ownLossKey]) * shrink);
     const el = Math.round(Number(b.data[enemyLossKey]) * inflate);
+    // a partisan chronicler never admits more dead than the enemy in a victory
+    let ol = Math.round(Number(b.data[ownLossKey]) * shrink);
+    if (won && ol > el * 0.4) ol = Math.round(el * (0.08 + rng.next() * 0.25));
     const es = Math.round(Number(b.data[enemySizeKey]) * sizeInflate);
     reportedOwnLoss += ol;
     reportedEnemyLoss += el;
-    const when = localDate(ctx, d, own, b.year);
+    const when = cap(localDate(ctx, d, own, b.year, { key: `b${b.id}` }));
+    const ourMan = ownCmd ? d.n(ownCmd) : d.pick(['our captain', 'the commander of the host', 'the king’s general']);
+    const theirMan = enCmd ? d.n(enCmd) : 'the enemy';
+    const enemyDeadCmd = b.data.commanderKilled !== undefined && enCmd && b.data.commanderKilled === ctx.idNum(enCmd);
+    const ownDeadCmd = b.data.commanderKilled !== undefined && ownCmd && b.data.commanderKilled === ctx.idNum(ownCmd);
+    lines.push('');
     if (won) {
       reportedWins++;
-      lines.push('');
-      lines.push(`${cap(when)}, ${enCmd ? d.n(enCmd) : 'the enemy'} came against us at ${place} with ${fmt(es)} men${era <= 1 ? ' and chariots beyond counting' : ''}. ${ownCmd ? d.n(ownCmd) : 'Our captain'} ${d.pick(['met them in the field', 'fell upon them at dawn', 'held the ford against them', 'drew them into the hills'])}, and ${god} ${d.pick(['fought before our ranks', 'gave them into our hands', 'sent a wind against them', 'darkened their eyes'])}. Of the enemy ${fmt(el)} were slain; of ours, ${fmt(ol)}.${b.data.commanderKilled !== undefined && enCmd && b.data.commanderKilled === ctx.idNum(enCmd) ? ` ${d.n(enCmd)} himself was killed, and his head was brought to the king.` : ''}`);
+      const opening = isA
+        ? d.pick([
+          `${when}, ${ourMan} marched on ${place}, where ${theirMan} waited with ${host(es)}.`,
+          `${when}, the host of ${ownName} went up against ${place}. ${cap(theirMan)} had gathered ${host(es)} there.`,
+          `${when}, ${ourMan} crossed into the enemy's country and found ${theirMan} at ${place} with ${host(es)}.`,
+        ])
+        : d.pick([
+          `${when}, ${theirMan} came against us at ${place} with ${host(es)}.`,
+          `${when}, ${theirMan} fell upon ${place} with ${host(es)}, burning the villages as he came.`,
+          `${when}, word came that ${theirMan} had reached ${place} with ${host(es)}.`,
+        ]);
+      const action = era >= 4
+        ? d.pick([`${cap(ourMan)} held the heights against them`, `${cap(ourMan)} turned their flank at noon`, `${cap(ourMan)} brought up the guns at the decisive moment`, `${cap(ourMan)} met them in the field`, `${cap(ourMan)} threw in the reserves at the right hour`])
+        : d.pick([`${cap(ourMan)} met them in the field`, `${cap(ourMan)} fell upon them at dawn`, `${cap(ourMan)} held the ford against them`, `${cap(ourMan)} drew them into the hills`, `${cap(ourMan)} broke their line at the first charge`, `${cap(ourMan)} waited until their water ran out`]);
+      const divine = era >= 4
+        ? d.pick([`providence favoured our arms`, `the enemy's courage failed before the end of the day`, `the discipline of our troops told`, `${god} was with us`])
+        : d.pick([`${god} fought before our ranks`, `${god} gave them into our hands`, `${god} sent a wind against them`, `${god} darkened their eyes`, `${god} kept faith with us`]);
+      const tally = d.pick([`Of the enemy ${fmt(el)} were slain; of ours, ${fmt(ol)}.`, `${fmt(el)} of them lay dead on the field, and of ours only ${fmt(ol)}.`, `The scribes counted ${fmt(el)} enemy dead; we lost ${fmt(ol)}.`]);
+      lines.push(`${opening} ${action}, and ${divine}. ${tally}${enemyDeadCmd ? ` ${d.n(enCmd!)} ${s.persons[ctx.idNum(enCmd!)].sex === 'f' ? 'herself' : 'himself'} was killed${era <= 2 ? `, and ${s.persons[ctx.idNum(enCmd!)].sex === 'f' ? 'her' : 'his'} head was brought to the king` : ''}.` : ''}`);
     } else {
       reportedLosses++;
-      lines.push('');
-      lines.push(`${cap(when)}, at ${place}, ${d.pick(['by treachery', 'through the cowardice of hired men', 'because the omens had been neglected', 'in a great storm'])} our army ${d.pick(['gave ground', 'withdrew in good order', 'could not hold the field'])}. ${fmt(ol)} of ours were lost, but ${fmt(el)} of the enemy.${b.data.commanderKilled !== undefined && ownCmd && b.data.commanderKilled === ctx.idNum(ownCmd) ? ` There fell ${d.n(ownCmd)}, whose name shall be remembered.` : ''}`);
+      const excuse = era >= 4
+        ? d.pick(['through the failure of the supply trains', 'after a night of rain that bogged the guns', 'when the allies failed to come', 'through the blunders of the general staff', 'outnumbered three to one'])
+        : d.pick(['by treachery', 'through the cowardice of hired men', 'because the omens had been neglected', 'in a great storm', 'when the allies failed to come', 'because the river rose and cut the army in two']);
+      const outcome = d.pick(['our army gave ground', 'our army withdrew in good order', 'our men could not hold the field', 'the host fell back to the walls']);
+      lines.push(`${when}, at ${place}, ${excuse}, ${outcome}. ${d.pick([`${fmt(ol)} of ours were lost, but ${fmt(el)} of the enemy.`, `We lost ${fmt(ol)}; the enemy, ${fmt(el)}.`, `It cost us ${fmt(ol)} men, and them ${fmt(el)}.`])}${ownDeadCmd ? ` There fell ${d.n(ownCmd!)}, whose name shall be remembered.` : ''}`);
     }
   }
   // peace
@@ -136,15 +165,18 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
   let outcomeClaim: string;
   let territoryClaim: string;
   lines.push('');
-  const peaceDate = localDate(ctx, d, own, t.war.end);
+  const peaceDate = localDate(ctx, d, own, t.war.end, { key: 'peace' });
+  const conquest = t.treaty && t.treaty.sub !== 'treaty';
   if (ownVictory) {
     outcomeClaim = `${g.T.short.get(`pol:${own.id}`)} victorious`;
     territoryClaim = cede ? `${Math.round((cede.cells?.length ?? 0) * (1.5 + rng.next()))} districts won` : 'tribute and submission';
-    lines.push(`${cap(peaceDate)}, ${enemyName} ${d.pick(['came to beg for peace', 'bowed to the feet of the king', 'sent envoys with gifts and pleas'])}${t.treaty ? `, and ${d.n(`evt:${t.treaty.id}`)} was sworn` : ''}. ${cede && cede.kind === 'cede' ? `The land which they had stolen was returned to ${ownName}.` : cede ? `${enemyName} is no more, and its people serve ${ownName}.` : 'Their pride was broken.'} ${d.pick([`Thanks were given to ${god}.`, `A stele was raised to ${god} in the capital.`, 'The land rested.'])}`);
+    if (conquest) lines.push(`${cap(peaceDate)}, ${d.pick(['the last stronghold of', 'the royal city of', 'the gates of'])} ${enemyName} ${d.pick(['fell to our army', 'were opened to the king', 'could hold out no longer'])}. ${enemyName} is no more, and its people serve ${ownName}. ${d.pick([`Thanks were given to ${god}.`, `A stele was raised to ${god} in the capital.`, 'The land rested.'])}`);
+    else lines.push(`${cap(peaceDate)}, ${enemyName} ${d.pick(['came to beg for peace', 'bowed to the feet of the king', 'sent envoys with gifts and pleas'])}${t.treaty ? `, and the ${d.n(`evt:${t.treaty.id}`)} was sworn` : ''}. ${cede && cede.kind === 'cede' ? `The land which they had stolen was returned to ${ownName}.` : cede ? `${enemyName} is no more, and its people serve ${ownName}.` : 'Their pride was broken.'} ${d.pick([`Thanks were given to ${god}.`, `A stele was raised to ${god} in the capital.`, 'The land rested.'])}`);
   } else if (ownDefeat) {
     outcomeClaim = rng.chance(0.6) ? 'honourable peace' : 'stalemate';
     territoryClaim = cede ? (rng.chance(0.5) ? 'none' : 'a few villages') : 'none';
-    lines.push(`${cap(peaceDate)}, ${d.pick(['wearied of bloodshed', 'out of mercy for the common folk', 'at the urging of the priests'])}, the king ${d.pick(['granted peace to', 'agreed to terms with', 'accepted the pleas of'])} ${enemyName}${t.treaty ? ` (${d.n(`evt:${t.treaty.id}`)})` : ''}. ${cede ? d.pick(['Some villages of no account were given up, which had always been poor.', 'The border was settled.', 'Nothing of worth was lost.']) : 'The honour of the realm was preserved.'}`);
+    if (conquest) lines.push(`${cap(peaceDate)}, ${d.pick(['the royal city was taken', 'the gates were opened to the enemy', 'the last of the strongholds fell'])}. ${d.pick(['The gods had turned their faces from us.', 'Who will now remember the kings of old?', 'Let this record keep what the sword has taken.'])}`);
+    else lines.push(`${cap(peaceDate)}, ${d.pick(['wearied of bloodshed', 'out of mercy for the common folk', 'at the urging of the priests'])}, the king ${d.pick(['granted peace to', 'agreed to terms with', 'accepted the pleas of'])} ${enemyName}${t.treaty ? `, and the ${d.n(`evt:${t.treaty.id}`)} was sworn` : ''}. ${cede ? d.pick(['Some villages of no account were given up, which had always been poor.', 'The border was settled.', 'Nothing of worth was lost.']) : 'The honour of the realm was preserved.'}`);
   } else {
     outcomeClaim = `${g.T.short.get(`pol:${own.id}`)} victorious`;
     territoryClaim = 'none';
@@ -166,7 +198,7 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
   lines.push('');
   lines.push('---');
   lines.push('');
-  lines.push(`**Editorial note.** This is the ${side === 'attacker' ? 'attacking' : 'defending'} side's account of the ${d.title(`evt:${t.war.id}`)}. ${lag > 20 ? `It was composed some ${lag} years after the events.` : 'It was composed within living memory of the events.'} Compare it with the ${other}'s account and with the ground truth in the comparison view. ${reported < t.battles.length ? `The chronicle passes over ${t.battles.length - reported} of the ${t.battles.length} recorded engagements.` : ''}`);
+  lines.push(`**Editorial note.** This is the ${side === 'attacker' ? 'attacking' : 'defending'} side's account of the ${d.title(`evt:${t.war.id}`)}. ${lag > 20 ? `It was composed some ${lag} years after the events.` : 'It was composed within living memory of the events.'} Compare it with the ${other}'s account and with the ground truth in the comparison view.${reported < t.battles.length ? ` The chronicle passes over ${t.battles.length - reported} of the ${t.battles.length} recorded engagements.` : ''}`);
   const ownRulerName = ownRuler ? g.T.short.get(`per:${ownRuler.person}`) : null;
   void ownRulerName;
   const medium = era <= 1 ? 'clay tablet (copy)' : era <= 3 ? d.pick(['parchment codex', 'papyrus roll', 'paper codex']) : era === 4 ? 'printed book' : 'printed book';

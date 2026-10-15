@@ -44,6 +44,22 @@ const FORMS: Record<string, string[]> = {
   panic: ['merchant’s memoir of the panic', 'letter of a banker'],
   'script-invention': ['scribal school exercise and its teacher’s preface', 'praise of the new letters'],
   modern: ['editor’s preface to the archive', 'essay on the reliability of the chronicles', 'lecture on the great collapse'],
+  sack: ['eyewitness account of the sack', 'lament for the fallen city', 'letter of a survivor of the sack'],
+  siege: ['diary of the siege', 'letter smuggled out of the besieged city'],
+  debasement: ['merchant’s complaint about the new coin', 'satire on the light coin', 'memorandum of the mint master'],
+  conversion: ['sermon at the conversion of the court', 'letter of a priest of the old gods', 'hymn of the new faith'],
+  persecution: ['letter of a martyr', 'account of the persecution by a survivor', 'secret prayer of the persecuted'],
+  migration: ['song of the wanderers', 'complaint of the settled people against the newcomers', 'oral history set down by a grandson'],
+  succession: ['lament for the dead king', 'coronation hymn', 'letter of the queen mother'],
+  usurpation: ['proclamation of the usurper', 'curse on the usurper', 'apology of the usurper'],
+  marriage: ['wedding song', 'letter of the bride to her mother', 'envoy’s description of the wedding'],
+  council: ['letter from a delegate to the council', 'minutes kept by a secretary of the council'],
+  bankruptcy: ['ledger note and lament of a failed merchant', 'letter of a creditor'],
+  'colonial-war': ['letter of a colonial soldier', 'complaint of the colonized', 'report of the colonial governor'],
+  independence: ['declaration of independence', 'memoir of a rebel', 'speech of the rebel leader'],
+  reform: ['edict of reform', 'speech in favour of the reform', 'protest against the reform'],
+  'house-founding': ['charter of partnership', 'letter of the founder to his son'],
+  default: ['chronicle entry', 'letter', 'memoir'],
 };
 
 function era(a: Archive, p: Polity | null, year: number): number {
@@ -121,7 +137,7 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
   const s = ctx.s;
   const T = a.T;
   const id = `fl-${String(n + 1).padStart(3, '0')}`;
-  const form = rng.pick(FORMS[c.kind] ?? ['chronicle']);
+  const form = rng.pick(FORMS[c.kind] ?? FORMS.default);
   // --- author and date
   let author: Person | null = null;
   let polity: Polity | null = null;
@@ -142,7 +158,7 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
     if (form.startsWith('panegyric') || form.startsWith('satirical')) author = null; // court poet / anonymous
   } else if (e) {
     const parts = e.parts.map(([r, role]) => ({ r, role }));
-    const pol = parts.find((x) => x.r.startsWith('pol:') && ['attacker', 'victor', 'polity', 'collapsed', 'stricken', 'issuer', 'party', 'colonizer'].includes(x.role)) ?? parts.find((x) => x.r.startsWith('pol:'));
+    const pol = parts.find((x) => x.r.startsWith('pol:') && ['attacker', 'victor', 'polity', 'collapsed', 'stricken', 'issuer', 'party', 'colonizer', 'besieged', 'persecutor', 'house', 'host', 'against', 'annexed'].includes(x.role)) ?? parts.find((x) => x.r.startsWith('pol:'));
     polity = pol ? s.polities[ctx.idNum(pol.r)] : (e.cell >= 0 && ctx.ownerAt(e.cell, e.year) >= 0 ? s.polities[ctx.ownerAt(e.cell, e.year)] : null);
     const lag = form.includes('memoir') || form.includes('chronicle') || form.includes('lament') ? rng.int(2, 25) : form.includes('epic') ? rng.int(10, 60) : rng.int(0, 2);
     year = Math.min(4999, Math.max(e.year, e.end) + (form.includes('diary') || form.includes('log') || form.includes('letter') || form.includes('dispatch') ? 0 : lag));
@@ -176,7 +192,8 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
     if (!T.pageRefs.has(ref) || !isSim(ref) || allowed.has(ref)) return;
     const st = startOf(a, ref);
     if (st !== null && st > year) return;
-    allowed.set(ref, { text: d.nameOf(ref), what });
+    const who = ref.startsWith('per:') ? ` (${s.persons[ctx.idNum(ref)].sex === 'f' ? 'woman; she/her' : 'man; he/him'})` : '';
+    allowed.set(ref, { text: d.nameOf(ref), what: what + who });
   };
   // --- subject
   let subject: Dossier['subject'];
@@ -273,7 +290,7 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
     script: scriptId >= 0 ? T.short.get(`scr:${scriptId}`) ?? '' : er >= 4 ? 'print' : 'unwritten (oral, set down later)',
     medium,
     author: author ? {
-      id: `per:${author.id}`, name: d.nameOf(`per:${author.id}`), role: author.roles.map((r) => r.role).join(', ') || 'person', polity: author.polity !== null ? T.short.get(`pol:${author.polity}`) ?? null : null,
+      id: `per:${author.id}`, name: d.nameOf(`per:${author.id}`), role: `${author.sex === 'f' ? 'woman' : 'man'}; ${author.roles.map((r) => r.role).join(', ') || 'person'}`, polity: author.polity !== null ? T.short.get(`pol:${author.polity}`) ?? null : null,
       born: author.born, died: author.died, stance: stanceOf(a, author, e),
     } : { id: null, name: 'anonymous', role: form.includes('poem') || form.includes('panegyric') || form.includes('verses') || form.includes('hymn') || form.includes('lament') ? 'poet' : 'unknown', polity: polity ? T.short.get(`pol:${polity.id}`) ?? null : null, born: null, died: null, stance: 'loyal to their own people and gods' },
     subject: subject!,
@@ -411,4 +428,41 @@ function computeErasLite(a: Archive): { id: string; name: string; start: number;
   const m: [string, string, number][] = [['bronze', 'The Age of Bronze', 0], ['iron', 'The Age of Iron', first('iron')], ['coin', 'The Age of Coin and Creed', first('coinage')], ['parchment', 'The Age of Parchment and Plough', first('paper')], ['print', 'The Age of Sail and Print', first('printing')], ['engines', 'The Age of Engines', first('steam')], ['networks', 'The Age of Networks', first('computing')]];
   m.sort((x, y) => x[2] - y[2]);
   return m.map(([id, name, start], i) => ({ id, name, start, end: i + 1 < m.length ? m[i + 1][2] : 5000 })).filter((e) => e.end > e.start);
+}
+
+/** Second wave: subjects not covered by the first, numbered from fl-301. */
+export function buildWave2(a: Archive, exclude: Set<string>): Dossier[] {
+  const ctx = a.ctx;
+  const s = ctx.s;
+  const T = a.T;
+  const rng = new Rng(s.seed).fork('dossiers-wave2');
+  const simPersons = a.ctx.r.simPersons ?? s.persons.length;
+  const isSim = (ref: string) => !ref.startsWith('per:') || ctx.idNum(ref) < simPersons;
+  const simEvents = a.ctx.r.simEvents ?? s.events.length;
+  const pick = (sub: string, n: number, f: (e: SimEvent) => boolean = () => true) => s.events
+    .filter((e) => e.id < simEvents && e.sub === sub && T.pageRefs.has(`evt:${e.id}`) && !exclude.has(`evt:${e.id}`) && f(e))
+    .sort((x, y) => y.sig - x.sig || x.id - y.id).slice(0, n);
+  const plan: [string, string, number, ((e: SimEvent) => boolean)?][] = [
+    ['war', 'war', 36, (e) => e.data.outcome !== 'dissolved'],
+    ['sack', 'sack', 18], ['siege', 'siege', 6], ['debasement', 'debasement', 8], ['conversion', 'conversion', 14],
+    ['persecution', 'persecution', 10], ['migration', 'migration', 8], ['famine', 'famine', 8], ['succession', 'succession', 14, (e) => e.sig >= 0.1],
+    ['usurpation', 'usurpation', 12], ['marriage', 'marriage', 10], ['council', 'council', 8], ['bankruptcy', 'bankruptcy', 6],
+    ['war', 'colonial-war', 10, (e) => e.data.goal === 'colonial'], ['war', 'independence', 10, (e) => e.data.goal === 'independence' && e.data.outcome === 'attacker'],
+    ['revolution', 'revolution', 10], ['reform', 'reform', 6], ['invention', 'invention', 10, (e) => !e.data.independent],
+    ['collapse', 'collapse', 12], ['plague', 'plague', 6], ['movement-founding', 'movement-founding', 12], ['treaty', 'treaty', 12, (e) => e.data.kind === 'peace'],
+    ['house-founding', 'house-founding', 6], ['schism', 'schism', 6],
+  ];
+  const chosen: { kind: string; e: SimEvent }[] = [];
+  const taken = new Set<number>();
+  for (const [sub, kind, n, f] of plan) for (const e of pick(sub, n * 2, f)) {
+    if (taken.has(e.id) || chosen.filter((c) => c.kind === kind).length >= n) continue;
+    taken.add(e.id);
+    chosen.push({ kind, e });
+  }
+  const out: Dossier[] = [];
+  for (const c of chosen) {
+    const d = dossier(a, { kind: c.kind, e: c.e }, 300 + out.length, rng.fork(c.e.id), isSim);
+    if (d) out.push(d);
+  }
+  return out;
 }

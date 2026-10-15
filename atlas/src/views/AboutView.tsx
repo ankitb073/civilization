@@ -4,6 +4,7 @@ import { KIND_LABEL, KINDS } from '../kinds.ts';
 import { ensureMeta, meta } from '../store.ts';
 import { mapHref } from '../state.ts';
 import { Featured } from './MapPanel.tsx';
+import { HistomapThumb } from './HistomapView.tsx';
 
 export function AboutView() {
   const m = meta.value;
@@ -29,7 +30,8 @@ export function AboutView() {
           <a class="proof__a" href="#consistency" onClick={(e) => { e.preventDefault(); document.getElementById('consistency')?.scrollIntoView({ behavior: 'smooth' }); }}>See the report</a>
         </div>
         <div class="actions">
-          <a class="btn btn--accent" href={mapHref({ y: 0 })}>Start at year 0</a>
+          <a class="btn btn--accent" href="#/story">Read the story</a>
+          <a class="btn" href={mapHref({ y: 0 })}>Start at year 0</a>
           <a class="btn" href="#/browse">Browse the archive</a>
           <a class="btn btn--ghost" href="https://github.com/ankitb073/civilization" target="_blank" rel="noopener">Source on GitHub</a>
         </div>
@@ -57,6 +59,11 @@ export function AboutView() {
             </div>
           ) : null}
         </div>
+      </section>
+
+      <section class="about__sect">
+        <h2 class="sect">The Histomap</h2>
+        <HistomapThumb height={150} />
       </section>
 
       <section class="about__sect">

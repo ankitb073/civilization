@@ -14,6 +14,8 @@ export class Ctx {
   readonly rng: Rng;
   editorialLang: LangId = 0;
   editorialPolity = -1;
+  /** Archive-level continents: region ids 1000+landmass for landmasses of more than 60 cells. */
+  continents = new Map<number, { lm: number; nameId: NameId; cells: number; labelCell: number }>();
   // per-cell histories: parallel arrays of [year, value]
   private ownerY: number[][] = [];
   private ownerV: number[][] = [];
@@ -208,6 +210,41 @@ export class Ctx {
 
   personName(p: Person, lang: LangId, year: number): string {
     return this.name(p.nameId, lang, year);
+  }
+
+  /** Coin names for every sizeable landmass (idempotent). */
+  ensureContinents(): void {
+    if (this.continents.size) return;
+    const s = this.s;
+    const w = s.world;
+    for (let lm = 0; lm < w.landmassSize.length; lm++) {
+      if (w.landmassSize[lm] <= 60) continue;
+      const counts = new Map<number, number>();
+      let sx = 0, sy = 0, n = 0;
+      for (let c = 0; c < w.n; c++) {
+        if (w.landmass[c] !== lm) continue;
+        const cu = this.r.initial.culture[c];
+        if (cu >= 0) counts.set(cu, (counts.get(cu) ?? 0) + 1);
+        sx += w.x[c]; sy += w.y[c]; n++;
+      }
+      let cu = -1, best = -1;
+      for (const [k, v] of counts) if (v > best || (v === best && k < cu)) { best = v; cu = k; }
+      if (cu < 0) continue;
+      const lang = s.cultures[cu].lang;
+      const nameId = s.lang.coinName(lang, Math.max(0, s.lang.info(lang).born), 'region', `continent:${lm}`);
+      let label = -1, bd = Infinity;
+      for (let c = 0; c < w.n; c++) {
+        if (w.landmass[c] !== lm) continue;
+        const dd = Math.hypot(w.x[c] - sx / n, w.y[c] - sy / n);
+        if (dd < bd) { bd = dd; label = c; }
+      }
+      this.continents.set(1000 + lm, { lm, nameId, cells: w.landmassSize[lm], labelCell: label });
+    }
+  }
+
+  continentOfCell(cell: number): number | null {
+    const id = 1000 + this.s.world.landmass[cell];
+    return this.continents.has(id) ? id : null;
   }
 
   ev(id: number): SimEvent {

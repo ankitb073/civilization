@@ -6,6 +6,7 @@ import { KIND_LABEL, kindFromId } from '../kinds.ts';
 import { PageCard } from '../components/PageCard.tsx';
 import { MapRenderer } from './mapRenderer.ts';
 import { startTour } from '../components/Tour.tsx';
+import { HistomapThumb } from './HistomapView.tsx';
 import { reducedMotion } from '../state.ts';
 
 export function MapPanel() {
@@ -75,8 +76,15 @@ function Intro() {
         <li><span>2</span>Tap a territory, city or marker to see who held it.</li>
         <li><span>3</span>Open any page to read the primary sources behind it.</li>
       </ol>
-      {!reducedMotion && <button class="linkish small tourlink" onClick={startTour}>▶ Watch all 5,000 years in nine seconds</button>}
+      <div class="introlinks">
+        <a class="introlink" href="#/story"><span class="introlink__k">Read</span>The story of five thousand years →</a>
+        {!reducedMotion && <button class="introlink" onClick={startTour}><span class="introlink__k">Watch</span>All 5,000 years in nine seconds ▶</button>}
+      </div>
       <Featured />
+      <section class="hmsect">
+        <h3 class="sect">The Histomap</h3>
+        <HistomapThumb height={86} />
+      </section>
       {top.length > 0 && (
         <section class="legend">
           <h3 class="sect">{L === 'political' ? `${total} powers in ${y}` : L === 'culture' ? `${total} peoples in ${y}` : `${total} faiths in ${y}`}</h3>

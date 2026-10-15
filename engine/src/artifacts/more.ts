@@ -10,6 +10,7 @@ import { Rng } from '../core/rng.ts';
 import { GOODS } from '../sim/economy.ts';
 import { fmtPrice } from './ledger.ts';
 import { tenetText } from '../archive/pages.ts';
+import { MOBILIZATION } from '../sim/tech.ts';
 import { genModern } from './modern.ts';
 
 const GRAIN = GOODS.findIndex((g) => g.key === 'grain');
@@ -81,33 +82,33 @@ function decree(g: Gen, e: SimEvent, p: Polity, rng: Rng): void {
       const cur = first('currency')!;
       const c = s.currencies[ctx.idNum(cur)];
       title = e.sub === 'coinage' ? `Edict on the striking of the ${g.T.short.get(cur)}` : e.sub === 'paper-money' ? `Edict on the issue of ${g.T.short.get(cur)} notes` : `Currency law of AY ${year}`;
-      if (e.sub === 'coinage') lines.push(`Let there be struck in the workshop of the palace a coin of ${c.metal}, of the weight of ${fmt(c.content)} grains of the royal standard, to be called ${d.n(cur)}. ${d.pick(['It shall bear the image of the king and the sign of the city.', 'On the one face the king, on the other the god of the city.', 'Each shall be weighed and sealed before it leaves the workshop.'])}`);
+      if (e.sub === 'coinage') lines.push(`Let there be struck ${era <= 3 ? 'in the workshop of the palace' : 'at the royal mint'} a coin of ${c.metal}, of the royal standard [${fmt(c.content)} g of silver], to be called the ${d.n(cur)}. ${d.pick(['It shall bear the image of the king and the sign of the city.', 'On the one face the king, on the other the god of the city.', 'Each shall be weighed and sealed before it leaves the workshop.'])} ${d.pick(['It shall be received for all taxes and dues.', 'Weighed silver shall no longer be accepted at the treasury.', 'The moneyers shall answer with their lives for its weight.'])}`);
       else if (e.sub === 'paper-money') lines.push(`Notes of the treasury, to be called ${d.n(cur)}, shall pass in all payments at their face value and shall be received for taxes. ${d.pick(['Whoever refuses them shall be fined.', 'Whoever counterfeits them shall die.', 'They may be exchanged for coin at the treasury on demand.'])}`);
       else lines.push(`The new unit of account, the ${d.n(cur)}, replaces the old at the rate fixed by the treasury. All contracts shall be read as if written in the new unit.`);
-      lines.push('', `Given ${localDate(ctx, d, p, year)}.`);
+      lines.push('', closing(ctx, d, p, year, era));
       break;
     }
     case 'debasement': {
       const cur = first('currency')!;
       title = `Edict on the new ${g.T.short.get(cur)}`;
-      lines.push(`Because the treasury is empty ${d.pick(['on account of the war', 'through the costs of the realm', 'by the malice of the enemy'])}, the ${d.n(cur)} shall henceforth be struck at ${fmt(Number(e.data.after))} grains of silver. It shall pass at the full value of the old coin. ${d.pick(['Whoever refuses it in the market shall be beaten.', 'Merchants who raise their prices shall be fined double.', 'Whoever melts the old coin shall forfeit his goods.'])}`);
+      lines.push(`Because the treasury is empty ${d.pick(['on account of the war', 'through the costs of the realm', 'by the malice of the enemy'])}, the ${d.n(cur)} shall henceforth be struck with less silver [${fmt(Number(e.data.after))} g, in place of ${fmt(Number(e.data.before))} g]. It shall pass at the full value of the old coin. ${d.pick(['Whoever refuses it in the market shall be beaten.', 'Merchants who raise their prices shall be fined double.', 'Whoever melts the old coin shall forfeit his goods.'])}`);
       const war = e.causes.find((c) => s.events[c].sub === 'war');
-      if (war !== undefined) lines.push('', `*(The edict follows the outbreak of the ${d.title(`evt:${war}`)}.)*`);
-      lines.push('', `Given ${localDate(ctx, d, p, year)}.`);
+      lines.push('', closing(ctx, d, p, year, era));
+      lines.push('', '---', '', `**Editorial note.** ${war !== undefined ? `The edict follows the outbreak of the ${d.title(`evt:${war}`)}. ` : ''}See the ${d.title(`evt:${e.id}`)}: the coin lost ${Math.round((1 - Number(e.data.after) / Number(e.data.before)) * 100)}% of its silver.`);
       break;
     }
     case 'conversion': {
       const m = first('adopted')!;
       title = `Edict establishing the ${g.T.short.get(m)}`;
-      lines.push(`From this day the ${d.n(m)} is the faith of ${d.n(`pol:${p.id}`)}. ${d.pick(['Its priests shall be fed from the royal granaries.', 'Its shrines shall be built in every city of the realm.', 'Its feasts shall be kept as the feasts of the king.'])} ${first('abandoned') ? `The rites of the ${d.n(first('abandoned')!)} ${d.pick(['may continue in private', 'shall no longer be paid for by the treasury', 'shall be kept only in the old temples'])}.` : ''}`);
-      lines.push('', `Given ${localDate(ctx, d, p, year)}.`);
+      lines.push(`From this day the ${d.n(m)} is the faith of ${d.n(`pol:${p.id}`)}. ${era >= 4 ? d.pick(['Its clergy shall be paid from the public treasury.', 'Its holy days shall be public holidays.', 'Its schools shall be open to every child.']) : d.pick(['Its priests shall be fed from the royal granaries.', 'Its shrines shall be built in every city of the realm.', 'Its feasts shall be kept as the feasts of the king.'])} ${first('abandoned') ? `The rites of the ${d.n(first('abandoned')!)} ${d.pick(['may continue in private', 'shall no longer be paid for by the treasury', 'shall be kept only in the old temples'])}.` : ''}`);
+      lines.push('', closing(ctx, d, p, year, era));
       break;
     }
     case 'persecution': {
       const m = first('persecuted')!;
       title = `Edict against the ${g.T.short.get(m)}`;
       lines.push(`The followers of the ${d.n(m)} ${d.pick(['corrupt the people', 'deny the gods of the city', 'refuse the sacrifices owed to the king'])}. They shall not assemble, nor teach, nor keep their books. ${d.pick(['Their houses of prayer shall be closed.', 'Those who recant shall be pardoned.', 'Their goods shall pass to the treasury.'])} The ${d.n(first('establishment')!)} alone shall be honoured.`);
-      lines.push('', `Given ${localDate(ctx, d, p, year)}.`);
+      lines.push('', closing(ctx, d, p, year, era));
       break;
     }
     case 'famine': {
@@ -120,7 +121,7 @@ function decree(g: Gen, e: SimEvent, p: Polity, rng: Rng): void {
       const ceiling = (pr / grams) * 0.7;
       title = `Edict on the price of grain, AY ${year}`;
       lines.push(`Because of the ${d.n(`evt:${e.id}`)}, no man in ${d.n(`pol:${p.id}`)} shall sell grain above ${fmtPrice(ceiling)} ${curOk ? d.n(`cur:${cur}`) : 'shekels of silver'} the measure. ${d.pick(['The granaries of the palace shall be opened to the poor.', 'Whoever hoards grain shall forfeit it.', 'Ships carrying grain shall pay no toll.'])}`);
-      lines.push('', `Given ${localDate(ctx, d, p, year)}.`);
+      lines.push('', closing(ctx, d, p, year, era));
       lines.push('', '---', '', `**Editorial note.** The market price of grain at ${d.ed(`set:${cap0}`)} that decade was about ${fmtPrice(pr / grams)} the measure; the ceiling was set some 30% below it.`);
       break;
     }
@@ -140,6 +141,21 @@ function decree(g: Gen, e: SimEvent, p: Polity, rng: Rng): void {
     settlement: capCity, about: [e.id], body: lines.join('\n'), mentions: d.mentions, dateText: localDate(ctx, d, p, year), flagship: false,
     durable: m.durable, tau: m.tau, seat: capCity,
   });
+}
+
+function closing(ctx: Gen['ctx'], d: Doc, p: Polity, year: number, era: number): string {
+  const date = localDate(ctx, d, p, year);
+  if (era <= 1) return `Given ${date}.`;
+  if (era <= 3) return `Given at the palace ${date}. ${d.pick(['Let it be proclaimed in every market.', 'Let it be read aloud at the gates of every city.', 'Let it be cut in stone at the temple door.'])}`;
+  const capCity = ctx.capitalAt(p, year);
+  return `Done at ${d.n(`set:${capCity}`)}, ${date}. ${d.pick(['To be published in the official gazette.', 'By command of the government.', 'Printed by authority.'])}`;
+}
+
+function ratioWord(r: number): string {
+  if (r >= 3.5) return 'more than three times';
+  if (r >= 2.6) return 'nearly three times';
+  if (r >= 1.8) return 'twice';
+  return 'half as much again as';
 }
 
 function govNoun(to: string): string {
@@ -177,7 +193,8 @@ function annals(g: Gen, p: Polity, from: number, to: number, evs: SimEvent[], rn
   const author = g.author(p, 'scribe', year);
   const era = ctx.eraAt(p.id, year);
   const lines: string[] = [];
-  lines.push(`*${d.pick(['These are the deeds of the years', 'The record of the years', 'Here begin the annals'])} of ${d.n(`pol:${p.id}`)}, from ${localDate(ctx, d, p, from).replace(/ \[AY \d+\]$/, '')} to ${localDate(ctx, d, p, to).replace(/ \[AY \d+\]$/, '')}.*`);
+  const span = (y: number) => localDate(ctx, d, p, y, { key: `span${y}` }).replace(/ \[AY \d+\]$/, '').replace(/^in /, '');
+  lines.push(`*${d.pick(['These are the deeds of the years', 'The record of the years', 'Here begin the annals'])} of ${d.n(`pol:${p.id}`)}, from ${span(from)} to ${span(to)}.*`);
   lines.push('');
   const self = `pol:${p.id}`;
   const roleOf = (e: SimEvent) => e.parts.find(([r]) => r === self)?.[1];
@@ -189,8 +206,11 @@ function annals(g: Gen, p: Polity, from: number, to: number, evs: SimEvent[], rn
     return perWar.get(w)! <= 2;
   });
   const chosen = pruned.length > 28 ? pruned.filter((e) => e.sig > 0.12 || rng.chance(0.4)).slice(0, 28) : pruned;
+  let battlesMentioned = 0;
+  let lastBattleKey = '';
+  const his = (ref: string | undefined) => (ref && s.persons[ctx.idNum(ref)]?.sex === 'f' ? 'her' : 'his');
   for (const e of chosen) {
-    const when = cap(localDate(ctx, d, p, e.year).replace(/ \[AY \d+\]$/, ''));
+    const when = cap(localDate(ctx, d, p, e.year, { key: `a${e.id}` }).replace(/ \[AY \d+\]$/, ''));
     const role = roleOf(e);
     let line = '';
     const other = (roles: string[]) => {
@@ -198,34 +218,45 @@ function annals(g: Gen, p: Polity, from: number, to: number, evs: SimEvent[], rn
       return r ? d.n(r) : 'the enemy';
     };
     switch (e.sub) {
-      case 'war': line = role === 'attacker' ? `The king went to war against ${other(['defender'])}.` : `${cap(other(['attacker']))} ${d.pick(['came up against the land', 'broke the peace', 'raided the border'])}.`; break;
+      case 'war': line = role === 'attacker'
+        ? d.pick([`The king went to war against ${other(['defender'])}.`, `The army marched against ${other(['defender'])}.`, `The king took the field against ${other(['defender'])}.`, `War was declared upon ${other(['defender'])}.`])
+        : `${cap(other(['attacker']))} ${d.pick(['came up against the land', 'broke the peace', 'raided the border', 'crossed the frontier in arms'])}.`; break;
       case 'battle': {
         const won = e.data.winner === p.id;
         const near = e.parts.find(([, r]) => r === 'near')?.[0];
         if (!won && rng.chance(0.6)) continue;
-        line = won ? `There was a battle${near ? ` at ${d.n(near)}` : ''}; ${d.pick(['the army of the king prevailed', 'the enemy fled', 'the gods gave the victory'])}.` : `There was a battle${near ? ` at ${d.n(near)}` : ''}; ${d.pick(['many fell', 'the army withdrew', 'it went ill'])}.`;
+        const key = `${near ?? e.data.region}:${e.year}`;
+        if (key === lastBattleKey) continue; // the annalist does not repeat himself
+        lastBattleKey = key;
+        battlesMentioned++;
+        line = won
+          ? `${d.pick(['There was a battle', 'The armies met', 'The host fought'])}${near ? ` at ${d.n(near)}` : ''}; ${d.pick(['the army of the king prevailed', 'the enemy fled', 'the gods gave the victory', 'the enemy were scattered'])}.`
+          : `There was a battle${near ? ` at ${d.n(near)}` : ''}; ${d.pick(['many fell', 'the army withdrew', 'it went ill', 'the day was lost'])}.`;
         break;
       }
-      case 'treaty': line = `Peace was sworn: ${d.n(`evt:${e.id}`)}.`; break;
+      case 'treaty': line = d.pick([`Peace was sworn: the ${d.n(`evt:${e.id}`)}.`, `The ${d.n(`evt:${e.id}`)} was sworn, and the land had rest.`, `Envoys came and went; the ${d.n(`evt:${e.id}`)} was sealed.`]); break;
       case 'conquest': line = role === 'victor' ? `${cap(other(['vanquished']))} was taken and made part of the land.` : `The realm fell.`; break;
       case 'succession': {
         const succ = e.parts.find(([, r]) => r === 'successor')?.[0];
         const pred = e.parts.find(([, r]) => r === 'predecessor')?.[0];
-        line = `${pred ? d.n(pred) : 'The king'} ${d.pick(['went to his fate', 'died', 'was gathered to his fathers'])}; ${succ ? d.n(succ) : 'his heir'} sat on the throne${e.data.regency ? ', being a child' : ''}.`;
+        const same = succ && pred && s.persons[ctx.idNum(succ)].nameId === s.persons[ctx.idNum(pred)].nameId;
+        const child = succ && pred && s.persons[ctx.idNum(succ)].father === ctx.idNum(pred);
+        const heir = succ ? (same ? `${child ? `${his(pred)} ${s.persons[ctx.idNum(succ)].sex === 'f' ? 'daughter' : 'son'}` : 'another'} of the same name, ${d.n(succ)},` : d.n(succ)) : `${his(pred)} heir`;
+        line = `${pred ? d.n(pred) : 'The king'} ${d.pick([`went to ${his(pred)} fate`, 'died', `was gathered to ${his(pred)} fathers`, 'passed from the world'])}; ${heir} sat on the throne${e.data.regency ? ', being a child' : ''}.`;
         break;
       }
-      case 'usurpation': { const succ = e.parts.find(([, r]) => r === 'successor')?.[0]; line = `${succ ? d.n(succ) : 'A usurper'} seized the throne.`; break; }
-      case 'famine': line = `${d.pick(['The harvest failed', 'There was hunger in the land', 'Grain was dear'])}${e.causes.some((c) => s.events[c].sub === 'drought') ? '; the rains did not come' : ''}.`; break;
-      case 'plague': line = `${d.pick(['A sickness came', 'Pestilence struck the cities', 'The dead lay unburied'])}: ${d.n(`evt:${e.id}`)}.`; break;
+      case 'usurpation': { const succ = e.parts.find(([, r]) => r === 'successor')?.[0]; line = `${succ ? d.n(succ) : 'A usurper'} ${d.pick(['seized the throne', 'took the palace by force', 'made himself king'])}.`; break; }
+      case 'famine': line = `${d.pick(['The harvest failed', 'There was hunger in the land', 'Grain was dear', 'The granaries stood empty'])}${e.causes.some((c) => s.events[c].sub === 'drought') ? '; the rains did not come' : ''}.`; break;
+      case 'plague': line = `${d.pick(['A sickness came', 'Pestilence struck the cities', 'The dead lay unburied'])}: the ${d.n(`evt:${e.id}`)}.`; break;
       case 'eruption': line = `${d.pick(['The sun was darkened', 'Ash fell from the sky', 'There was no summer'])}.`; break;
-      case 'founding-city': { const t = e.parts.find(([, r]) => r === 'settlement')?.[0]; line = `The city of ${t ? d.n(t) : ''} was founded.`; break; }
+      case 'founding-city': { const t = e.parts.find(([, r]) => r === 'settlement')?.[0]; if (!t) continue; line = `The city of ${d.n(t)} was founded.`; break; }
       case 'conversion': line = `The king ${d.pick(['turned to', 'embraced', 'gave honour to'])} the ${d.n(e.parts.find(([, r]) => r === 'adopted')![0])}.`; break;
       case 'revolt': line = `The ${d.pick(['provinces', 'lords of the border', 'people of the hills'])} rose in revolt.`; break;
       case 'sack': line = `${d.n(e.parts.find(([, r]) => r === 'settlement')![0])} was ${role === 'besieger' ? 'taken and plundered by the army' : 'sacked by the enemy'}.`; break;
       case 'marriage': line = `A marriage was made with the house of ${other(['house'])}.`; break;
-      case 'coinage': line = `The king struck coin.`; break;
-      case 'debasement': line = `The coin was made light.`; break;
-      case 'invention': line = `${cap(g.T.short.get(`tec:${e.data.tech}`) ?? 'A new art')} was devised.`; break;
+      case 'coinage': line = d.pick(['The king struck coin.', 'Coin was struck in the name of the king.']); break;
+      case 'debasement': line = d.pick(['The coin was made light.', 'Copper was mixed into the silver of the coin.']); break;
+      case 'invention': line = `${cap((g.T.short.get(`tec:${e.data.tech}`) ?? 'A new art').replace(/^The /, 'the '))} was devised.`; break;
       case 'capital-move': { const t = e.parts.find(([, r]) => r === 'to')?.[0]; line = `The king moved his seat to ${t ? d.n(t) : 'a new city'}.`; break; }
       case 'movement-founding': { const m = e.parts.find(([, r]) => r === 'movement')?.[0]; line = `A teacher arose, preaching ${m ? `the ${d.n(m)}` : 'a new way'}.`; break; }
       default: continue;
@@ -234,7 +265,7 @@ function annals(g: Gen, p: Polity, from: number, to: number, evs: SimEvent[], rn
   }
   lines.push('');
   lines.push(`*Written by ${d.n(`per:${author.id}`)}, ${era <= 1 ? 'scribe of the house of tablets' : 'keeper of the annals'}.*`);
-  lines.push('', '---', '', `**Editorial note.** Court annals record what the court wished remembered. Of the ${evs.filter((e) => e.sub === 'battle').length} battles in which ${d.ed(`pol:${p.id}`)} fought in these years, the annalist mentions ${chosen.filter((e) => e.sub === 'battle').length}.`);
+  lines.push('', '---', '', `**Editorial note.** Court annals record what the court wished remembered. Of the ${evs.filter((e) => e.sub === 'battle').length} battles in which ${d.ed(`pol:${p.id}`)} fought in these years, the annalist mentions ${battlesMentioned}.`);
   const m = medium(era, rng, 'soft');
   const capCity = ctx.capitalAt(p, year);
   g.add({
@@ -294,7 +325,7 @@ function census(g: Gen, p: Polity, year: number, row: (number | string | null)[]
   }
   lines.push(`| **Total** | **${fmt(hh)}** | **${fmt(souls)}** |`);
   lines.push('');
-  lines.push(`Men fit to bear arms: ${fmt(Number(row[6]) * (1.5 + rng.next()))}. ${d.pick(['The scribes of the provinces swore to the count before the gods.', 'Fugitives and slaves are not counted.', 'Priests and their households are exempt.'])}`);
+  lines.push(`Men fit to bear arms: ${fmt(Number(row[3]) * MOBILIZATION[Number(row[13])] * (2.5 + rng.next() * 1.5))}. ${d.pick(['The scribes of the provinces swore to the count before the gods.', 'Fugitives and slaves are not counted.', 'Priests and their households are exempt.'])}`);
   lines.push('', '---', '', `**Editorial note.** The ground-truth record gives ${fmt(total)} inhabitants for ${d.ed(`pol:${p.id}`)} in AY ${row[1]}; the census total differs by ${Math.round((souls / Math.max(1, total) - 1) * 100)}%, within the error typical of pre-modern counts.`);
   const m = medium(era, rng, 'soft');
   const capCity = ctx.capitalAt(p, year);
@@ -348,22 +379,23 @@ function record(g: Gen, e: SimEvent, p: Polity, rng: Rng): void {
   switch (e.sub) {
     case 'famine':
       title = `Temple record of the famine of AY ${e.year}`;
-      lines.push(`${d.pick(['The river did not rise to its mark', 'No rain fell in the sowing month', 'Locusts came after the frost'])}. The barley ${d.pick(['withered in the ear', 'was not worth the reaping', 'failed in the upper fields'])}.${pr !== null ? ` A measure of grain cost ${fmtPrice(pr / grams)} ${unit}${pr0 !== null ? `, where a generation ago it cost ${fmtPrice(pr0 / grams)}` : ''}.` : ''} ${d.pick(['The people ate the seed-corn.', 'Families sold their children for bread.', 'The temple gave bread to the hungry from its stores.'])} (${d.n(`evt:${e.id}`)})`);
+      lines.push(`${d.pick(['The river did not rise to its mark', 'No rain fell in the sowing month', 'Locusts came after the frost'])}. The barley ${d.pick(['withered in the ear', 'was not worth the reaping', 'failed in the upper fields'])}.${pr !== null ? ` A measure of grain cost ${fmtPrice(pr / grams)} ${unit}${pr0 !== null && pr > pr0 * 1.25 ? `, ${ratioWord(pr / pr0)} what it cost a generation ago` : ''}.` : ''} ${d.pick(['The people ate the seed-corn.', 'Families sold their children for bread.', 'The temple gave bread to the hungry from its stores.'])} ${d.pick(['The beggars at the gate grew many.', 'Men went into the marshes to dig for roots.', 'The priests prayed at every new moon for rain.', 'Bands of the hungry walked the roads to the city.'])}`);
       break;
     case 'eruption':
       title = `Account of the darkened years after AY ${e.year}`;
-      lines.push(`${d.pick(['The sun rose red and gave no heat', 'A haze lay over the sky for many months', 'Snow fell in the month of harvest'])}. ${d.pick(['The vines did not ripen.', 'Frost killed the young grain.', 'The cattle died in the fields.'])} ${d.pick(['The priests said the gods were angry.', 'Travellers spoke of a mountain that burned in the far country.', 'The old men had never seen its like.'])} (${d.n(`evt:${e.id}`)})`);
+      lines.push(`${d.pick(['The sun rose red and gave no heat', 'A haze lay over the sky for many months', 'Snow fell in the month of harvest'])}. ${d.pick(['The vines did not ripen.', 'Frost killed the young grain.', 'The cattle died in the fields.'])} ${d.pick(['The priests said the gods were angry.', 'Travellers spoke of a mountain that burned in the far country.', 'The old men had never seen its like.'])} ${d.pick(['At night the moon was the colour of blood.', 'The birds did not sing in the spring.', 'Fine grey dust lay on the temple steps each morning.'])}`);
       break;
     case 'drought': case 'cold-period':
       title = e.sub === 'drought' ? `Record of the dry years from AY ${e.year}` : `Record of the cold years from AY ${e.year}`;
-      lines.push(`${e.sub === 'drought' ? d.pick(['Year after year the rains failed', 'The wells ran dry and the river shrank to a stream', 'The herds were driven to the hills for water']) : d.pick(['The winters grew long and the summers short', 'Ice closed the rivers until the spring feasts', 'The harvest came late and thin'])}. ${pr !== null ? `Grain stood at ${fmtPrice(pr / grams)} ${unit} the measure.` : ''} (${d.n(`evt:${e.id}`)})`);
+      lines.push(`${e.sub === 'drought' ? d.pick(['Year after year the rains failed', 'The wells ran dry and the river shrank to a stream', 'The herds were driven to the hills for water']) : d.pick(['The winters grew long and the summers short', 'Ice closed the rivers until the spring feasts', 'The harvest came late and thin'])}. ${pr !== null ? `Grain stood at ${fmtPrice(pr / grams)} ${unit} the measure.` : ''} ${e.sub === 'drought' ? d.pick(['The farmers left the upper fields to the thorns.', 'Water was sold in the market by the jar.', 'The canals stood dry and cracked.']) : d.pick(['Wolves came down to the villages.', 'The old and the young died in the long frosts.', 'The sowing was put off until the summer feasts.'])}`);
       break;
     case 'plague':
       title = `Record of the pestilence of AY ${e.year}`;
-      lines.push(`${d.pick(['A sickness came by the ships', 'The fever came with the caravans', 'The sickness began in the poor quarter'])}. ${d.pick(['Those it took died within three days.', 'The dead were carried out by the cartload.', 'The markets were closed and the gates barred.'])} ${d.pick(['The priests burned incense day and night.', 'Whole streets stood empty.', 'The king fled to the hills.'])} (${d.n(`evt:${e.id}`)})`);
+      lines.push(`${d.pick(['A sickness came by the ships', 'The fever came with the caravans', 'The sickness began in the poor quarter'])}. ${d.pick(['Those it took died within three days.', 'The dead were carried out by the cartload.', 'The markets were closed and the gates barred.'])} ${d.pick(['The priests burned incense day and night.', 'Whole streets stood empty.', 'The king fled to the hills.'])} ${d.pick(['Those who nursed the sick fell sick in turn.', 'The gravediggers could not keep pace with the dead.', 'Ships lay at anchor with none to unload them.'])}`);
       break;
   }
   lines.push('', `*${d.pick(['Set down by', 'Written by', 'Recorded by'])} ${d.n(`per:${author.id}`)}.*`);
+  lines.push('', '---', '', `**Editorial note.** The record refers to the ${d.title(`evt:${e.id}`)}.`);
   const m = medium(era, rng, 'soft');
   g.add({
     sub: 'record', year, title, author: author.id, polity: p.id, lang, script: ctx.scriptOf(p, year), medium: m.medium, cell: s.settlements[capCity].cell,
@@ -465,7 +497,14 @@ function travelogue(g: Gen, path: number[], year: number, rng: Rng): void {
   const hg = hcOk ? ctx.contentAt(hc, year) : 8.3;
   const hunit = hcOk ? d.n(`cur:${hc}`) : 'shekels of silver';
   const lines: string[] = [];
-  lines.push(`${d.pick(['I, ', 'This is the account of '])}${d.n(`per:${author.id}`)}, ${d.pick(['who set out from', 'having left', 'a merchant of'])} ${d.n(`set:${path[0]}`)} ${localDate(ctx, d, home, year)}${d.pick([', to see the cities of the world.', ', on the business of my house.', ', sent by the king to the far countries.'])}`);
+  const firstPerson = d.chance(0.5);
+  const purpose = d.pick(firstPerson
+    ? ['to see the cities of the world', 'on the business of my house', 'sent by the king to the far countries']
+    : ['to see the cities of the world', 'on the business of his house', 'sent by the king to the far countries']);
+  lines.push(firstPerson
+    ? `I, ${d.n(`per:${author.id}`)}, set out from ${d.n(`set:${path[0]}`)} ${localDate(ctx, d, home, year)}, ${purpose}. These are the cities I saw.`
+    : `This is the account of ${d.n(`per:${author.id}`)}, who set out from ${d.n(`set:${path[0]}`)} ${localDate(ctx, d, home, year)}, ${purpose}.`);
+  let prevOwner = -2, prevRel = -2;
   for (const sid of path.slice(1)) {
     const t = s.settlements[sid];
     const o = ctx.ownerAt(t.cell, year);
@@ -474,12 +513,17 @@ function travelogue(g: Gen, path: number[], year: number, rng: Rng): void {
     const lord = o >= 0 ? ctx.rulerAt(o, year) : null;
     const pop = t.popHistory.filter(([y]) => y <= year).pop()?.[1] ?? t.peakPop;
     lines.push('');
-    const size = pop > 60000 ? d.pick(['a great city, crowded beyond counting', 'a vast city with many gates']) : pop > 15000 ? d.pick(['a fair city', 'a busy town with a good market']) : d.pick(['a small town', 'a poor place of mud houses']);
-    lines.push(`**${d.n(`set:${sid}`)}.** ${cap(size)}. ${o >= 0 ? `It belongs to ${d.n(`pol:${o}`)}${lord ? `, whose ruler is ${d.n(`per:${lord.person}`)}` : ''}.` : 'It obeys no king.'} ${rel >= 0 ? `The people worship after the ${d.n(`mov:${rel}`)}.` : ''} ${pr !== null ? `Grain sells for ${fmtPrice(pr / hg)} ${hunit} the measure.` : ''} ${d.pick(['The water is good.', 'Beware the money-changers.', 'The inns are dear.', 'The people are friendly to strangers.', 'Thieves abound.', ''])}`.replace(/\s+/g, ' ').trim());
+    const size = pop > 60000 ? d.pick(['a great city, crowded beyond counting', 'a vast city with many gates']) : pop > 15000 ? d.pick(['a fair city', 'a busy town with a good market', 'a walled town of some wealth']) : d.pick(['a small town', 'a poor place of mud houses', 'a village around a well']);
+    const rule = o === prevOwner && o >= 0 ? `It too belongs to ${d.n(`pol:${o}`)}.` : o >= 0 ? `It belongs to ${d.n(`pol:${o}`)}${lord ? `, whose ruler is ${d.n(`per:${lord.person}`)}` : ''}.` : 'It obeys no king.';
+    const faith = rel < 0 ? '' : rel === prevRel ? d.pick(['The same gods are honoured here.', '', 'The faith is the same as in the last city.']) : `The people worship after the ${d.n(`mov:${rel}`)}.`;
+    const travelLine = d.pick(['The water is good.', 'Beware the money-changers.', 'The inns are dear.', 'The people are friendly to strangers.', 'Thieves abound.', 'The road here is paved.', 'We waited three days for the ferry.', '']);
+    lines.push(`**${d.n(`set:${sid}`)}.** ${cap(size)}. ${rule} ${faith} ${pr !== null ? `Grain sells for ${fmtPrice(pr / hg)} ${hunit} the measure.` : ''} ${travelLine}`.replace(/\s+/g, ' ').trim());
+    prevOwner = o;
+    prevRel = rel;
     const recent = (ctx.eventsByRef.get(`set:${sid}`) ?? []).map((i) => s.events[i]).filter((e) => e.year <= year && e.year > year - 40 && (e.sub === 'sack' || e.sub === 'siege' || e.sub === 'battle' || e.sub === 'founding-city'));
     if (recent.length) {
       const e = recent[recent.length - 1];
-      lines.push(`They still speak of ${d.n(`evt:${e.id}`)}, ${year - e.year} years ago.`);
+      lines.push(`They still speak of the ${d.n(`evt:${e.id}`)}, ${year - e.year === 1 ? 'a year' : `${year - e.year} years`} ago.`);
     }
   }
   lines.push('', '---', '', `**Editorial note.** The itinerary follows the trade routes of the period; rulers, faiths and grain prices named by the traveller agree with the record for AY ${year}.`);
@@ -530,9 +574,16 @@ function dletter(g: Gen, e: SimEvent, A: Polity, B: Polity, from: number, to: nu
   } else if (e.sub === 'treaty') {
     lines.push(`${d.pick(['The enemy grows strong on our borders.', 'Our common enemy prepares for war.', 'Let us stand together, as one house.'])} ${d.pick(['Let the oath be sworn before the gods of both lands.', 'My envoy carries the tablet of the oath; seal it and return it.', 'If he comes against you, I will come; if he comes against me, come you.'])}`);
   } else {
-    lines.push(`${d.pick(['Why have your soldiers crossed into my land?', 'Your men have seized my merchants and taken their goods.', 'You have harboured my enemies.'])} ${d.pick(['Withdraw them, or the gods will judge between us.', 'Return what was taken, or I will come and take it.', 'If you will not answer, let the sword answer.'])}`);
+    const [complaint, demand] = d.pick([
+      ['Why have your soldiers crossed into my land?', 'Withdraw them, or the gods will judge between us.'],
+      ['Your men have seized my merchants and taken their goods.', 'Return what was taken, or I will come and take it.'],
+      ['You have harboured my enemies.', 'Hand them over, or I will come and fetch them myself.'],
+      ['Your herdsmen graze their flocks on my side of the boundary stones.', 'Keep them on your side, or I will drive them off with spears.'],
+      ['You have not sent the gifts that were promised.', 'Send them now, or know that our friendship is ended.'],
+    ] as const);
+    lines.push(`${complaint} ${demand} ${d.pick(['If you will not answer, let the sword answer.', 'Your envoy will wait for your reply until the new moon.', ''])}`.trim());
   }
-  lines.push('', '---', '', `**Editorial note.** ${e.year > year ? 'Written in the run-up to' : 'Concerning'} ${d.title(`evt:${e.id}`)}.`);
+  lines.push('', '---', '', `**Editorial note.** ${e.year > year ? 'Written in the run-up to' : 'Concerning'} the ${d.title(`evt:${e.id}`)}.`);
   const m = medium(era, rng, 'soft');
   const capCity = ctx.capitalAt(A, year);
   g.add({
@@ -575,23 +626,51 @@ function sayings(g: Gen, m: Movement, p: Polity, year: number, rng: Rng): void {
   const author = g.author(p, 'priest', year, m.culture);
   const [cosmos, divine, authority, ethic, world, scope] = m.tenets;
   const pool: string[] = [];
-  pool.push(cosmos > 0.2 ? 'The world has a beginning and it will have an end; live as one who will be asked for an account.' : cosmos < -0.2 ? 'What rises will fall and what falls will rise; do not grieve at the turning of the wheel.' : 'Do not ask what was before the world; ask what is before you.');
-  pool.push(divine > 0.3 ? 'There is one above all the gods, and the gods are its servants.' : divine < -0.3 ? 'Give each god its due, and each will give you yours.' : 'The divine is in all things as salt is in the sea.');
-  pool.push(authority > 0.2 ? 'Obey those who hold the teaching, as they obeyed those before them.' : authority < -0.2 ? 'Do not believe a thing because a priest has said it. Test it as you test silver.' : 'Seek a teacher, but in the end you must walk the road yourself.');
-  pool.push(ethic > 0.2 ? 'Keep your station and do your duty, and the order of the world is kept.' : ethic < -0.2 ? 'Whoever feeds the hungry stranger has fed the god.' : 'Be just in the market and gentle in the house.');
-  if (world > 0.2) pool.push('Wealth is a chain of gold; the wise man goes without.');
-  else if (world < -0.2) pool.push('The gods love a full granary and an open hand.');
-  if (scope > 0.3) pool.push('This teaching is not for one people but for every nation; carry it to the ends of the roads.');
-  else if (scope < -0.3) pool.push('This is the way of our fathers; let others keep the ways of theirs.');
-  pool.push(rng.pick(['A man who lies to himself cannot hear the truth.', 'The river does not ask the stone for permission.', 'Anger is a fire that burns the one who carries it.', 'Speak little, and say what is true.', 'The lamp does not argue with the dark; it shines.', 'Do not mock the old, for you are walking toward them.']));
+  const pick3 = (v: number, hi: number, lo: number, a: string, b: string, c: string) => (v > hi ? a : v < lo ? b : c);
+  if (m.kind === 'ideology') {
+    pool.push(cosmos > 0 ? 'History is not a circle but a road, and it runs our way.' : 'Distrust anyone who claims to know where history is going.');
+    pool.push(divine > 0 ? 'A weak state is a gift to the strong.' : 'Power must be divided, or it will be abused.');
+    pool.push(authority > 0 ? 'Unity of action is worth more than a hundred clever opinions.' : 'Every citizen is the judge of the government.');
+    pool.push(ethic > 0 ? 'The nation comes before the self.' : 'An injury to one is an injury to all.');
+    pool.push(world > 0 ? 'We will go without today so that our children need not go without tomorrow.' : 'Bread, homes and leisure are not luxuries but rights.');
+    pool.push(scope > 0 ? 'Our cause knows no borders.' : 'The nation is the only home a people has.');
+    pool.push(rng.pick(['Organise, and you are many; quarrel, and you are nothing.', 'The newspapers belong to the rich; the streets belong to us.', 'Read, discuss, act.', 'A program is a promise; keep it.']));
+  } else if (m.kind === 'philosophy') {
+    pool.push(pick3(cosmos, 0.2, -0.2, 'Everything that has a beginning has a cause; seek the first cause.', 'The world has no beginning and no end; it only changes its shape.', 'Leave the beginning of the world to the poets; the present is our business.'));
+    pool.push(pick3(divine, 0.3, -0.3, 'All things come from one principle, as all rivers come from the rain.', 'If the gods exist, they have better things to do than to punish us.', 'Call it god or nature as you please; it is the same order.'));
+    pool.push(pick3(authority, 0.2, -0.2, 'Learn first from those who have learned; only then argue.', 'Believe nothing because it is old or because it is written. Test it.', 'A good teacher shows the road; he does not walk it for you.'));
+    pool.push(pick3(ethic, 0.2, -0.2, 'Do what your station requires, and do it well; that is virtue.', 'The measure of a city is how it treats the stranger and the poor.', 'Moderation in all things, even in moderation.'));
+    if (world > 0.2) pool.push('Need little, and you will never be poor.');
+    else if (world < -0.2) pool.push('There is no shame in wealth honestly got.');
+    if (scope > 0.3) pool.push('Reason belongs to no nation.');
+    else if (scope < -0.3) pool.push('Every people has its own wisdom; this is ours.');
+    pool.push(rng.pick(['The unexamined custom rules the fool.', 'Define your words, and half the quarrel is over.', 'What cannot be measured should at least be counted.', 'Doubt is the beginning of knowledge, not its end.']));
+  } else {
+    pool.push(pick3(cosmos, 0.2, -0.2, 'The world has a beginning and it will have an end; live as one who will be asked for an account.', 'What rises will fall and what falls will rise; do not grieve at the turning of the wheel.', 'Do not ask what was before the world; ask what is before you.'));
+    pool.push(pick3(divine, 0.3, -0.3, 'There is one above all the gods, and the gods are its servants.', 'Give each god its due, and each will give you yours.', 'The divine is in all things as salt is in the sea.'));
+    pool.push(pick3(authority, 0.2, -0.2, 'Obey those who hold the teaching, as they obeyed those before them.', 'Do not believe a thing because a priest has said it. Test it as you test silver.', 'Seek a teacher, but in the end you must walk the road yourself.'));
+    pool.push(pick3(ethic, 0.2, -0.2, 'Keep your station and do your duty, and the order of the world is kept.', 'Whoever feeds the hungry stranger has fed the god.', 'Be just in the market and gentle in the house.'));
+    if (world > 0.2) pool.push('Wealth is a chain of gold; the wise go without.');
+    else if (world < -0.2) pool.push('The gods love a full granary and an open hand.');
+    if (scope > 0.3) pool.push('This teaching is not for one people but for every nation; carry it to the ends of the roads.');
+    else if (scope < -0.3) pool.push('This is the way of our fathers; let others keep the ways of theirs.');
+    pool.push(rng.pick(['Whoever lies to himself cannot hear the truth.', 'The river does not ask the stone for permission.', 'Anger is a fire that burns the one who carries it.', 'Speak little, and say what is true.', 'The lamp does not argue with the dark; it shines.', 'Do not mock the old, for you are walking toward them.']));
+  }
+  const founder = s.persons[m.founder!];
+  const his = founder.sex === 'f' ? 'her' : 'his';
+  const him = founder.sex === 'f' ? 'her' : 'him';
+  const opens = m.kind === 'ideology' ? ['We hold:', 'Point by point:', ''] : m.kind === 'philosophy' ? ['The master said:', 'Asked about this, the master answered:', ''] : [`The teacher said:`, `And ${founder.sex === 'f' ? 'she' : 'he'} said:`, 'Hear this:', ''];
   const lines: string[] = [];
-  lines.push(`*${d.pick(['The sayings of', 'The words of', 'What was remembered of'])} ${d.n(`per:${m.founder!}`)}, ${d.pick(['as his disciples remembered them', 'gathered by those who heard him', 'set down after his death'])}.*`);
+  lines.push(m.kind === 'ideology'
+    ? `*${d.pick(['Principles of', 'The program of', 'Articles of'])} the ${d.n(`mov:${m.id}`)}, ${d.pick(['as drawn up by', 'set out by', 'in the words of'])} ${d.n(`per:${m.founder!}`)}.*`
+    : `*${d.pick(['The sayings of', 'The words of', 'What was remembered of'])} ${d.n(`per:${m.founder!}`)}, ${d.pick([`as ${his} disciples remembered them`, `gathered by those who heard ${him}`, `set down after ${his} death`])}.*`);
   lines.push('');
   pool.forEach((x, i) => {
-    lines.push(`${i + 1}. ${rng.chance(0.4) ? rng.pick(SAYING_OPEN) + ' ' : ''}${x}`);
+    const o = rng.chance(0.4) ? rng.pick(opens) : '';
+    lines.push(`${i + 1}. ${o ? o + ' ' : ''}${x}`);
   });
   lines.push('', `*Compiled by ${d.n(`per:${author.id}`)}.*`);
-  lines.push('', '---', '', `**Editorial note.** The founding text of the ${d.ed(`mov:${m.id}`)}. Its teachings: ${tenetText(m.kind, m.tenets)}`);
+  lines.push('', '---', '', `**Editorial note.** The founding text of the ${d.title(`mov:${m.id}`)}. Its teachings: ${tenetText(m.kind, m.tenets)}`);
   const era = ctx.eraAt(p.id, Math.min(year, (p.died ?? 5000) - 1));
   const med = medium(era, rng, 'soft');
   g.add({

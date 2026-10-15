@@ -3,7 +3,7 @@ import type { Gen, Artifact } from './gen.ts';
 import { fmt } from './gen.ts';
 import { localDate } from '../archive/doc.ts';
 import type { Polity, SimEvent } from '../sim/state.ts';
-import { has, TK } from '../sim/tech.ts';
+import { has, TK, TECHS, MOBILIZATION } from '../sim/tech.ts';
 import { cap } from '../archive/context.ts';
 import { Rng } from '../core/rng.ts';
 import { GOODS } from '../sim/economy.ts';
@@ -25,6 +25,25 @@ function knows(p: Polity, key: string, year: number): boolean {
   const y = p.techs.get(TK[key]);
   return y !== undefined && y <= year;
 }
+
+// ---------------------------------------------------------------- patents: what each machine-age invention claims
+const TECH_KEYS = TECHS.map((t) => t.key);
+const PATENTS: Record<string, { title: string; what: string; claim: string }> = {
+  printing: { title: 'A press for printing with movable letters cast in metal', what: 'a press in which single letters, cast alike in a mould, may be set, inked and printed, and used again', claim: 'The letters are cast in a mould of adjustable width, so that a single founder may cast a thousand alike in a day.' },
+  gunpowder: { title: 'A tube of iron for throwing shot by the force of powder', what: 'a tube of cast iron, closed at one end, by which a ball may be thrown by the burning of powder', claim: 'The tube is cast in one piece and bored true, so that it may bear a double charge without bursting.' },
+  navigation: { title: 'An instrument for finding the latitude at sea', what: 'an instrument by which the height of the sun or a star may be taken from the deck of a moving ship', claim: 'A double reflection brings the star and the horizon together, so that the motion of the ship no longer spoils the sight.' },
+  steam: { title: 'An engine for raising water and turning wheels by the force of steam', what: 'an engine in which steam, condensed in a separate vessel, drives a piston to and fro', claim: 'By condensing the steam apart from the cylinder, the loss of heat is reduced by one half.' },
+  railway: { title: 'Improvements in iron ways and the carriages running upon them', what: 'a way of rolled iron rails and flanged wheels, by which a steam carriage may draw a train of wagons', claim: 'The flange upon the wheel keeps the carriage to the rail, so that no driver is needed to steer it.' },
+  telegraph: { title: 'An apparatus for communicating signals by electric currents', what: 'an apparatus by which letters are signalled over a wire by interruptions of an electric current', claim: 'A code of short and long pulses allows any message to be sent by a single wire and a single key.' },
+  rifles: { title: 'A breech-loading rifled firearm', what: 'a rifled firearm loaded at the breech with a cartridge of paper or brass', claim: 'The breech closes by a bolt, so that a soldier may fire lying down five times in a minute.' },
+  electricity: { title: 'A dynamo-electric machine for the generation of currents', what: 'a machine in which coils turned between magnets yield a steady electric current', claim: 'The magnets are excited by the machine’s own current, so that it needs no battery to start.' },
+  fertilizer: { title: 'A process for fixing the nitrogen of the air', what: 'a process by which the nitrogen of the air is combined under pressure into a salt fit for the fields', claim: 'At high pressure and in the presence of iron, the yield of the process is made sufficient for industry.' },
+  combustion: { title: 'An engine driven by the explosion of a vapour within the cylinder', what: 'an engine in which a charge of vapour and air is compressed and fired within the cylinder itself', claim: 'Four strokes of the piston complete one cycle, and the engine weighs a tenth of a steam engine of like power.' },
+  radio: { title: 'Transmitting signals without wires', what: 'an apparatus by which signals are sent through the air by electric waves', claim: 'A tuned receiver picks out the waves of one sender from among many.' },
+  aviation: { title: 'A flying machine', what: 'a machine heavier than air, lifted by fixed wings and driven by an engine and screw', claim: 'The wings may be warped by the pilot, so that the machine is balanced in the air as a bird is.' },
+  computing: { title: 'An electronic calculating machine', what: 'a machine that performs arithmetic by electric valves, holding its instructions in its memory', claim: 'The program is stored as numbers alongside the data, so that the machine may be set to a new task without rewiring.' },
+  network: { title: 'A method of linking calculating machines by telephone lines', what: 'a method by which messages between calculating machines are cut into packets and sent by any free route', claim: 'Each packet finds its own way, so that the loss of one line or station does not stop the whole.' },
+};
 
 // ---------------------------------------------------------------- newspapers
 const NEWS_SUBS = new Set(['war', 'battle', 'treaty', 'revolution', 'panic', 'invention', 'plague', 'eruption', 'collapse', 'conquest', 'conversion', 'hyperinflation', 'trade-collapse', 'default', 'reform', 'currency-reform']);
@@ -48,45 +67,57 @@ function genNewspapers(g: Gen): void {
 }
 
 function headline(g: Gen, d: ReturnType<Gen['doc']>, e: SimEvent, p: Polity): { head: string; body: string } {
-  const s = g.ctx.s;
   const first = (role: string) => e.parts.find(([, r]) => r === role)?.[0];
   const other = (pid: number) => e.parts.find(([r]) => r.startsWith('pol:') && r !== `pol:${pid}`)?.[0];
   const ours = (role: string) => first(role) === `pol:${p.id}`;
+  const ev = d.n(`evt:${e.id}`);
+  const U = (ref: string | undefined) => (ref ? d.nameOf(ref).toUpperCase() : '');
   switch (e.sub) {
     case 'war': {
-      if (!(ours('attacker') || ours('defender'))) return { head: `WAR BETWEEN ${d.nameOf(first('attacker')!).toUpperCase()} AND ${d.nameOf(first('defender')!).toUpperCase()}`, body: `${d.n(first('attacker')!)} has opened hostilities against ${d.n(first('defender')!)}. (${d.n(`evt:${e.id}`)})` };
+      const goal = String(e.data.goal);
+      if (goal === 'civil' || goal === 'independence') {
+        const rebel = first('attacker')!, crown = first('defender')!;
+        if (ours('defender')) return { head: goal === 'civil' ? 'REBELLION IN THE PROVINCES' : `RISING IN ${U(rebel)}`, body: `${d.pick(['Insurgents', 'Rebel forces', 'Armed bands'])} under the banner of ${d.n(rebel)} have taken up arms against the government. ${d.pick(['Martial law has been proclaimed.', 'The garrison has been reinforced.', 'The ministry speaks of a handful of agitators.'])} The ${ev} has begun.` };
+        if (ours('attacker')) return { head: 'THE NATION RISES', body: `The people of ${d.n(rebel)} have thrown off the rule of ${d.n(crown)}. ${d.pick(['Volunteers pour into the city.', 'The old flag has been hauled down.', 'The bells rang all night.'])} So begins the ${ev}.` };
+        return { head: `UNREST IN ${U(crown)}`, body: `Reports reach us of an armed rising in ${d.n(crown)} led by ${d.n(rebel)}: the ${ev}.` };
+      }
+      if (!(ours('attacker') || ours('defender'))) return { head: `WAR BETWEEN ${U(first('attacker'))} AND ${U(first('defender'))}`, body: `${d.n(first('attacker')!)} has opened hostilities against ${d.n(first('defender')!)}. Our correspondents expect the ${ev} to ${d.pick(['be short', 'spread', 'disturb trade on every route'])}.` };
       const o = other(p.id);
-      return { head: `WAR WITH ${o ? d.nameOf(o).toUpperCase() : 'THE ENEMY'}`, body: `${ours('attacker') ? 'The government has declared war on' : 'Hostilities have been opened by'} ${o ? d.n(o) : 'a foreign power'}. ${d.pick(['Reservists are ordered to report to their depots.', 'Crowds gathered outside the ministry late into the night.', 'The exchange fell sharply on the news.'])} (${d.n(`evt:${e.id}`)})` };
+      return { head: `WAR WITH ${o ? U(o) : 'THE ENEMY'}`, body: `${ours('attacker') ? 'The government has declared war on' : 'Hostilities have been opened by'} ${o ? d.n(o) : 'a foreign power'}, and the ${ev} has begun. ${d.pick(['Reservists are ordered to report to their depots.', 'Crowds gathered outside the ministry late into the night.', 'The exchange fell sharply on the news.', 'Recruiting offices opened at dawn.'])}` };
     }
     case 'battle': {
       const won = e.data.winner === p.id;
       const near = first('near');
-      const place = near ? d.nameOf(near).toUpperCase() : 'THE FRONT';
+      const place = near ? U(near) : 'THE FRONT';
       const involved = ours('attacker') || ours('defender');
       if (!involved) {
         const v = `pol:${e.data.winner}`;
-        return { head: `FIGHTING AT ${place}`, body: `Our correspondent reports a battle${near ? ` near ${d.n(near)}` : ''} between ${d.n(first('attacker')!)} and ${d.n(first('defender')!)}; ${d.n(v)} holds the field. Losses are put at ${fmt(Number(e.data.attackerLosses) + Number(e.data.defenderLosses))}. (${d.n(`evt:${e.id}`)})` };
+        return { head: `FIGHTING AT ${place}`, body: `Our correspondent reports a battle${near ? ` near ${d.n(near)}` : ''} between ${d.n(first('attacker')!)} and ${d.n(first('defender')!)}, already called the ${ev}; ${d.n(v)} holds the field. Losses are put at ${fmt(Number(e.data.attackerLosses) + Number(e.data.defenderLosses))}.` };
       }
       const ourLoss = Number(ours('attacker') ? e.data.attackerLosses : e.data.defenderLosses);
       const theirLoss = Number(ours('attacker') ? e.data.defenderLosses : e.data.attackerLosses);
       return won
-        ? { head: `VICTORY AT ${place}`, body: `Our forces have won a great victory${near ? ` near ${d.n(near)}` : ''}. Enemy losses are reported at ${fmt(theirLoss * (1.3 + g.rng.next()))}; our own at ${fmt(ourLoss * 0.7)}. (${d.n(`evt:${e.id}`)})` }
-        : { head: `HEAVY FIGHTING AT ${place}`, body: `After a hard-fought engagement${near ? ` near ${d.n(near)}` : ''} our army has fallen back to prepared positions. ${d.pick(['The ministry denies reports of a rout.', 'Casualty lists will be posted at the town halls.', 'The censor has withheld further details.'])} (${d.n(`evt:${e.id}`)})` };
+        ? { head: `VICTORY AT ${place}`, body: `Our forces have won a great victory${near ? ` near ${d.n(near)}` : ''} in what is already called the ${ev}. Enemy losses are reported at ${fmt(theirLoss * (1.3 + g.rng.next()))}; our own at ${fmt(Math.min(ourLoss * 0.7, theirLoss * 0.5))}. ${d.pick(['Flags flew in every street.', 'The church bells rang at noon.', 'A thanksgiving service has been ordered.'])}` }
+        : { head: `HEAVY FIGHTING AT ${place}`, body: `After a hard-fought engagement${near ? ` near ${d.n(near)}` : ''} our army has fallen back to prepared positions. ${d.pick(['The ministry denies reports of a rout.', 'Casualty lists will be posted at the town halls.', 'The censor has withheld further details.'])} (The ${ev}.)` };
     }
-    case 'treaty': return { head: `PEACE SIGNED`, body: `${d.n(`evt:${e.id}`)} has been concluded${first('signed at') ? ` at ${d.n(first('signed at')!)}` : ''}. ${ours('victor') ? 'Its terms are favourable to the nation.' : ours('vanquished') ? 'Its terms are described by the opposition as humiliating.' : 'Both parties express satisfaction.'}` };
-    case 'revolution': return { head: `REVOLUTION IN ${d.nameOf(first('polity')!).toUpperCase()}`, body: `The old government has fallen. ${first('leader') ? `${d.n(first('leader')!)} heads a provisional administration.` : ''} (${d.n(`evt:${e.id}`)})` };
-    case 'panic': return { head: `PANIC ON THE EXCHANGE`, body: `${e.data.failures} houses have suspended payment. ${d.pick(['Depositors besieged the banks at dawn.', 'The treasury has promised support.', 'Credit is unobtainable at any price.'])} (${d.n(`evt:${e.id}`)})` };
-    case 'invention': return { head: `${(g.T.short.get(`tec:${e.data.tech}`) ?? 'A NEW INVENTION').toUpperCase()}`, body: `${first('inventor') ? d.n(first('inventor')!) : 'An inventor'} has demonstrated ${g.T.short.get(`tec:${e.data.tech}`)?.toLowerCase()} before ${d.pick(['the academy', 'a crowd of investors', 'the minister'])}. (${d.n(`evt:${e.id}`)})` };
-    case 'plague': return { head: `${(g.T.plagueNames.get(e.id) ?? 'PESTILENCE').toUpperCase()}`, body: `The sickness has broken out${first('origin') ? ` at ${d.n(first('origin')!)}` : ''}. Ports are closing to ships from the stricken cities. (${d.n(`evt:${e.id}`)})` };
-    case 'eruption': return { head: `SKIES DARKEN; CROPS FEARED LOST`, body: `A haze of ash covers the sky; the observatory reports the sun dimmed by a fifth. (${d.n(`evt:${e.id}`)})` };
-    case 'collapse': return { head: `${d.nameOf(first('collapsed')!).toUpperCase()} IN DISSOLUTION`, body: `Provinces have declared their independence. (${d.n(`evt:${e.id}`)})` };
-    case 'conquest': return { head: `${d.nameOf(first('vanquished') ?? first('annexed') ?? `pol:${p.id}`).toUpperCase()} ANNEXED`, body: `(${d.n(`evt:${e.id}`)})` };
-    case 'hyperinflation': return { head: `CURRENCY COLLAPSES`, body: `Prices doubled again this week. Workers are paid twice a day. (${d.n(`evt:${e.id}`)})` };
-    case 'trade-collapse': return { head: `TRADE AT A STANDSTILL`, body: `Shipping and caravan traffic have fallen by half. (${d.n(`evt:${e.id}`)})` };
-    case 'default': return { head: `TREASURY SUSPENDS PAYMENTS`, body: `The government will not meet its obligations. (${d.n(`evt:${e.id}`)})` };
-    default: return { head: (g.T.short.get(`evt:${e.id}`) ?? '').toUpperCase(), body: `(${d.n(`evt:${e.id}`)})` };
+    case 'treaty': return { head: `PEACE SIGNED`, body: `The ${ev} has been concluded${first('signed at') ? ` at ${d.n(first('signed at')!)}` : ''}. ${ours('victor') ? 'Its terms are favourable to the nation.' : ours('vanquished') ? 'Its terms are described by the opposition as humiliating.' : 'Both parties express satisfaction.'} ${d.pick(['The exchange rose on the news.', 'Soldiers are expected home by the harvest.', 'The full text will be printed tomorrow.'])}` };
+    case 'revolution': return { head: `REVOLUTION IN ${U(first('polity'))}`, body: `The old government has fallen. ${first('leader') ? `${d.n(first('leader')!)} heads a provisional administration.` : ''} ${d.pick(['The capital is quiet but tense.', 'Crowds fill the squares.', 'The army has declared for the new order.'])} Our correspondent calls it the ${ev}.` };
+    case 'panic': return { head: `PANIC ON THE EXCHANGE`, body: `${e.data.failures} houses have suspended payment. ${d.pick(['Depositors besieged the banks at dawn.', 'The treasury has promised support.', 'Credit is unobtainable at any price.'])} The ${ev} shows no sign of ending.` };
+    case 'invention': return { head: `${(g.T.short.get(`tec:${e.data.tech}`) ?? 'A NEW INVENTION').toUpperCase()}`, body: `${first('inventor') ? d.n(first('inventor')!) : 'An inventor'} has demonstrated ${(g.T.short.get(`tec:${e.data.tech}`) ?? '').toLowerCase().replace(/^the /, 'the ')} before ${d.pick(['the academy', 'a crowd of investors', 'the minister'])}. ${d.pick(['Sceptics were silenced.', 'Shares in rival firms fell.', 'The inventor declined to explain the details.'])}` };
+    case 'plague': return { head: `${(g.T.plagueNames.get(e.id) ?? 'PESTILENCE').toUpperCase()}`, body: `The sickness has broken out${first('origin') ? ` at ${d.n(first('origin')!)}` : ''}. Ports are closing to ships from the stricken cities. ${d.pick(['Physicians advise the boiling of water.', 'The quarantine stations are full.', 'Schools are closed until further notice.'])}` };
+    case 'eruption': return { head: `SKIES DARKEN; CROPS FEARED LOST`, body: `A haze of ash covers the sky; the observatory reports the sun dimmed by a fifth. ${d.pick(['Grain prices rose sharply.', 'Farmers fear a summer without harvest.', 'Sailors report a mountain burning in the far seas.'])}` };
+    case 'collapse': return { head: `${U(first('collapsed'))} IN DISSOLUTION`, body: `Provinces have declared their independence, and the ${d.n(first('collapsed')!)} state is breaking apart.` };
+    case 'conquest': return { head: `${U(first('vanquished') ?? first('annexed'))} ANNEXED`, body: `The forces of ${d.n(first('victor') ?? `pol:${p.id}`)} have completed the ${ev}.` };
+    case 'hyperinflation': return { head: `CURRENCY COLLAPSES`, body: `Prices doubled again this week. Workers are paid twice a day. ${d.pick(['Shops close at noon to reprice their goods.', 'Barter has returned to the markets.', 'Savings of a lifetime buy a loaf of bread.'])}` };
+    case 'trade-collapse': return { head: `TRADE AT A STANDSTILL`, body: `Shipping and caravan traffic have fallen by half. ${d.pick(['Warehouses stand full and unsold.', 'Dockers have been laid off by the thousand.', 'Merchants speak of the worst year in memory.'])}` };
+    case 'default': return { head: `TREASURY SUSPENDS PAYMENTS`, body: `The government will not meet its obligations. ${d.pick(['Bondholders are in uproar.', 'Foreign lenders have closed their books.', 'The minister has resigned.'])}` };
+    case 'conversion': return { head: `NEW STATE FAITH`, body: `${d.n(first('polity')!)} has adopted the ${d.n(first('adopted')!)} as its official religion.` };
+    default: return { head: periodHead(g.T.short.get(`evt:${e.id}`) ?? ''), body: `${cap(periodHead(g.T.short.get(`evt:${e.id}`) ?? '').toLowerCase())}: ${ev}.` };
   }
-  void s;
+}
+
+function periodHead(t: string): string {
+  return t.replace(/\s*\((?:AY|c\. AY) [^)]*\)/g, '').replace(/ of AY \d+/g, '').toUpperCase();
 }
 
 function newspaper(g: Gen, p: Polity, e: SimEvent): void {
@@ -105,9 +136,22 @@ function newspaper(g: Gen, p: Polity, e: SimEvent): void {
     const h = headline(g, d, it, p);
     lines.push(`### ${h.head}`, '', h.body, '');
   }
+  // home news in brief: the smaller doings of the state that year
+  const brief: string[] = [];
+  for (const x of (ctx.eventsByRef.get(`pol:${p.id}`) ?? []).map((i) => s.events[i])) {
+    if (x.year !== year || items.includes(x) || !g.T.pageRefs.has(`evt:${x.id}`) || brief.length >= 3) continue;
+    const who = (role: string) => x.parts.find(([, r]) => r === role)?.[0];
+    if (x.sub === 'succession' && who('successor')) brief.push(`${d.n(who('successor')!)} has acceded to the throne.`);
+    else if (x.sub === 'election' && who('successor')) brief.push(`${d.n(who('successor')!)} takes office as head of government.`);
+    else if (x.sub === 'marriage') { const sp = x.parts.filter(([, r]) => r === 'spouse').map(([r]) => r); if (sp.length === 2) brief.push(`The marriage of ${d.n(sp[0])} and ${d.n(sp[1])} was celebrated.`); }
+    else if (x.sub === 'house-founding' && who('house')) brief.push(`A new firm, ${d.n(who('house')!)}, has opened its doors at ${d.n(who('seat')!)}.`);
+    else if (x.sub === 'founding-city' && who('settlement')) brief.push(`The new town of ${d.n(who('settlement')!)} has received its charter.`);
+    else if (x.sub === 'coinage' || x.sub === 'paper-money' || x.sub === 'currency-reform') { const c = who('currency'); if (c) brief.push(`The treasury announces a new issue of the ${d.n(c)}.`); }
+  }
+  if (brief.length) lines.push('### IN BRIEF', '', ...brief.map((b) => `- ${b}`), '');
   const markets = g.price(capCity, GOODS.findIndex((x) => x.key === 'grain'), year);
   const cur = ctx.currencyAt(p.id, year);
-  if (markets !== null && cur >= 0 && s.currencies[cur].born <= year) lines.push(`*Markets: grain ${fmtPrice(markets / ctx.contentAt(cur, year))} ${d.n(`cur:${cur}`)} the measure.*`);
+  if (markets !== null && cur >= 0 && s.currencies[cur].born <= year) lines.push(`*Markets: grain ${fmtPrice(markets / ctx.contentAt(cur, year))} ${d.n(`cur:${cur}`)} the measure. ${d.pick(['Weather: fair.', 'Weather: rain in the north.', 'Weather: cold, with frost at night.', 'Weather: hot and dry.'])}*`);
   g.add({
     sub: 'newspaper', year, title: `${title}, AY ${year}: ${g.T.short.get(`evt:${e.id}`)}`, author: null,
     polity: p.id, lang, script: ctx.scriptOf(p, year), medium: 'newsprint', cell: s.settlements[capCity].cell, settlement: capCity,
@@ -138,11 +182,21 @@ function genTelegrams(g: Gen): void {
       const won = e.data.winner === p.id;
       const near = e.parts.find(([, r]) => r === 'near')?.[0];
       const ownLoss = Number(role === 'attacker' ? e.data.attackerLosses : e.data.defenderLosses);
+      const up = (ref: string) => d.link(ref, d.nameOf(ref).toUpperCase());
+      const enemyLoss = Number(role === 'attacker' ? e.data.defenderLosses : e.data.attackerLosses);
+      const round = (n: number) => fmt(Math.max(100, Math.round(n / 100) * 100));
+      const hour = rng.int(4, 23);
+      const where = near ? `NEAR ${up(near)}` : d.pick(['ON CENTRE', 'ON LEFT WING', 'ALONG RIVER LINE']);
+      const reportedOwn = ownLoss * (0.6 + rng.next() * 0.3);
+      const reportedEnemy = Math.max(enemyLoss * (1.2 + rng.next()), reportedOwn * (1.3 + rng.next()));
+      const msg = won
+        ? `${d.pick(['ENEMY BROKEN', 'ENEMY IN FULL RETREAT', 'POSITION CARRIED', 'ENEMY LINE PIERCED'])} ${where} STOP ${d.pick(['PURSUIT CONTINUING', 'CAVALRY IN PURSUIT', 'GUNS AND COLOURS TAKEN'])} STOP OUR LOSSES ABOUT ${round(reportedOwn)} STOP ENEMY LOSSES ESTIMATED ${round(reportedEnemy)} STOP ${d.pick(['REQUEST REINFORCEMENTS TO EXPLOIT', 'MORALE EXCELLENT', 'AWAIT ORDERS'])} STOP`
+        : `${d.pick(['HEAVY PRESSURE', 'LINE GIVING WAY', 'ENEMY ATTACKING IN FORCE'])} ${where} STOP ${d.pick(['WITHDRAWING TO SECOND LINE', 'FALLING BACK IN GOOD ORDER', 'HOLDING WITH DIFFICULTY'])} STOP OUR LOSSES ABOUT ${round(reportedOwn)} STOP ${d.pick(['REQUEST AMMUNITION URGENTLY', 'REQUEST RELIEF', 'CANNOT HOLD WITHOUT SUPPORT'])} STOP`;
       const body = [
-        `FROM ${d.n(cmd).toUpperCase()} TO MINISTRY OF WAR ${d.n(`set:${ctx.capitalAt(p, e.year)}`).toUpperCase()}`,
+        `**${String(hour).padStart(2, '0')}${d.pick(['00', '15', '30', '45'])}** · FROM ${up(cmd)} TO MINISTRY OF WAR ${up(`set:${ctx.capitalAt(p, e.year)}`)}`,
         '',
-        `${won ? 'ENEMY BROKEN' : 'HEAVY PRESSURE'} ${near ? `NEAR ${d.n(near).toUpperCase()}` : 'ON CENTRE'} STOP ${won ? 'PURSUIT CONTINUING' : 'WITHDRAWING TO SECOND LINE'} STOP OUR LOSSES ABOUT ${fmt(ownLoss)} STOP ${won ? 'REQUEST REINFORCEMENTS TO EXPLOIT' : 'REQUEST AMMUNITION URGENTLY'} STOP`,
-        '', '---', '', `**Editorial note.** Sent during the ${d.title(`evt:${e.id}`)}.`,
+        msg,
+        '', '---', '', `**Editorial note.** Sent during the ${d.title(`evt:${e.id}`)}. Commanders' first reports routinely understate their own losses and overstate the enemy's.`,
       ];
       g.add({
         sub: 'telegram', year: e.year, title: `Telegram of ${g.T.short.get(cmd)} from the ${g.T.short.get(`evt:${e.id}`)}`, author: person.id, polity: p.id, lang,
@@ -174,11 +228,28 @@ function genDebates(g: Gen): void {
     const speakers = Array.from({ length: rng.int(3, 5) }, (_, i) => ctx.name(s.lang.coinName(lang, year, rng.chance(0.2) ? 'person-f' : 'person-m', `deputy:${e.id}:${i}`), lang, year));
     const motion = e.sub === 'war' ? `That this Assembly approves the declaration of war against ${d.n(e.parts.find(([, r]) => r === 'defender')![0])}` : `That this Assembly ratifies the ${d.n(`evt:${e.id}`)}`;
     const ayes = rng.int(120, 320), noes = rng.int(40, 260);
+    const enemyRef = e.sub === 'war' ? e.parts.find(([, r]) => r === 'defender')?.[0] : e.parts.find(([r]) => r.startsWith('pol:') && r !== `pol:${p.id}`)?.[0];
+    const enemy = enemyRef ? d.n(enemyRef) : 'the enemy';
+    const pastWars = enemyRef ? (ctx.eventsByRef.get(enemyRef) ?? []).map((i) => s.events[i]).filter((x) => x.sub === 'war' && x.year < year && x.parts.some(([r]) => r === `pol:${p.id}`)).length : 0;
+    const st = ctx.statsAt(p.id, year);
+    const army = st ? Math.round((st[3] as number) * MOBILIZATION[st[13] as number]) : 0; // headcount, not strength
+    const ceded = ((e.data.terms as { kind: string; cells?: number[]; from?: number }[] | undefined) ?? []).find((t) => t.kind === 'cede');
+    const oppose = e.sub === 'war'
+      ? ['Who will pay for this? The farmer, as always.', 'I speak for the provinces, which were not consulted.', 'The honourable member forgets the last war.', 'Let us count the cost before we count the glory.', ...(pastWars ? [`We have fought ${enemy} ${pastWars === 1 ? 'once' : `${pastWars} times`} before. What did it bring us?`] : []), 'Our credit abroad will not survive a long war.']
+      : ['This is not peace but surrender.', ...(ceded ? [`We give up ${ceded.cells?.length ?? 0} districts and call it statesmanship?`] : []), 'The dead deserved better terms.', 'The army was not beaten; the cabinet was.'];
+    const support = e.sub === 'war'
+      ? ['Hesitation now would be fatal.', ...(army ? [`The army stands at ${fmt(army)} men. Is this Assembly as ready as they are?`] : []), 'We owe it to our allies.', 'History will judge us by this vote.', `${enemy} has insulted the flag once too often.`]
+      : ['A bad peace is better than a good war.', 'The terms are hard, but the alternative is ruin.', 'Our sons come home. That is enough.', 'The treasury cannot bear another year of war.'];
+    const opp = rng.shuffle(oppose.slice());
+    const sup = rng.shuffle(support.slice());
+    const speakerLines = speakers.flatMap((n, i) => [`**${n}:** ${(i % 2 === 0 ? opp : sup)[Math.floor(i / 2) % (i % 2 === 0 ? opp.length : sup.length)]}`, '']);
+    const interjections = rng.chance(0.5) ? [`*(${rng.pick(['Cries of "Shame!"', 'Uproar on the left benches.', 'Laughter.', 'Prolonged applause.'])})*`, ''] : [];
+    speakerLines.splice(Math.min(2, speakerLines.length), 0, ...interjections);
     const lines = [
       `*Official report of the Assembly of ${d.n(`pol:${p.id}`)}, ${localDate(ctx, d, p, year).replace(/ \[AY \d+\]$/, '')}.*`,
       '', `**Motion:** ${motion}.`, '',
       ...(head ? [`**${d.n(`per:${head.person}`)}** (head of government): ${e.sub === 'war' ? d.pick(['The nation has been provoked beyond endurance.', 'We seek no territory, only security.', 'Every peaceful means has been exhausted.']) : d.pick(['This peace is the best that could be had.', 'The terms are hard, but the alternative is ruin.', 'This treaty secures our frontiers for a generation.'])}`, ''] : []),
-      ...speakers.map((n, i) => `**${n}:** ${i % 2 === 0 ? d.pick(['Who will pay for this? The farmer, as always.', 'I speak for the provinces, which were not consulted.', 'The honourable member forgets the last war.', 'Let us count the cost before we count the glory.']) : d.pick(['Hesitation now would be fatal.', 'The army is ready; is this Assembly?', 'We owe it to our allies.', 'History will judge us by this vote.'])}`),
+      ...speakerLines,
       '', `**Division:** Ayes ${ayes}, Noes ${noes}. The motion was ${ayes > noes ? 'carried' : 'lost'}.`,
       '', '---', '', `**Editorial note.** ${ayes > noes ? '' : 'Despite the vote, the government proceeded. '}See ${d.title(`evt:${e.id}`)}.`,
     ];
@@ -265,12 +336,12 @@ function yearbook(g: Gen, p: Polity, year: number, row: (number | string | null)
     .map((t) => [t, t.popHistory.filter(([y]) => y <= year).pop()?.[1] ?? t.pop] as const).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const cur = ctx.currencyAt(p.id, year);
   const lines = [
-    `*Statistical Yearbook of ${d.n(`pol:${p.id}`)}, ${year}. Issued by the Statistical Office.*`,
+    `*Statistical Yearbook of ${d.n(`pol:${p.id}`)}. Issued by the Statistical Office, ${localDate(ctx, d, p, year).replace(/ \[AY \d+\]$/, '')}.*`,
     '', '| Item | Value |', '|---|---|',
     `| Population | ${fmt(row[3] as number)} |`,
     `| Area | ${fmt(cells.length * s.world.cellArea)} km² |`,
     `| Urban population | ${fmt(row[4] as number)} |`,
-    `| Armed forces | ${fmt(row[6] as number)} |`,
+    `| Armed forces | ${fmt((row[3] as number) * MOBILIZATION[row[13] as number])} |`,
     `| Government | ${String(row[8]).replace(/-/g, ' ')} |`,
     ...(cur >= 0 && s.currencies[cur].born <= year ? [`| Currency | ${d.n(`cur:${cur}`)} |`] : []),
     '', '**Principal cities**', '', '| City | Inhabitants |', '|---|---|', ...cities.map(([t, pop]) => `| ${d.n(`set:${t.id}`)} | ${fmt(pop)} |`),
@@ -279,7 +350,7 @@ function yearbook(g: Gen, p: Polity, year: number, row: (number | string | null)
   ];
   const capCity = ctx.capitalAt(p, year);
   g.add({
-    sub: 'yearbook', year, title: `Statistical Yearbook of ${g.T.short.get(`pol:${p.id}`)}, ${year}`, author: null, polity: p.id, lang, script: ctx.scriptOf(p, year),
+    sub: 'yearbook', year, title: `Statistical Yearbook of ${g.T.short.get(`pol:${p.id}`)}, AY ${year}`, author: null, polity: p.id, lang, script: ctx.scriptOf(p, year),
     medium: 'printed volume', cell: s.settlements[capCity].cell, settlement: capCity, about: [], body: lines.join('\n'), mentions: d.mentions,
     dateText: localDate(ctx, d, p, year), flagship: false, durable: 0.95, tau: 9000, seat: capCity,
   });
@@ -296,17 +367,19 @@ function genPamphletsAndPatents(g: Gen): void {
       if (!inv || !knows(p, 'printing', e.year)) continue;
       const lang = ctx.polityLang(p, e.year);
       const d = g.doc(lang, e.year, `patent:${e.id}`);
-      const tech = g.T.short.get(`tec:${e.data.tech}`) ?? '';
+      const key = TECH_KEYS[e.data.tech as number];
+      const spec = PATENTS[key];
+      if (!spec) continue; // sciences, institutions and arts are not patented
       const lines = [
-        `**Specification of ${d.n(inv)}**, of ${d.n(`set:${ctx.capitalAt(p, e.year)}`)}: *${cap(tech.replace(/^The /, ''))}, an improved method and apparatus.*`,
-        '', `To all to whom these presents shall come: I, ${d.n(inv)}, have invented ${d.pick(['new and useful improvements in', 'a new method of', 'an apparatus for'])} ${tech.toLowerCase()}, of which the following is a full and exact description.`,
-        '', `1. ${d.pick(['The working parts are arranged so that', 'The principal novelty consists in that', 'Whereas former methods required great labour,'])} ${d.pick(['the force is applied continuously rather than by intervals', 'the loss of heat is reduced by one half', 'a single operator may do the work of twelve', 'the signal is carried over any distance without loss'])}.`,
+        `**Specification of ${d.n(inv)}**, of ${d.n(`set:${ctx.capitalAt(p, e.year)}`)}: *${spec.title}.*`,
+        '', `To all to whom these presents shall come: I, ${d.n(inv)}, have invented ${spec.what}, of which the following is a full and exact description.`,
+        '', `1. ${spec.claim}`,
         `2. ${d.pick(['Drawings are annexed.', 'A working model is deposited at the office.', 'The claims are limited to the arrangement described.'])}`,
-        '', '---', '', `**Editorial note.** See ${d.title(`evt:${e.id}`)}.`,
+        '', '---', '', `**Editorial note.** The patent specification for the ${d.title(`evt:${e.id}`)}.`,
       ];
       const capCity = ctx.capitalAt(p, e.year);
       g.add({
-        sub: 'patent', year: e.year, title: `Patent of ${g.T.short.get(inv)}: ${tech}`, author: ctx.idNum(inv), polity: p.id, lang, script: ctx.scriptOf(p, e.year),
+        sub: 'patent', year: e.year, title: `Patent of ${g.T.short.get(inv)}: ${spec.title}`, author: ctx.idNum(inv), polity: p.id, lang, script: ctx.scriptOf(p, e.year),
         medium: 'printed specification', cell: s.settlements[capCity].cell, settlement: capCity, about: [e.id], body: lines.join('\n'), mentions: d.mentions,
         dateText: localDate(ctx, d, p, e.year), flagship: false, durable: 0.9, tau: 7000, seat: capCity,
       });
@@ -323,7 +396,8 @@ function genPamphletsAndPatents(g: Gen): void {
       const lines = [
         `# ${d.pick(['A Word to the People of', 'An Appeal to the Citizens of', 'The Hour Has Come for'])} ${d.n(`pol:${p.id}`)}`,
         '', `${d.pick(['Citizens!', 'Brothers and sisters!', 'Workers of town and field!'])} ${d.pick(['How long will you bear the yoke?', 'Look around you: who owns the land you till?', 'They tell you to be patient. You have been patient for a thousand years.'])}`,
-        '', `${mov ? `The ${d.n(mov)} ` : 'We '}${d.pick(['demands', 'proclaims', 'calls for'])}: ${d.pick(['bread, land and peace', 'a constitution and an elected assembly', 'the end of privilege by birth', 'the nation united under one law'])}. ${d.pick(['Read this, and pass it on.', 'Meet in the squares on the first day of the month.', 'Do not fear the police; there are more of us than of them.'])}`,
+        '', `${mov ? `The ${d.n(mov)} ${d.pick(['demands', 'proclaims', 'calls for'])}` : `We ${d.pick(['demand', 'proclaim', 'call for'])}`}: ${d.pick(['bread, land and peace', 'a constitution and an elected assembly', 'the end of privilege by birth', 'the nation united under one law', 'the vote for every citizen', 'the eight-hour day'])}. ${d.pick(['The ministers dine while the workshops starve.', 'The last war was paid for with your sons; the next will be paid for with your bread.', 'The price of grain has doubled while wages stand still.', 'Every honest worker is a soldier of the cause.'])}`,
+        '', d.pick(['Read this, and pass it on.', 'Meet in the squares on the first day of the month.', 'Do not fear the police; there are more of us than of them.', 'Long live the people!']),
         '', leader ? `*${d.n(leader)}*` : '*The Committee*',
       ];
       const capCity = ctx.capitalAt(p, e.year);
@@ -365,7 +439,7 @@ function genScholarship(g: Gen): void {
     const sample = leaves.slice(0, 6);
     const concepts = ['water', 'fire', 'mother', 'king', 'god', 'river', 'stone', 'two', 'three', 'sun', 'house', 'silver'];
     const lines = [
-      `${d.n(`per:${who.id}`)}. *Regular sound correspondences in the ${d.title(`lan:${root.id}`).replace(/\]\]$/, ']]')} family.* Journal of Comparative Philology, ${who.year}.`,
+      `${d.n(`per:${who.id}`)}. *Regular sound correspondences in the ${d.link(`lan:${root.id}`, g.T.short.get(`lan:${root.id}`) ?? '')} family.* Journal of Comparative Philology, ${who.year}.`,
       '', '## Abstract', '',
       `Cognate sets from ${sample.length} attested languages allow a reconstruction of the parent language. The correspondences are regular, and the sound changes that produced them can be dated against the epigraphic record.`,
       '', '## Cognate sets', '',
@@ -373,10 +447,7 @@ function genScholarship(g: Gen): void {
       `|---|---|${sample.map(() => '---').join('|')}|`,
       ...concepts.map((c) => `| ${c} | ${s.lang.protoForm(root.id, c)} | ${sample.map((l) => s.lang.word(l.id, c, Math.min(l.died ?? 5000, 5000)).conventional).join(' | ')} |`),
       '', '## Dated sound laws', '',
-      ...sample.slice(0, 3).flatMap((l) => {
-        const ch = s.lang.soundChanges(l.id).filter((c) => c.lang !== root.id).slice(0, 4);
-        return ch.length ? [`**${g.T.short.get(`lan:${l.id}`)}:** ${ch.map((c) => `${c.label} (\`${c.rule}\`, c. AY ${c.year})`).join('; ')}.`, ''] : [];
-      }),
+      ...soundLawSection(g, sample.map((l) => l.id)),
     ];
     g.add({
       sub: 'paper', year: who.year, title: `Regular sound correspondences in the ${g.T.short.get(`lan:${root.id}`)} family`, author: who.id, polity: ed.id, lang,
@@ -425,6 +496,23 @@ function genScholarship(g: Gen): void {
   }
 }
 
+function soundLawSection(g: Gen, langs: number[]): string[] {
+  const s = g.ctx.s;
+  const key = (c: { lang: number; year: number; rule: string }) => `${c.lang}|${c.year}|${c.rule}`;
+  const hist = langs.map((l) => s.lang.soundChanges(l));
+  const shared = hist[0].filter((c) => hist.every((h) => h.some((x) => key(x) === key(c))));
+  const sharedKeys = new Set(shared.map(key));
+  const y = (n: number) => (n < 0 ? `${-n} before AY 0` : `AY ${n}`);
+  const out: string[] = [];
+  if (shared.length) out.push(`**Shared by all ${langs.length} languages** (inherited from the common ancestor): ${shared.slice(-5).map((c) => `${c.label} (\`${c.rule}\`, c. ${y(c.year)})`).join('; ')}.`, '');
+  for (const [i, l] of langs.slice(0, 4).entries()) {
+    const own = hist[i].filter((c) => !sharedKeys.has(key(c))).slice(-4);
+    if (own.length) out.push(`**${g.T.short.get(`lan:${l}`)} alone:** ${own.map((c) => `${c.label} (\`${c.rule}\`, c. ${y(c.year)})`).join('; ')}.`, '');
+  }
+  out.push('These datings follow the first appearance of each change in dated inscriptions.');
+  return out;
+}
+
 /** After survival: one report per excavation, listing the finds. */
 export function genExcavationReports(g: Gen): void {
   const ctx = g.ctx;
@@ -451,16 +539,21 @@ export function genExcavationReports(g: Gen): void {
     if (s.persons[by].died < year) continue;
     const d = g.doc(lang, year, `exc:${eid}`);
     const destr = t.sacks.map((x) => s.events[x]).filter((x) => x.year < e.year).sort((a, b) => a.year - b.year);
+    const shown = destr.slice(-4).reverse();
+    const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
     const strata = [
-      `Stratum I (top): ${t.abandoned !== null && t.abandoned < e.year ? `abandonment fill after AY ${t.abandoned}` : 'the modern town'}.`,
-      ...destr.slice(-4).reverse().map((x, i) => `Stratum ${i + 2}: burnt destruction layer, ash and fallen brick, dated to AY ${x.year} (${d.title(`evt:${x.id}`)}).`),
-      `Lowest stratum: foundation of the city, c. AY ${t.founded}.`,
+      `Stratum I (top): ${t.abandoned !== null && t.abandoned < e.year ? `abandonment fill over the ruins, after AY ${t.abandoned}` : 'the modern town'}.`,
+      ...shown.map((x, i) => `Stratum ${R[i + 1]}: ${d.pick(['burnt destruction layer, ash and fallen brick', 'a thick layer of ash over collapsed walls', 'burnt timbers and scattered arrowheads', 'destruction debris with traces of a great fire'])}, dated to AY ${x.year} (${d.title(`evt:${x.id}`)}).`),
+      ...(destr.length > shown.length ? [`Strata ${R[shown.length + 2] ?? 'below'} and below: ${destr.length - shown.length} earlier destruction horizons, not yet fully excavated.`] : []),
+      `Lowest stratum: the foundation of the city, c. ${t.founded < 0 ? `${-t.founded} before AY 0` : `AY ${t.founded}`}.`,
     ];
+    const finds = arts.slice().sort((a, b) => a.year - b.year);
     const lines = [
       `${d.n(`per:${by}`)}. *Excavations at ${d.n(`set:${site}`)}: preliminary report.* ${year}.`,
-      '', `The site of ancient ${d.ed(`set:${site}`)} was excavated in AY ${e.year}${destr.length ? `. ${destr.length} destruction layers were identified` : ''}.`,
+      '', `The site of ancient ${d.ed(`set:${site}`)} was excavated in AY ${e.year}. ${destr.length ? (destr.length === 1 ? 'One destruction layer was identified.' : `${destr.length} destruction layers were identified; the most recent are described below.`) : 'No destruction layer was found: the city seems never to have been sacked.'} ${d.pick(['Work concentrated on the citadel mound and the temple precinct.', 'Trenches were cut across the palace quarter and the lower town.', 'The excavation followed the line of the old city wall.'])}`,
       '', '## Stratigraphy', '', ...strata.map((x) => `- ${x}`),
-      '', `## Inscribed finds (${arts.length})`, '', ...arts.slice(0, 40).map((a) => `- [[art:${a.id}|${a.catalog}]]: ${a.title} (AY ${a.year})`),
+      '', `## Inscribed finds (${finds.length})`, '', ...finds.slice(0, 40).map((a) => `- [[art:${a.id}|${a.catalog}]], AY ${a.year}: ${a.title}`),
+      ...(finds.length > 40 ? [`- …and ${finds.length - 40} more, catalogued in the final report.`] : []),
     ];
     g.add({
       sub: 'excavation', year, title: `Excavations at ${g.T.short.get(`set:${site}`)} (AY ${e.year})`, author: by, polity: ed.id, lang, script: ctx.scriptOf(ed, year),

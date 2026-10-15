@@ -31,7 +31,7 @@ const ROLE_LABEL: Record<string, string> = {
   establishment: 'Established faith', dissenters: 'Dissenters', spouse: 'Spouse', house: 'House', currency: 'Currency',
   issuer: 'Issuer', replaces: 'Replaces', seat: 'Seat', debtor: 'Debtor', creditor: 'Creditor', failed: 'Failed', affected: 'Affected',
   annexed: 'Annexed', overlord: 'Overlord', vassal: 'Vassal', from: 'From', to: 'To', leader: 'Leader', claimant: 'Claimant',
-  against: 'Against', deposed: 'Deposed', site: 'Site', excavator: 'Excavator', colonizer: 'Colonizer', colony: 'Colony', port: 'Port',
+  against: 'Against', deposed: 'Deposed', site: 'Site', excavator: 'Excavator', colonizer: 'Colonizer', colony: 'Colony', port: 'Port', continent: 'Continent',
 };
 
 export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: string; infobox: [string, string][]; body: string } {
@@ -46,7 +46,7 @@ export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: stri
     const label = ROLE_LABEL[role] ?? cap(role);
     infobox.push([label, refs.map((r) => (r.startsWith('evt:') ? LT(T, r) : L(T, r))).join(', ')]);
   }
-  if (e.cell >= 0) infobox.push(['Region', L(T, `reg:${s.world.region[e.cell]}`)]);
+  if (e.cell >= 0 && !infobox.some(([k]) => k === 'Region')) infobox.push(['Region', L(T, `reg:${s.world.region[e.cell]}`)]);
   const first = (role: string) => byRole.get(role)?.[0];
   const P = (role: string) => (first(role) ? L(T, first(role)!) : '—');
   let summary = `${T.title.get(`evt:${e.id}`)} (${yr(e.year)}).`;
@@ -135,7 +135,7 @@ export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: stri
       summary = `In ${yr(e.year)} long-distance trade collapsed by about ${Math.round(Number(e.data.drop) * 100)}%.`;
       break;
     case 'first-contact':
-      summary = `In ${yr(e.year)} a trade route first joined two continents, at ${byRole.get('port')?.map((r) => L(T, r)).join(' and ')}. ${byRole.get('party')?.length ? `The states involved were ${byRole.get('party')!.map((r) => L(T, r)).join(' and ')}.` : ''}`;
+      summary = `In ${yr(e.year)} a trade route first joined ${byRole.get('continent')?.length === 2 ? byRole.get('continent')!.map((r) => L(T, r)).join(' and ') : 'two landmasses'}, at ${byRole.get('port')?.map((r) => L(T, r)).join(' and ')}. ${byRole.get('party')?.length ? `The states involved were ${byRole.get('party')!.map((r) => L(T, r)).join(' and ')}.` : ''}`;
       break;
     case 'colonization':
       summary = `${P('colonizer')} planted a colony at ${P('colony')} in ${P('region')} in ${yr(e.year)}${e.data.overseas ? ', across the sea' : ''}.`;
@@ -143,10 +143,55 @@ export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: stri
     case 'excavation':
       summary = `Excavation at ${P('site')} in ${yr(e.year)} by ${P('excavator')}${e.data.finds ? `, yielding ${e.data.finds} catalogued documents` : ''}.`;
       break;
+    case 'revolution': case 'reform':
+      summary = `${e.sub === 'revolution' ? 'A revolution' : 'A reform'} in ${P('polity')} in ${yr(e.year)} turned the ${govWord(String(e.data.from))} into ${govArticle(String(e.data.to))}${first('leader') ? `, led by ${P('leader')}` : ''}${first('deposed') ? `; ${P('deposed')} was deposed` : ''}.`;
+      break;
+    case 'founding': summary = `${P('polity')} was founded at ${P('capital')} in ${yr(e.year)}.`; break;
+    case 'successor-state': summary = `${P('polity')} arose at ${P('capital')} in ${yr(e.year)}${first('predecessor') ? `, a successor of ${P('predecessor')}` : ''}.`; break;
+    case 'revolt': summary = `${P('leader')} led a revolt against ${P('against')} in ${yr(e.year)}, founding ${P('polity')}.`; break;
+    case 'civil-war': summary = `${P('claimant')} claimed the throne of ${P('against')} in ${yr(e.year)}, splitting the realm.`; break;
+    case 'extinction': summary = `${P('polity')} lost the last of its lands in ${yr(e.year)}.`; break;
+    case 'annexation': summary = `${P('overlord')} annexed its vassal ${P('annexed')} in ${yr(e.year)}.`; break;
+    case 'capital-move': summary = `${P('polity')} moved its capital from ${P('from')} to ${P('to')} in ${yr(e.year)}.`; break;
+    case 'siege': case 'sack': summary = `${P('besieger')} ${e.sub === 'sack' ? 'sacked' : 'besieged'} ${P('settlement')} in ${yr(e.year)}${e.data.burnedArchives ? '; the city’s archives burned' : ''}.`; break;
+    case 'marriage': summary = `${byRole.get('spouse')?.map((r) => L(T, r)).join(' and ')} were married in ${yr(e.year)}, joining the houses of ${byRole.get('house')?.map((r) => L(T, r)).join(' and ')}.`; break;
+    case 'conversion': summary = `${P('polity')} adopted the ${P('adopted')} as its state religion in ${yr(e.year)}${first('abandoned') ? `, abandoning the ${P('abandoned')}` : ''}.`; break;
+    case 'persecution': summary = `${P('persecutor')} persecuted the followers of the ${P('persecuted')} in ${yr(e.year)}.`; break;
+    case 'council': summary = `A council of the ${P('movement')} met in ${P('host')} in ${yr(e.year)} and failed to reconcile ${P('dissenters')}.`; break;
+    case 'coinage': case 'paper-money': case 'currency-reform': case 'weight-standard': summary = `${P('issuer')} introduced the ${P('currency')} in ${yr(e.year)}.`; break;
+    case 'hyperinflation': summary = `The ${P('currency')} of ${P('issuer')} collapsed in ${yr(e.year)}, losing nearly all its value.`; break;
+    case 'house-founding': summary = `${P('founder')} founded the ${P('house')} at ${P('seat')} in ${yr(e.year)}.`; break;
+    case 'bankruptcy': summary = `The ${P('house')} of ${P('seat')} failed in ${yr(e.year)}.`; break;
+    case 'default': summary = `${P('debtor')} defaulted on its debts to the ${P('creditor')} in ${yr(e.year)}.`; break;
+    case 'founding-city': summary = `${P('settlement')} was founded in ${yr(e.year)}${first('founder') ? ` by ${P('founder')}` : ''}.`; break;
+    case 'abandonment': summary = `${P('settlement')} was abandoned in ${yr(e.year)}.`; break;
+    case 'ethnogenesis': summary = `The ${P('culture')} emerged as a people distinct from the ${P('parent')} in ${yr(e.year)}, speaking ${P('language')}.`; break;
+    case 'acculturation': summary = `The court of ${P('polity')} adopted the ways of the ${P('to')} in ${yr(e.year)}.`; break;
+    case 'script-invention': summary = `The ${P('script')} script was invented by the ${P('culture')} in ${yr(e.year)}.`; break;
+    case 'script-adoption': summary = `${P('polity')} adopted the ${P('script')} script in ${yr(e.year)}${first('source') ? `, adapted from the ${P('source')}` : ''}.`; break;
+    case 'cold-period': summary = `A run of cold years began in ${yr(e.year)}.`; break;
+    case 'warming': summary = `From ${yr(e.year)} the burning of coal and oil began to warm the climate.`; break;
+    case 'colonial-claim': summary = `${P('claimant')} pressed a colonial claim against ${P('target')} in ${yr(e.year)}.`; break;
+    case 'repudiation': summary = `${P('vassal')} threw off the overlordship of ${P('overlord')} in ${yr(e.year)}.`; break;
+    case 'alliance-lapse': summary = `The alliance between ${byRole.get('party')?.map((r) => L(T, r)).join(' and ')} lapsed in ${yr(e.year)}.`; break;
     default:
       break;
   }
+  if (e.sub === 'succession' || e.sub === 'usurpation' || e.sub === 'election') {
+    summary = e.sub === 'election'
+      ? `${P('successor')} took office as head of ${P('polity')} in ${yr(e.year)}, succeeding ${P('predecessor')}.`
+      : `${P('successor')} ${e.sub === 'usurpation' ? 'seized the throne of' : 'succeeded to the throne of'} ${P('polity')} in ${yr(e.year)}${first('predecessor') ? `, after ${P('predecessor')}` : ''}${e.data.regency ? `, with ${P('regent')} as regent` : ''}.`;
+  }
   return { summary, infobox, body: body.join('\n') };
+}
+
+function govWord(g: string): string {
+  const m: Record<string, string> = { 'city-state': 'city-state', 'merchant-republic': 'merchant republic', 'feudal-kingdom': 'feudal kingdom', 'absolute-monarchy': 'absolute monarchy', 'constitutional-monarchy': 'constitutional monarchy', 'one-party-state': 'one-party state' };
+  return m[g] ?? g.replace(/-/g, ' ');
+}
+function govArticle(g: string): string {
+  const w = govWord(g);
+  return `${/^[aeiou]/i.test(w) && !/^one/i.test(w) ? 'an' : 'a'} ${w}`;
 }
 
 export function termSummary(T: Titles, t: Term): string {

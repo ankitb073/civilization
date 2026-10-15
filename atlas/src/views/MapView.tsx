@@ -30,7 +30,15 @@ export function MapView() {
     rendRef.current = r;
     (window as unknown as { __palimpsestMap?: MapRenderer }).__palimpsestMap = r;
     const ogMode = route.peek().params.get('og') === '1';
-    const insets = () => (route.peek().params.get('clean') === '1' || ogMode ? [0, 0] : isMobile.peek() ? [0, sheetSnap.peek() === 'peek' ? SHEET_PEEK : Math.round((wrapRef.current?.clientHeight ?? 600) * 0.5)] : [panelCollapsed.peek() ? 0 : PANEL_W + 24, 0]);
+    const framesMode = route.peek().params.get('frames') === '1';
+    if (framesMode) {
+      r.wholeWorld = true;
+      (window as unknown as { __palimpsestSetYear?: (y: number) => Promise<void> }).__palimpsestSetYear = (y: number) => new Promise((res) => {
+        year.value = y;
+        requestAnimationFrame(() => requestAnimationFrame(() => res()));
+      });
+    }
+    const insets = () => (route.peek().params.get('clean') === '1' || ogMode || framesMode ? [0, 0] : isMobile.peek() ? [0, sheetSnap.peek() === 'peek' ? SHEET_PEEK : Math.round((wrapRef.current?.clientHeight ?? 600) * 0.5)] : [panelCollapsed.peek() ? 0 : PANEL_W + 24, 0]);
     [r.insetRight, r.insetBottom] = insets();
     if (ogMode) { r.insetLeft = 390; r.wholeWorld = true; }
     r.year = year.peek();
@@ -201,6 +209,7 @@ export function MapView() {
         </div>
         <TourOverlay />
         {route.value.params.get('og') === '1' && <OgPlate />}
+        {route.value.params.get('frames') === '1' && <FramesPlate />}
         {tip && !isMobile.value && !touring.value && (
           <div class="maptip" style={{ transform: `translate(${tip.x + 14}px, ${tip.y + 14}px)` }}>
             <div class="maptip__t">{tip.text}</div>
@@ -261,6 +270,19 @@ function OgPlate() {
       </div>
       <div class="ogplate__y">The map at {year.value} {m.yearLabel}{era ? ` · ${era.name}` : ''}</div>
       <div class="ogplate__u">ankitb073.github.io/civilization</div>
+    </div>
+  );
+}
+
+/** Corner caption for the borders animation (frames=1). */
+function FramesPlate() {
+  const m = meta.value;
+  const era = eraAt(year.value);
+  return (
+    <div class="framesplate">
+      <div class="framesplate__t">{m?.title ?? 'Palimpsest'} <span>· the borders of {m?.worldName ?? ''}</span></div>
+      <div class="framesplate__y"><strong>{year.value}</strong> {m?.yearLabel ?? 'AY'}</div>
+      <div class="framesplate__e">{era?.name}</div>
     </div>
   );
 }

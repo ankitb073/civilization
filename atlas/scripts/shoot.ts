@@ -69,6 +69,10 @@ const views: { name: string; hash: string; dark?: boolean; wait?: number; full?:
   { name: 'browse', hash: `#/browse?kind=artifact&sub=treaty`, wait: 1500 },
   { name: 'browse-flag', hash: `#/browse?kind=artifact&flag=1`, wait: 1500 },
   { name: 'tour', hash: ``, wait: 3200 },
+  { name: 'histomap', hash: `#/histomap`, wait: 1500, full: true },
+  { name: 'histomap-dark', hash: `#/histomap`, dark: true, wait: 1500 },
+  { name: 'story', hash: `#/story`, wait: 2200 },
+  { name: 'story-beat', hash: `#/story?at=c2b3`, wait: 3000 },
   ...(ids.poem ? [{ name: 'poem', hash: `#/p/${ids.poem}` }] : []),
   ...(ids.diary ? [{ name: 'diary', hash: `#/p/${ids.diary}` }] : []),
   ...(ids.flagship ? [{ name: 'flagship', hash: `#/p/${ids.flagship}` }] : []),
@@ -121,6 +125,33 @@ try {
     await ctx.close();
   }
 
+  // README stills → docs/img/
+  if (only.includes('readme')) {
+    const IMG = join(ROOT, '..', 'docs', 'img');
+    mkdirSync(IMG, { recursive: true });
+    const poem = (meta.flagships ?? []).find((id) => search.find((e) => e[0] === id)?.[5] === 'poem');
+    const shots: { file: string; hash: string; vp: { width: number; height: number; scale: number; mobile?: boolean }; dark?: boolean; wait?: number; full?: boolean }[] = [
+      { file: 'map.png', hash: '#/map?y=3700&l=political', vp: { width: 1440, height: 900, scale: 2 } },
+      { file: 'compare.png', hash: `#/compare/${meta.featured[0].id}`, vp: { width: 1440, height: 900, scale: 2 } },
+      { file: 'graph.png', hash: '#/graph?y=4500&d=1', vp: { width: 1440, height: 900, scale: 2 }, dark: true, wait: 7000 },
+      { file: 'inscription.png', hash: `#/p/${ids.inscription}`, vp: { width: 1440, height: 1100, scale: 2 } },
+      { file: 'poem.png', hash: `#/p/${poem ?? ids.poem}`, vp: { width: 1440, height: 1100, scale: 2 } },
+      { file: 'phone.png', hash: '#/map?y=3200&l=political', vp: { width: 390, height: 844, scale: 3, mobile: true } },
+      { file: 'story.png', hash: '#/story?at=c3b2', vp: { width: 1440, height: 900, scale: 2 }, wait: 3200 },
+      { file: 'histomap.png', hash: '#/histomap?export=1', vp: { width: 1600, height: 1000, scale: 1 }, wait: 1500, full: true },
+    ];
+    for (const sh of shots) {
+      const ctx = await browser.newContext({ viewport: { width: sh.vp.width, height: sh.vp.height }, deviceScaleFactor: sh.vp.scale, isMobile: !!sh.vp.mobile, hasTouch: !!sh.vp.mobile, colorScheme: sh.dark ? 'dark' : 'light', reducedMotion: 'reduce' });
+      const page = await ctx.newPage();
+      page.on('pageerror', (e) => errors.push(`[readme ${sh.file}] PAGEERROR ${e.message}`));
+      await page.goto(BASE + sh.hash, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(sh.wait ?? 1200);
+      await page.screenshot({ path: join(IMG, sh.file), fullPage: !!sh.full });
+      console.log(`docs/img/${sh.file}`);
+      await ctx.close();
+    }
+  }
+
   // interaction flows
   if (!only.length || only.includes('flows')) {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -148,7 +179,8 @@ try {
     });
     await step('global search finds and opens a page', async () => {
       await page.goto(BASE + '#/browse', { waitUntil: 'networkidle' });
-      const first = (await page.locator('.row__t').first().textContent())!.trim();
+      // title text only (skip the ✦ flagship marker and the type label)
+      const first = (await page.locator('.row__t').first().evaluate((el) => [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join(''))).trim();
       await page.locator('.topbar__search input').fill(first.slice(0, 8));
       await page.locator('.topbar .search__item').first().waitFor({ timeout: 3000 });
       await page.keyboard.press('Enter');

@@ -9,6 +9,7 @@ import '@fontsource/inter/600.css';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/reader.css';
+import './styles/views2.css';
 import { App } from './app.tsx';
 
 render(<App />, document.getElementById('app')!);

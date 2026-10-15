@@ -3,6 +3,7 @@
 // tradition; the lost work then gets a page of its own holding just the quoted fragment.
 import type { Gen, Artifact } from './gen.ts';
 import { Rng } from '../core/rng.ts';
+import { periodTitle } from '../archive/doc.ts';
 
 const QUOTABLE = new Set(['chronicle', 'annals', 'treaty', 'scripture', 'treatise', 'decree', 'record']);
 const QUOTERS = new Set(['chronicle', 'annals', 'treatise', 'scripture', 'paper', 'travelogue']);
@@ -42,7 +43,8 @@ export function applyFragments(g: Gen): number {
     // the quoting work: a passage citing the lost one, before its editorial apparatus
     const [qText, ...qRest] = Q.body.split('\n---\n');
     const intro = r.pick(['As it is written in', 'So say the old books, in', 'We read in', 'In the words of']);
-    const quote = `\n\n${intro} the *[[art:${L.id}|${L.title}]]*:\n\n> ${frag}`;
+    const cited = periodTitle(L.title).replace(/^Text of the /, '');
+    const quote = `\n\n${intro} the *[[art:${L.id}|${cited}]]*:\n\n> ${frag}`;
     Q.body = qText.trimEnd() + quote + (qRest.length ? `\n\n---\n${qRest.join('\n---\n')}` : '') + `\n\n*Fragment:* the passage quoted from the ${L.title} is the only surviving witness to that work.`;
     // the lost work survives as a fragment page
     L.status = 'extant';

@@ -2,7 +2,7 @@
 import type { Ctx } from './context.ts';
 import { cap, fmtNum, ordinal } from './context.ts';
 import type { Titles } from './naming.ts';
-import { isPageEvent, mainGov, kindOfRef } from './naming.ts';
+import { isPageEvent, mainGov, kindOfRef, domainPhrase } from './naming.ts';
 import type { PageJson, EntityKind } from '../export/contract.ts';
 import type { Artifact } from '../artifacts/gen.ts';
 import { TECHS } from '../sim/tech.ts';
@@ -134,7 +134,7 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const govs = p.govs.map(([y, g]) => `${g.replace(/-/g, ' ')} (${yr(y)})`);
     const religions = [...new Set(stats.map((r) => r[11] as number).filter((x) => x >= 0))].slice(0, 6);
     const currencies = [...new Set(stats.map((r) => r[12] as number).filter((x) => x >= 0))].slice(0, 6);
-    pg.summary = `${T.title.get(ref)} was a ${mainGov(p).replace(/-/g, ' ')} of the ${T.short.get(`cul:${p.culture}`)} people, ${span(p.born, p.died)}. At its height it held ${peakCells} districts and about ${fmtNum(peakPop)} people.`;
+    pg.summary = `${T.short.get(ref)} was ${article(govLabel(mainGov(p)))} ${govLabel(mainGov(p))} of the ${T.short.get(`cul:${p.culture}`)} people, ${span(p.born, p.died)}. At its height it held ${plural(peakCells, 'district')} and about ${fmtNum(peakPop)} people.`;
     pg.infobox = [
       ['Period', span(p.born, p.died)],
       ['Founded', LT(T, `evt:${p.foundEvent}`)],
@@ -199,7 +199,13 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const roles = p.roles.map((r) => `${r.role}${r.polity !== null ? ` of ${L(T, `pol:${r.polity}`)}` : ''} (${r.start}${r.end !== null && r.end !== r.start ? `–${r.end}` : ''})${r.ref ? `: ${L(T, r.ref)}` : ''}`);
     const lang = s.cultures[p.culture].lang;
     const meaning = s.lang.nameMeaning(p.nameId);
-    pg.summary = `${T.short.get(ref)} (${yr(p.born)} – ${p.died >= 5000 ? 'living' : yr(p.died)}) was ${p.roles.length ? roles.map((x) => x.replace(/\[\[[^|]+\|([^\]]+)\]\]/g, '$1')).slice(0, 2).join('; ') : 'a person of note'}.`;
+    const roleText = (r: (typeof p.roles)[number]) => {
+      const where = r.polity !== null ? ` of ${T.short.get(`pol:${r.polity}`) ?? ''}` : '';
+      const what = r.role === 'ruler' ? (p.sex === 'f' ? 'queen' : 'king') : r.role === 'merchant' && r.ref ? `head of the ${T.short.get(r.ref) ?? 'house'}` : r.role;
+      const when = r.end !== null && r.end !== r.start ? ` from AY ${r.start} to ${r.end}` : ` in AY ${r.start}`;
+      return `${article(what)} ${what}${r.role === 'merchant' ? '' : where}${when}`;
+    };
+    pg.summary = `${T.short.get(ref)} (${yr(p.born)} – ${p.died >= 5000 ? 'living' : yr(p.died)}) was ${p.roles.length ? joinList([...new Set(p.roles.map(roleText))].slice(0, 2)) : 'a person of note'}.`;
     const kids = p.children.filter((c) => T.pageRefs.has(`per:${c}`));
     pg.infobox = [
       ['Born', yr(p.born)],
@@ -248,6 +254,7 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
       ['Founded', `${yr(t.founded)}, ${LT(T, `evt:${t.foundEvent}`)}`],
       ...(t.endEvent !== null ? [['Abandoned', LT(T, `evt:${t.endEvent}`)] as [string, string]] : []),
       ['Region', L(T, `reg:${region}`)],
+      ...(ctx.continentOfCell(t.cell) !== null ? [['Continent', L(T, `reg:${ctx.continentOfCell(t.cell)}`)] as [string, string]] : []),
       ['Founders', L(T, `cul:${t.culture}`)],
       ...(meaning ? [['Name means', `“${meaning}”`] as [string, string]] : []),
       ['Peak population', fmtNum(t.peakPop)],
@@ -295,7 +302,8 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const mainBiome = [...biomes].sort((a, b) => b[1] - a[1])[0];
     const resources = RESOURCE_NAMES.filter((k) => res & RES[k]);
     pg.summary = `${T.short.get(ref)} is a region of ${cells.length} districts, mostly ${BIOMES[mainBiome[0]].name.toLowerCase()}.`;
-    pg.infobox = [['Districts', String(cells.length)], ['Landscape', BIOMES[mainBiome[0]].name], ['Resources', resources.join(', ') || '—'], ['Area', `${fmtNum(cells.length * s.world.cellArea)} km²`]];
+    pg.infobox = [['Districts', String(cells.length)], ['Landscape', BIOMES[mainBiome[0]].name], ['Resources', resources.join(', ') || '—'], ['Area', `${fmtNum(cells.length * s.world.cellArea)} km²`],
+      ...(ctx.continentOfCell(cell) !== null ? [['Continent', L(T, `reg:${ctx.continentOfCell(cell)}`)] as [string, string]] : [])];
     const owners = compressOwners(ctx.ownerHistory(cell), -3000);
     const body: string[] = ['## Masters of the region', '', owners.map(([a, b, o]) => `- ${yr(Math.max(a, 0))} – ${b >= 5000 ? 'present' : yr(b)}: ${o >= 0 ? LT(T, `pol:${o}`) : '*no state*'}`).join('\n')];
     const evs = eventsOf(ctx, ref);
@@ -306,6 +314,34 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     pg.names = nameHistory(ctx, s.regionNames[r], (y) => { const cu = ctx.cultureAt(cell, y); return cu >= 0 ? s.cultures[cu].lang : 0; }, 0, 5000, exoLangs(cell));
     pages.set(ref, pg);
   }
+  // ---------------------------------------------------------------- continents (archive-level regions 1000+)
+  for (const [cid, cont] of ctx.continents) {
+    const ref = `reg:${cid}`;
+    const pg = blank(ref, T, 'continent', -3000, 5000, cont.labelCell);
+    const lm = cont.lm;
+    const regions = [...new Set(Array.from({ length: s.world.n }, (_, c) => c).filter((c) => s.world.landmass[c] === lm && s.world.region[c] >= 0).map((c) => s.world.region[c]))];
+    const peak = new Map<number, number>();
+    for (const [pid, rows] of ctx.polityStats) for (const row of rows) peak.set(pid, Math.max(peak.get(pid) ?? 0, row[2] as number));
+    const states = s.polities.filter((p) => p.capitals.some(([, c]) => s.world.landmass[s.settlements[c].cell] === lm)).sort((a, b) => (peak.get(b.id) ?? 0) - (peak.get(a.id) ?? 0) || a.id - b.id).slice(0, 20);
+    const contacts = s.events.filter((e) => e.sub === 'first-contact' && ((e.data.landmasses as number[] | undefined) ?? []).includes(lm) && T.pageRefs.has(`evt:${e.id}`));
+    const colonies = s.events.filter((e) => e.sub === 'colonization' && e.cell >= 0 && s.world.landmass[e.cell] === lm && T.pageRefs.has(`evt:${e.id}`));
+    const kind = cont.cells < 300 ? 'island group' : 'continent';
+    pg.summary = `${T.title.get(ref)} is ${kind === 'continent' ? 'a continent' : 'an island group'} of ${plural(cont.cells, 'district')} (${fmtNum(cont.cells * s.world.cellArea)} km²), divided into ${plural(regions.length, 'region')}.${contacts.length ? ` It first made contact with another landmass in ${yr(contacts[0].year)}.` : ''}`;
+    const meaning = s.lang.nameMeaning(cont.nameId);
+    pg.infobox = [
+      ['Kind', kind], ['Districts', String(cont.cells)], ['Area', `${fmtNum(cont.cells * s.world.cellArea)} km²`], ['Regions', String(regions.length)],
+      ...(meaning ? [['Name means', `“${meaning}”`] as [string, string]] : []),
+      ...(contacts.length ? [['First contact', LT(T, `evt:${contacts[0].id}`)] as [string, string]] : []),
+    ];
+    const body: string[] = ['## Regions', '', regions.map((r) => `- ${L(T, `reg:${r}`)}`).join('\n')];
+    if (states.length) body.push('', '## Great states', '', states.map((p) => `- ${LT(T, `pol:${p.id}`)} (${span(p.born, p.died)}, at most ${plural(peak.get(p.id) ?? 0, 'district')})`).join('\n'));
+    if (contacts.length) body.push('', '## Contacts across the sea', '', contacts.map((e) => `- **${yr(e.year)}**: ${LT(T, `evt:${e.id}`)}`).join('\n'));
+    if (colonies.length) body.push('', '## Colonies planted here', '', colonies.slice(0, 40).map((e) => `- **${yr(e.year)}**: ${LT(T, `evt:${e.id}`)}`).join('\n'));
+    pg.body = body.join('\n');
+    pg.names = nameHistory(ctx, cont.nameId, (y) => { const cu = ctx.cultureAt(cont.labelCell, y); return cu >= 0 ? s.cultures[cu].lang : 0; }, 0, 5000, exoLangs(cont.labelCell));
+    pages.set(ref, pg);
+  }
+
   for (let i = 0; i < s.world.rivers.length; i++) {
     const ref = `riv:${i}`;
     const rv = s.world.rivers[i];
@@ -334,7 +370,8 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
       ['Way of life', c.pastoral ? 'herding' : 'farming and towns'],
     ];
     const states = s.polities.filter((p) => p.culture === c.id);
-    pg.body = [`## States of the ${T.short.get(ref)}`, '', states.length ? states.slice(0, 60).map((p) => `- ${LT(T, `pol:${p.id}`)} (${span(p.born, p.died)})`).join('\n') : '*none*', '', '## Events', '', eventList(ctx, T, eventsOf(ctx, ref), 30)].join('\n');
+    const cevs = eventsOf(ctx, ref);
+    pg.body = [`## States of the ${T.short.get(ref)}`, '', states.length ? states.slice(0, 60).map((p) => `- ${LT(T, `pol:${p.id}`)} (${span(p.born, p.died)})`).join('\n') : '*The archive records no state founded by this people.*', ...(cevs.length ? ['', '## Events', '', eventList(ctx, T, cevs, 30)] : [])].join('\n');
     pg.names = nameHistory(ctx, c.nameId, () => c.lang, c.born, c.died ?? 5000, [ctx.editorialLang]);
     pages.set(ref, pg);
   }
@@ -344,7 +381,7 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const daughters = s.lang.languages().filter((x) => x.parent === info.id);
     const speakers = s.cultures.filter((c) => c.lang === info.id);
     if (speakers.length) pg.cell = speakers[0].homeCell;
-    pg.summary = `${T.title.get(ref)}: ${info.parent === null ? 'the reconstructed ancestor of a language family' : `a language descended from ${T.short.get(`lan:${info.parent}`)}`} (${span(info.born, info.died)}). Word order ${info.typology.order}${info.typology.cases.length ? `, with ${info.typology.cases.length} cases` : ', without case endings'}.`;
+    pg.summary = `${T.title.get(ref)}: ${info.parent === null ? 'the reconstructed ancestor of a language family' : `a language descended from ${T.short.get(`lan:${info.parent}`)}`} (${span(info.born, info.died)}). Word order ${info.typology.order}${info.typology.cases.length ? `, with ${plural(info.typology.cases.length, 'case')}` : ', without case endings'}.`;
     pg.infobox = [
       ['Spoken', span(info.born, info.died)],
       ...(info.parent !== null ? [['Parent', L(T, `lan:${info.parent}`)] as [string, string]] : []),
@@ -379,14 +416,14 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const ref = `scr:${sc.id}`;
     const pg = blank(ref, T, sc.kind, sc.born, 5000, s.cultures[sc.culture].homeCell);
     const children = s.scripts.filter((x) => x.parent === sc.id);
-    pg.summary = `The ${T.title.get(ref)} is a ${sc.kind} writing system, ${sc.parent === null ? 'invented' : 'adapted'} by the ${T.short.get(`cul:${sc.culture}`)} in ${yr(sc.born)}.`;
+    pg.summary = `The ${T.title.get(ref)} is ${article(sc.kind)} ${sc.kind} writing system, ${sc.parent === null ? 'invented' : 'adapted'} by the ${T.short.get(`cul:${sc.culture}`)} in ${yr(sc.born)}.`;
     pg.infobox = [
       ['Type', sc.kind],
       ['Created', LT(T, `evt:${sc.event}`)],
       ['People', L(T, `cul:${sc.culture}`)],
       ...(sc.parent !== null ? [['Derived from', L(T, `scr:${sc.parent}`)] as [string, string]] : []),
       ...(children.length ? [['Descendants', children.map((x) => L(T, `scr:${x.id}`)).join(', ')] as [string, string]] : []),
-      ['Logograms read in', L(T, `lan:${sc.originLang}`)],
+      ...(sc.kind === 'logographic' || sc.kind === 'logosyllabic' ? [['Logograms read in', L(T, `lan:${sc.originLang}`)] as [string, string]] : []),
     ];
     pg.body = `## About\n\n${scriptBlurb(sc.kind)}`;
     pages.set(ref, pg);
@@ -411,7 +448,8 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     if (m.deities.length) body.push('', '## Gods', '', m.deities.map((x) => `- ${L(T, `dei:${x}`)}: ${s.deities[x].domain}`).join('\n'));
     const states = s.polities.filter((p) => (ctx.polityStats.get(p.id) ?? []).some((r) => r[11] === m.id));
     if (states.length) body.push('', '## States that professed it', '', states.slice(0, 40).map((p) => `- ${LT(T, `pol:${p.id}`)}`).join('\n'));
-    body.push('', '## Events', '', eventList(ctx, T, eventsOf(ctx, ref), 30));
+    const mevs = eventsOf(ctx, ref);
+    if (mevs.length) body.push('', '## Events', '', eventList(ctx, T, mevs, 30));
     pg.body = body.join('\n');
     pages.set(ref, pg);
   }
@@ -419,7 +457,7 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const ref = `dei:${dd.id}`;
     const pg = blank(ref, T, dd.domain, dd.born, 5000, s.cultures[dd.culture].homeCell);
     const meaning = s.lang.nameMeaning(dd.nameId);
-    pg.summary = `${T.short.get(ref)} is the ${dd.sex === 'f' ? 'goddess' : 'god'} of ${dd.domain} in the ${T.short.get(`mov:${dd.movement}`)} religion of the ${T.short.get(`cul:${dd.culture}`)}.`;
+    pg.summary = `${T.short.get(ref)} is the ${dd.sex === 'f' ? 'goddess' : 'god'} of ${domainPhrase(dd.domain)} in the ancestral religion of the ${T.short.get(`cul:${dd.culture}`)}.`;
     pg.infobox = [['Domain', dd.domain], ['Religion', L(T, `mov:${dd.movement}`)], ['People', L(T, `cul:${dd.culture}`)], ...(meaning ? [['Name means', `“${meaning}”`] as [string, string]] : [])];
     pg.body = `## Worship\n\nInvoked in oaths, dedications and curses wherever the ${L(T, `mov:${dd.movement}`)} religion was practised.`;
     pg.names = nameHistory(ctx, dd.nameId, () => s.cultures[dd.culture].lang, Math.max(dd.born, s.lang.info(s.cultures[dd.culture].lang).born), 5000, [ctx.editorialLang]);
@@ -457,7 +495,9 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const ref = `cli:${a.id}`;
     const cell = a.volcanoCell >= 0 ? a.volcanoCell : a.cells[Math.floor(a.cells.length / 2)] ?? -1;
     const pg = blank(ref, T, a.kind, a.start, a.end, cell);
-    const consequences = (ctx.childrenEvents.get(a.event) ?? []).map((i) => s.events[i]).filter(isPageEvent);
+    const cellSet = new Set(a.cells);
+    const caused = new Set(ctx.childrenEvents.get(a.event) ?? []);
+    const consequences = s.events.filter((e) => isPageEvent(e) && (caused.has(e.id) || (e.sub === 'famine' && e.year >= a.start && e.year <= a.end + 5 && (cellSet.size === 0 || cellSet.has(e.cell))))).sort((x, y) => x.year - y.year || x.id - y.id);
     pg.summary = `${T.title.get(ref)}: ${a.kind === 'eruption' ? `a volcanic eruption (VEI ${a.severity}) and the cold years that followed` : a.kind === 'drought' ? `a drought across ${a.cells.length} districts` : a.kind === 'cold' ? `a period of cold years (${a.severity.toFixed(2)} °C below normal)` : 'the warming of the climate by the burning of coal and oil'}, ${span(a.start, a.end)}.`;
     pg.infobox = [['Kind', a.kind], ['Period', span(a.start, a.end)], ['Onset', LT(T, `evt:${a.event}`)], ['Extent', a.cells.length ? `${a.cells.length} districts` : 'world-wide'], ['Severity', a.kind === 'eruption' ? `VEI ${a.severity}` : a.severity.toFixed(2)]];
     pg.body = ['## Consequences', '', consequences.length ? eventList(ctx, T, consequences, 40) : '*No recorded consequences.*'].join('\n');
@@ -471,9 +511,11 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const inventions = s.events.filter((e) => e.sub === 'invention' && e.data.tech === tech.id);
     const first = holders[0];
     const pg = blank(ref, T, `era-${tech.era}`, first ? first[0] : tech.target, 5000, first ? s.settlements[s.polities[first[1]].capital].cell : -1);
-    pg.summary = `${tech.name}${first ? `, first known in ${T.short.get(`pol:${first[1]}`)} in ${yr(first[0])}` : ', never achieved'}. Known to ${holders.length} states in all.`;
+    pg.summary = first ? `${tech.name}, first known in ${T.short.get(`pol:${first[1]}`)} in ${yr(first[0])}. Known to ${plural(holders.length, 'state')} in all.` : `${tech.name}: never achieved before AY 5000.`;
     pg.infobox = [['First known', first ? `${yr(first[0])}, ${L(T, `pol:${first[1]}`)}` : 'never'], ['Requires', tech.prereqs.map((q) => L(T, `tec:${q}`)).join(', ') || '—'], ['Leads to', TECHS.filter((x) => x.prereqs.includes(tech.id)).map((x) => L(T, `tec:${x.id}`)).join(', ') || '—']];
-    pg.body = ['## Inventions', '', inventions.length ? inventions.map((e) => `- ${LT(T, `evt:${e.id}`)}`).join('\n') : '*Spread by contact only.*', '', '## Spread', '', holders.slice(0, 30).map(([y, p]) => `- ${yr(y)}: ${L(T, `pol:${p}`)}`).join('\n')].join('\n');
+    pg.body = holders.length
+      ? ['## Inventions', '', inventions.length ? inventions.map((e) => `- ${LT(T, `evt:${e.id}`)}`).join('\n') : '*Learned by contact only.*', '', '## Spread', '', holders.slice(0, 30).map(([y, p]) => `- ${yr(y)}: ${L(T, `pol:${p}`)}`).join('\n')].join('\n')
+      : '*No state of the archive achieved this before AY 5000.*';
     pg.series = [{ label: 'States knowing it', unit: 'states', points: cumulative(holders.map(([y]) => y)) }];
     pages.set(ref, pg);
   }
@@ -489,8 +531,9 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const causes = e.causes.filter((c) => T.pageRefs.has(`evt:${c}`));
     const effects = (ctx.childrenEvents.get(e.id) ?? []).filter((c) => T.pageRefs.has(`evt:${c}`));
     const body: string[] = [d.body];
-    if (causes.length) body.push('', '## Causes', '', causes.map((c) => `- ${LT(T, `evt:${c}`)} (${yr(s.events[c].year)})`).join('\n'));
-    if (effects.length) body.push('', '## Consequences', '', effects.slice(0, 40).map((c) => `- ${LT(T, `evt:${c}`)} (${yr(s.events[c].year)})`).join('\n'));
+    const dated = (c: number) => { const t = T.title.get(`evt:${c}`) ?? ''; return `- ${LT(T, `evt:${c}`)}${t.includes(`AY ${s.events[c].year}`) ? '' : ` (${yr(s.events[c].year)})`}`; };
+    if (causes.length) body.push('', '## Causes', '', causes.map(dated).join('\n'));
+    if (effects.length) body.push('', '## Consequences', '', effects.slice(0, 40).map(dated).join('\n'));
     const docs = artsBy.get(ref) ?? [];
     if (docs.length) body.push('', '## Sources', '', docList(T, docs));
     pg.body = body.join('\n');
@@ -503,6 +546,24 @@ function sig3(x: number): string {
   if (x === 0) return '0';
   const d = Math.max(0, 2 - Math.floor(Math.log10(Math.abs(x))));
   return x.toFixed(Math.min(6, d));
+}
+
+const GOV_LABEL: Record<string, string> = {
+  'city-state': 'city-state', 'merchant-republic': 'merchant republic', 'feudal-kingdom': 'feudal kingdom', 'absolute-monarchy': 'absolute monarchy',
+  'constitutional-monarchy': 'constitutional monarchy', 'one-party-state': 'one-party state',
+};
+function govLabel(g: string): string {
+  return GOV_LABEL[g] ?? g.replace(/-/g, ' ');
+}
+function article(w: string): string {
+  return /^[aeiou]/i.test(w) && !/^(one|uni|eu)/i.test(w) ? 'an' : 'a';
+}
+function plural(n: number, w: string): string {
+  return `${n} ${w}${n === 1 ? '' : 's'}`;
+}
+function joinList(xs: string[]): string {
+  if (xs.length <= 1) return xs[0] ?? '';
+  return `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
 }
 
 function compressOwners(hist: [number, number][], from: number): [number, number, number][] {
@@ -584,7 +645,7 @@ function polityNarrative(ctx: Ctx, T: Titles, p: Polity, evs: SimEvent[]): strin
   const wars = evs.filter((e) => e.sub === 'war');
   const won = evs.filter((e) => (e.sub === 'treaty' || e.sub === 'conquest') && e.parts.some(([r, role]) => r === `pol:${p.id}` && role === 'victor')).length;
   const lost = evs.filter((e) => (e.sub === 'treaty' || e.sub === 'conquest') && e.parts.some(([r, role]) => r === `pol:${p.id}` && role === 'vanquished')).length;
-  if (wars.length) parts.push(`It fought ${wars.length} wars, winning ${won} peace settlements and losing ${lost}.`);
+  if (wars.length) parts.push(`It fought ${plural(wars.length, 'war')}${won + lost ? `, emerging the victor from ${won} settlement${won === 1 ? '' : 's'} and the loser from ${lost}` : ''}.`);
   const big = wars.slice().sort((a, b) => b.sig - a.sig)[0];
   if (big) parts.push(`The most consequential was the ${LT(T, `evt:${big.id}`)}.`);
   const conv = evs.filter((e) => e.sub === 'conversion');
@@ -593,7 +654,8 @@ function polityNarrative(ctx: Ctx, T: Titles, p: Polity, evs: SimEvent[]): strin
   if (rev.length) parts.push(`Its government was remade ${rev.length === 1 ? 'once' : `${rev.length} times`}${rev.some((x) => x.sub === 'revolution') ? ', including by revolution' : ''}.`);
   if (p.endEvent !== null) {
     const ee = s.events[p.endEvent];
-    parts.push(`It ended in ${yr(p.died)} with the ${LT(T, `evt:${ee.id}`)}${ee.causes.length ? `, after ${ee.causes.slice(0, 3).filter((c) => T.pageRefs.has(`evt:${c}`)).map((c) => LT(T, `evt:${c}`)).join(', ')}` : ''}.`);
+    const after = ee.causes.slice(0, 3).filter((c) => T.pageRefs.has(`evt:${c}`)).map((c) => `the ${LT(T, `evt:${c}`)}`);
+    parts.push(`It ended in ${yr(p.died)} with the ${LT(T, `evt:${ee.id}`)}${after.length ? `, after ${joinList(after)}` : ''}.`);
   } else parts.push('It survives to the present day.');
   return parts.join(' ');
 }

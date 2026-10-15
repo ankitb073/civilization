@@ -80,6 +80,12 @@ export function editorialName(ctx: Ctx, ref: string): string {
       return ctx.name(t.nameId, lang, Math.max(y, langBorn(ctx, lang)));
     }
     case 'reg': {
+      const cont = ctx.continents.get(id);
+      if (cont) {
+        const cu = ctx.cultureAt(cont.labelCell, 5000);
+        const lang = cu >= 0 ? s.cultures[cu].lang : 0;
+        return ctx.name(cont.nameId, lang, 5000);
+      }
       const cell = s.world.regionLabelCell[id];
       const cu = ctx.cultureAt(cell, 5000);
       const lang = cu >= 0 ? s.cultures[cu].lang : 0;
@@ -153,6 +159,15 @@ export function buildTitles(ctx: Ctx): Titles {
   const span = (a: number, b: number | null) => `AY ${a}–${b ?? 5000}`;
 
   // --- page-worthy entities
+  ctx.ensureContinents();
+  for (const id of ctx.continents.keys()) T.pageRefs.add(`reg:${id}`);
+  for (const e of s.events) {
+    if (e.sub !== 'first-contact') continue;
+    for (const lm of (e.data.landmasses as number[] | undefined) ?? []) {
+      const ref = `reg:${1000 + lm}`;
+      if (ctx.continents.has(1000 + lm) && !e.parts.some(([r]) => r === ref)) e.parts.push([ref, 'continent']);
+    }
+  }
   for (const p of s.polities) T.pageRefs.add(`pol:${p.id}`);
   for (const t of s.settlements) T.pageRefs.add(`set:${t.id}`);
   for (let r = 0; r < s.world.regionCount; r++) T.pageRefs.add(`reg:${r}`);
@@ -206,7 +221,13 @@ export function buildTitles(ctx: Ctx): Titles {
         break;
       }
       case 'set': short = editorialName(ctx, ref); title = short; break;
-      case 'reg': short = editorialName(ctx, ref); title = short; break;
+      case 'reg': {
+        short = editorialName(ctx, ref);
+        const cont = ctx.continents.get(id);
+        title = cont && cont.cells < 300 ? `${short} Islands` : short;
+        if (cont && cont.cells < 300) short = title;
+        break;
+      }
       case 'riv': short = editorialName(ctx, ref); title = `${short} River`; break;
       case 'cul': short = editorialName(ctx, ref); title = `${short} (people)`; break;
       case 'lan': short = editorialName(ctx, ref); title = s.lang.info(id).parent === null ? `Proto-${short}` : `${short} language`; break;
@@ -231,7 +252,11 @@ export function buildTitles(ctx: Ctx): Titles {
         const a = s.anomalies[id];
         const nm = editorialName(ctx, ref);
         if (a.kind === 'eruption') title = `Volcanic Winter of Mount ${nm} (AY ${a.start})`;
-        else if (a.kind === 'drought') title = `The Great Drought of AY ${a.start}–${a.end}`;
+        else if (a.kind === 'drought') {
+          const mid = a.cells[Math.floor(a.cells.length / 2)];
+          const reg = mid !== undefined && s.world.region[mid] >= 0 ? T.short.get(`reg:${s.world.region[mid]}`) : undefined;
+          title = `The Great Drought${reg ? ` of ${reg}` : ''}, AY ${a.start}–${a.end}`;
+        }
         else if (a.kind === 'cold') title = `The Cold Spell of AY ${a.start}–${a.end}`;
         else title = 'The Industrial Warming';
         short = title;
@@ -268,10 +293,11 @@ export function buildTitles(ctx: Ctx): Titles {
         case 'per': { const p = s.persons[id]; q = `AY ${p.born}–${p.died}`; break; }
         case 'set': { const t = s.settlements[id]; q = `${T.short.get(`reg:${s.world.region[t.cell]}`) ?? ''}, founded AY ${t.founded}`; break; }
         case 'evt': q = `AY ${s.events[id].year}`; break;
+        case 'reg': q = ctx.continents.has(id) ? 'continent' : 'region'; break;
         case 'cul': q = `AY ${s.cultures[id].born}`; break;
         case 'lan': q = `AY ${s.lang.info(id).born}`; break;
         case 'mov': q = `AY ${s.movements[id].born}`; break;
-        case 'dei': { const d = s.deities[id]; q = `${T.short.get(`cul:${d.culture}`)} god of ${d.domain}`; break; }
+        case 'dei': { const d = s.deities[id]; q = `${T.short.get(`cul:${d.culture}`)} ${d.sex === 'f' ? 'goddess' : 'god'} of ${domainPhrase(d.domain)}`; break; }
         case 'cur': q = `AY ${s.currencies[id].born}`; break;
         case 'hou': q = `AY ${s.houses[id].born}`; break;
         default: q = ref;
@@ -352,18 +378,24 @@ export function eventTitle(ctx: Ctx, T: Titles, e: SimEvent): string {
     case 'famine': return `Famine of AY ${e.year} in ${T.short.get(first('region')) ?? ''}`;
     case 'plague': return T.plagueNames.get(e.id) ?? `Plague of AY ${e.year}`;
     case 'eruption': return `Eruption of Mount ${T.short.get(first('anomaly')) ? editorialName(ctx, first('anomaly')) : ''} (AY ${e.year})`;
-    case 'drought': return `Onset of the Great Drought (AY ${e.year})`;
+    case 'drought': return `Onset of the Great Drought${e.cell >= 0 && T.short.get(`reg:${s.world.region[e.cell]}`) ? ` in ${T.short.get(`reg:${s.world.region[e.cell]}`)}` : ''} (AY ${e.year})`;
     case 'cold-period': return `Onset of the Cold Spell (AY ${e.year})`;
     case 'warming': return `Onset of the Industrial Warming`;
     case 'migration': return `Migration of the ${T.short.get(first('migrants')) ?? ''} into ${T.short.get(first('destination')) ?? ''}`;
     case 'founding-city': return `Founding of ${setShort(T, first('settlement'))}`;
     case 'abandonment': return `Abandonment of ${setShort(T, first('settlement'))}`;
-    case 'invention': return `Invention of ${TECH_NAMES[e.data.tech as number].replace(/^the /, 'the ')} in ${P('polity')}`;
+    case 'invention': return `Invention of ${TECH_NAMES[e.data.tech as number].replace(/^./, (c) => c.toLowerCase())} in ${P('polity')}`;
     case 'ethnogenesis': return `Emergence of the ${T.short.get(first('culture')) ?? ''}`;
     case 'acculturation': return `Acculturation of the ${P('polity')} Court`;
     case 'script-invention': return `Invention of the ${T.short.get(first('script')) ?? ''} Script`;
     case 'script-adoption': return `Adoption of the ${T.short.get(first('script')) ?? ''} Script in ${P('polity')}`;
-    case 'movement-founding': return `Founding of the ${T.short.get(first('movement')) ?? ''} ${e.data.kind === 'philosophy' ? 'School' : e.data.kind === 'ideology' ? 'Movement' : 'Faith'}`;
+    case 'movement-founding': {
+      const k = String(e.data.kind);
+      const word = k === 'philosophy' ? 'School' : k === 'ideology' ? 'Movement' : k === 'cult' ? 'Cult' : k === 'sect' ? 'Sect' : k === 'reform' ? 'Reform' : 'Faith';
+      return `Founding of the ${T.short.get(first('movement')) ?? ''} ${word}`;
+    }
+    case 'excavation': return `Excavation at ${setShort(T, first('site'))} (AY ${e.year})`;
+    case 'election': return `${P('polity')} Election of AY ${e.year}`;
     case 'schism': return `The ${T.short.get(first('movement')) ?? ''} Schism`;
     case 'council': return `Council of ${setShort(T, `set:${ctx.capitalAt(ctx.s.polities[ctx.idNum(first('host'))], e.year)}`)}`;
     case 'conversion': return `Conversion of ${P('polity')} to ${T.short.get(first('adopted')) ?? ''}`;
@@ -382,7 +414,11 @@ export function eventTitle(ctx: Ctx, T: Titles, e: SimEvent): string {
     case 'default': return `${P('debtor')} Default of AY ${e.year}`;
     case 'panic': return `Panic of AY ${e.year}`;
     case 'trade-collapse': return `The Great Contraction of AY ${e.year}`;
-    case 'first-contact': return `First Contact at ${setShort(T, ctx.partsOf(e, 'port')[1])}`;
+    case 'first-contact': {
+      const lms = (e.data.landmasses as number[] | undefined) ?? [];
+      const names = lms.map((lm) => T.short.get(`reg:${1000 + lm}`)).filter(Boolean);
+      return names.length === 2 ? `First Contact between ${names[0]} and ${names[1]}` : `First Contact at ${setShort(T, ctx.partsOf(e, 'port')[1])}`;
+    }
     case 'colonization': return `Founding of the Colony of ${setShort(T, first('colony'))}`;
     case 'colonial-claim': return `${P('claimant')} Claim against ${P('target')}`;
     default: return `${cap(e.sub.replace(/-/g, ' '))} of AY ${e.year}`;
@@ -419,15 +455,24 @@ function numberWars(ctx: Ctx, T: Titles, want: Map<string, string>): void {
   }
   for (const [t, refs] of byTitle) {
     if (refs.length < 2) continue;
+    const perYear = new Map<number, number>();
+    for (const ref of refs) { const y = s.events[ctx.idNum(ref)].year; perYear.set(y, (perYear.get(y) ?? 0) + 1); }
+    const seenYear = new Map<number, number>();
     refs.forEach((ref, i) => {
       const e = s.events[ctx.idNum(ref)];
       let nt: string;
       if (e.sub === 'war' || ((e.sub === 'battle' || e.sub === 'siege' || e.sub === 'sack') && refs.length <= 12)) nt = `${cap(ordinalWord(i + 1))} ${t}`;
-      else nt = `${t} (AY ${e.year})`;
+      else if ((perYear.get(e.year) ?? 0) > 1) {
+        // several at the same place in one year: number them within the year
+        const k = (seenYear.get(e.year) ?? 0) + 1;
+        seenYear.set(e.year, k);
+        nt = `${cap(ordinalWord(k))} ${t} (AY ${e.year})`;
+      } else nt = `${t} (AY ${e.year})`;
       want.set(ref, nt);
       T.short.set(ref, nt);
     });
   }
+
   void KIND_PREFIX;
   void GOODS;
 }
@@ -468,6 +513,13 @@ function assignEpithets(ctx: Ctx, T: Titles): void {
       if (ep) T.epithet.set(person.id, ep);
     }
   }
+}
+
+/** "the underworld", "storms", "war"… for "god of …" phrases. */
+export function domainPhrase(domain: string): string {
+  const the = new Set(['underworld', 'sky', 'sea', 'earth', 'sun', 'moon', 'harvest', 'dawn', 'night']);
+  const plural: Record<string, string> = { river: 'rivers', storm: 'storms', grain: 'grain' };
+  return the.has(domain) ? `the ${domain}` : plural[domain] ?? domain;
 }
 
 export function kindOfRef(ref: string): EntityKind {

@@ -43,7 +43,7 @@ export class Doc {
         for (const [y, v] of t.names) if (y <= this.year) n = v;
         return nm(n);
       }
-      case 'reg': return nm(s.regionNames[id]);
+      case 'reg': return nm(this.ctx.continents.get(id)?.nameId ?? s.regionNames[id]);
       case 'riv': return nm(s.riverNames[id]);
       case 'cul': return nm(s.cultures[id].nameId);
       case 'mov': return nm(s.movements[id].nameId);
@@ -52,6 +52,7 @@ export class Doc {
       case 'hou': return nm(s.houses[id].nameId);
       case 'lan': return nm(s.lang.info(id).endonym);
       case 'scr': return nm(s.scripts[id].nameId);
+      case 'evt': case 'cli': return periodTitle(this.T.short.get(ref) ?? ref);
       default: return this.T.short.get(ref) ?? ref;
     }
   }
@@ -79,15 +80,16 @@ export class Doc {
     return this.rng.chance(p);
   }
 
-  private days = new Map<number, [number, number]>();
+  private days = new Map<number | string, [number, number]>();
 
   /** A stable (month index, day) for a given year within this document. */
-  dayOf(year: number, maxDay = 28): [number, number] {
-    let v = this.days.get(year);
+  dayOf(year: number, maxDay = 28, key = ''): [number, number] {
+    const k: number | string = key ? `${year}:${key}` : year;
+    let v = this.days.get(k);
     if (!v) {
-      const r = this.rng.fork('day', year);
+      const r = this.rng.fork('day', year, key);
       v = [r.int(0, 11), r.int(1, maxDay)];
-      this.days.set(year, v);
+      this.days.set(k, v);
     }
     return v;
   }
@@ -128,7 +130,12 @@ export function resetCalendarCache(): void {
 }
 
 /** A local date for a document issued by polity `p` in `year`, plus the normalized year. */
-export function localDate(ctx: Ctx, d: Doc, p: Polity | null, year: number, opts: { day?: boolean } = {}): string {
+/** An event or anomaly name as a contemporary would write it: no editorial year qualifiers or ids. */
+export function periodTitle(t: string): string {
+  return t.replace(/\s*\[[a-z]{3}:\d+\]$/, '').replace(/\s*\((?:AY|c\. AY) [^)]*\)/g, '').replace(/ of AY \d+/g, '').replace(/^Onset of /, '').replace(/^The /, '').trim();
+}
+
+export function localDate(ctx: Ctx, d: Doc, p: Polity | null, year: number, opts: { day?: boolean; key?: string } = {}): string {
   const s = ctx.s;
   const norm = ` [AY ${year}]`;
   if (!p) return `in the year AY ${year}`;
@@ -139,7 +146,7 @@ export function localDate(ctx: Ctx, d: Doc, p: Polity | null, year: number, opts
     if (!opts.day) return '';
     const cu = ctx.polityCulture(p, year);
     const ms = months(ctx, cu);
-    const [mi, day] = d.dayOf(year, 29);
+    const [mi, day] = d.dayOf(year, 29, opts.key);
     return `on the ${ordinal(day)} day of ${d.link(`cul:${cu}`, ctx.name(ms[mi], d.lang, year))}, `;
   };
   if (era <= 1 || (era <= 3 && style === 0)) {
@@ -167,6 +174,6 @@ export function localDate(ctx: Ctx, d: Doc, p: Polity | null, year: number, opts
   const label = m && m.kind !== 'pantheon' && m.born <= year ? d.n(`mov:${m.id}`) : d.n(`pol:${p.id}`);
   const cu = ctx.polityCulture(p, year);
   const ms = months(ctx, cu);
-  const [mi, day] = d.dayOf(year, 28);
+  const [mi, day] = d.dayOf(year, 28, opts.key);
   return `${day} ${d.link(`cul:${cu}`, ctx.name(ms[mi], d.lang, year))} ${year - anchor + 1} of the ${label}${norm}`;
 }

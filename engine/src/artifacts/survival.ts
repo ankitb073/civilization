@@ -35,6 +35,8 @@ export function applySurvival(g: Gen): void {
     const wear = 1 - Math.exp(-age / 2500);
     if (a.interlinear) {
       a.condition = a.interlinear.translation.endsWith('[...]') ? 'Damaged; the final lines are lost.' : wear > 0.5 ? 'Weathered but legible.' : 'Complete.';
+    } else if (a.sub === 'coin') {
+      a.condition = r.pick(['Extremely fine.', 'Very fine.', 'Fine; legend partly off the flan.', 'Worn, but the portrait is clear.', 'Corroded; weight slightly reduced.']);
     } else if (r.chance(wear * 0.5)) {
       a.condition = r.pick(['Fragmentary; gaps marked [...].', 'Damaged by fire at the edges.', 'Several leaves missing.', 'Water-stained; partly illegible.']);
       a.body = lacunae(a.body, r);
@@ -46,7 +48,7 @@ export function applySurvival(g: Gen): void {
     if (a.year >= 4500) {
       a.provenance = `State archive of ${refName(g, a.polity)}; catalogued AY ${Math.min(4999, a.year + r.int(1, 40))}.`;
       a.foundYear = null;
-    } else if (durableMedium && a.year < 3800) {
+    } else if (durableMedium && (a.year < 3800 || a.sub === 'inscription' || a.sub === 'coin')) {
       const site = a.settlement ?? nearestSite(g, a.cell, a.year);
       let ex = site !== null ? excavations.get(site) : undefined;
       if (site !== null && !ex) {

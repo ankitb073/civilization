@@ -325,6 +325,38 @@ export class MapRenderer {
     this.invalidate();
   }
 
+  private flight = 0;
+  /** Animate the camera to centre a world point at `zoom` × the fit scale (or fit the world when wx < 0). */
+  flyTo(wx: number, wy: number, zoom: number, ms = 900) {
+    cancelAnimationFrame(this.flight);
+    const { width, height } = this.d.geo;
+    const s0 = this.scale, x0 = this.tx, y0 = this.ty;
+    let s1: number, x1: number, y1: number;
+    if (wx < 0) {
+      s1 = this.fitScale;
+      x1 = this.insetLeft + this.availW / 2 - (width / 2) * s1;
+      y1 = this.availH / 2 - (height / 2) * s1;
+    } else {
+      s1 = this.fitScale * zoom;
+      x1 = this.insetLeft + this.availW / 2 - wx * s1;
+      y1 = this.availH / 2 - wy * s1;
+    }
+    const t0 = performance.now();
+    const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const step = (now: number) => {
+      const t = Math.min(1, (now - t0) / Math.max(1, ms));
+      const e = ease(t);
+      // interpolate in log-scale so zooms feel even
+      this.scale = Math.exp(Math.log(s0) + (Math.log(s1) - Math.log(s0)) * e);
+      // keep the target point moving smoothly in screen space
+      this.tx = x0 + (x1 - x0) * e;
+      this.ty = y0 + (y1 - y0) * e;
+      this.invalidate();
+      if (t < 1) this.flight = requestAnimationFrame(step);
+    };
+    this.flight = requestAnimationFrame(step);
+  }
+
   /** Is a world point comfortably inside the unobstructed area? */
   inView(wx: number, wy: number, margin = 60): boolean {
     const [x, y] = this.toScreen(wx, wy);

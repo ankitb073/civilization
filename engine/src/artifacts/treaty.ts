@@ -41,7 +41,10 @@ function treaty(g: Gen, e: SimEvent, drafter: Polity, parties: Polity[]): void {
     const r = ruler(p);
     return r ? d.n(`per:${r.person}`) : `the ${govWord(ctx.govAt(p, year))} of ${d.n(`pol:${p.id}`)}`;
   };
-  const title = (p: Polity) => titleOf(ctx.govAt(p, year), era);
+  const title = (p: Polity) => {
+    const r = ruler(p);
+    return titleOf(ctx.govAt(p, year), era, r ? s.persons[r.person].sex === 'f' : false);
+  };
   const date = localDate(ctx, d, drafter, year, { day: era >= 2 });
   const war = typeof e.data.war === 'number' ? e.data.war as number : null;
   const lines: string[] = [];
@@ -91,7 +94,8 @@ function treaty(g: Gen, e: SimEvent, drafter: Polity, parties: Polity[]): void {
     const W = victor ? s.polities[ctx.idNum(victor)] : A;
     const L = vanq ? s.polities[ctx.idNum(vanq)] : B;
     if (era <= 1) {
-      lines.push(`Thus says ${rulerLink(W)}, ${title(W)}, king of ${d.n(`pol:${W.id}`)}, beloved of ${gods(W, 1)[0] ?? 'the gods'}:`);
+      const tw = title(W);
+      lines.push(`Thus says ${rulerLink(W)}, ${tw.startsWith('great') ? `${tw}, ${tw.replace('great ', '')}` : tw} of ${d.n(`pol:${W.id}`)}, beloved of ${gods(W, 1)[0] ?? 'the gods'}:`);
       lines.push('');
       if (victor) lines.push(`${d.pick(['The gods of', 'The storm-god of', 'The lord of'])} ${d.n(`pol:${W.id}`)} went before me, and ${d.n(`pol:${L.id}`)} ${d.pick(['bowed down', 'sued for peace', 'sent tribute to my camp', 'came to my feet'])}. ${war !== null ? `The war which ${rulerLink(L)} ${d.pick(['began', 'stirred up', 'brought upon his own land'])} is ended.` : ''}`);
       else lines.push(`${rulerLink(A)} and ${rulerLink(B)} have made peace, and set their words upon this tablet.`);
@@ -118,8 +122,9 @@ function treaty(g: Gen, e: SimEvent, drafter: Polity, parties: Polity[]): void {
   // ---------------------------------------------------------------- oaths, curses, signatures
   lines.push('');
   if (era <= 1) {
-    const ga = gods(A, 3), gb = gods(B, 3);
-    lines.push(`The gods of the oath are witnesses: ${[...ga, ...gb].join(', ')}, and the thousand gods of ${d.n(`pol:${A.id}`)} and of ${d.n(`pol:${B.id}`)}.`);
+    const witnesses = [...new Set([...gods(A, 3), ...gods(B, 3)])];
+    const sameGods = pantheonOf(A)?.id === pantheonOf(B)?.id;
+    lines.push(`The gods of the oath are witnesses: ${witnesses.join(', ')}, ${sameGods ? `the gods whom ${d.n(`pol:${A.id}`)} and ${d.n(`pol:${B.id}`)} alike revere` : `and the thousand gods of ${d.n(`pol:${A.id}`)} and of ${d.n(`pol:${B.id}`)}`}.`);
     lines.push('');
     lines.push(`Whoever changes the words of this tablet, ${d.pick(['may the gods of the oath destroy him, his house, his land and his seed', 'may his name be taken from the land and his seed from the earth', 'may the river refuse him water and the field refuse him grain'])}. Whoever keeps them, may the gods protect him in the house of his father.`);
     lines.push('');
@@ -242,15 +247,16 @@ export function govWord(gov: string): string {
   }
 }
 
-function titleOf(gov: string, era: number): string {
-  if (gov === 'empire') return era <= 1 ? 'great king' : 'emperor';
-  if (gov === 'horde') return 'khan';
-  if (gov === 'city-state' || gov === 'chiefdom') return era <= 1 ? 'lord' : 'prince';
-  if (gov === 'theocracy') return 'high priest';
+function titleOf(gov: string, era: number, female = false): string {
+  const t = (m: string, f: string) => (female ? f : m);
+  if (gov === 'empire') return era <= 1 ? t('great king', 'great queen') : t('emperor', 'empress');
+  if (gov === 'horde') return t('khan', 'khatun');
+  if (gov === 'city-state' || gov === 'chiefdom') return era <= 1 ? t('lord', 'lady') : t('prince', 'princess');
+  if (gov === 'theocracy') return t('high priest', 'high priestess');
   if (gov === 'republic' || gov === 'democracy' || gov === 'federation') return 'president';
   if (gov === 'one-party-state') return 'chairman';
   if (gov === 'merchant-republic') return 'doge';
-  return 'king';
+  return t('king', 'queen');
 }
 
 export function plural(n: number, w: string): string {

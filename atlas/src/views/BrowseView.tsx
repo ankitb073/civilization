@@ -131,7 +131,7 @@ export function BrowseView() {
                 <a class="row" href={`#/p/${idx.ids[i]}`}>
                   <span class="row__y">{idx.t0[i]}</span>
                   <span class={`kdot k-${idx.kinds[i]}`} aria-hidden="true" />
-                  <span class="row__t">{flagSet.has(idx.ids[i]) && <span class="row__flag" title="Flagship source">✦</span>}{idx.titles[i]}{idx.subs[i] && kind === 'all' || (idx.subs[i] && !sub) ? <span class="row__sub">{subLabel(idx.subs[i])}</span> : null}</span>
+                  <span class="row__t">{flagSet.has(idx.ids[i]) && <span class="row__flag" title="Flagship source" aria-hidden="true">✦</span>}{idx.titles[i]}{idx.subs[i] && kind === 'all' || (idx.subs[i] && !sub) ? <span class="row__sub">{subLabel(idx.subs[i])}</span> : null}</span>
                   {idx.aliases[i] && <span class="row__a">{idx.aliases[i].split('|').slice(0, 3).join(' · ')}</span>}
                 </a>
               </li>

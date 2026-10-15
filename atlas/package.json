@@ -9,7 +9,9 @@
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "mock": "node --disable-warning=ExperimentalWarning scripts/mock-data.ts",
-    "shoot": "node --disable-warning=ExperimentalWarning scripts/shoot.ts"
+    "shoot": "node --disable-warning=ExperimentalWarning scripts/shoot.ts",
+    "frames": "node --disable-warning=ExperimentalWarning scripts/frames.ts",
+    "fixtures": "node --disable-warning=ExperimentalWarning scripts/fixture-flagships.ts"
   },
   "dependencies": {
     "@fontsource/eb-garamond": "5.3.0",

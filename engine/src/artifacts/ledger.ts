@@ -6,6 +6,7 @@ import { localDate, months } from '../archive/doc.ts';
 import type { Doc } from '../archive/doc.ts';
 import type { House, Polity } from '../sim/state.ts';
 import { GOODS } from '../sim/economy.ts';
+import { TK } from '../sim/tech.ts';
 import { Rng } from '../core/rng.ts';
 import { ordinal } from '../archive/context.ts';
 
@@ -117,7 +118,7 @@ function ledger(g: Gen, h: House, year: number, rng: Rng): void {
   }
   const author = s.persons[head];
   const lines: string[] = [];
-  lines.push(`${era <= 1 ? 'Accounts' : era <= 3 ? 'Day-book' : 'Journal'} of the ${d.n(`hou:${h.id}`)}, kept at ${d.n(`set:${t.id}`)} by ${d.n(`per:${head}`)}, ${localDate(ctx, d, P, year)}. Sums in ${unitLink}${curOk ? '' : ''}. Opening balance ${fmtPrice(openingBal)}.`);
+  lines.push(`${era <= 1 ? 'Accounts' : era <= 3 ? 'Day-book' : 'Journal'} of ${houseLabel(h.kind, d.n(`hou:${h.id}`))}, kept at ${d.n(`set:${t.id}`)} by ${d.n(`per:${head}`)}, ${localDate(ctx, d, P, year)}. Sums in ${unitLink}${curOk ? '' : ''}. Opening balance ${fmtPrice(openingBal)}.`);
   if (notes.length) {
     lines.push('');
     lines.push('Notes in the margin:');
@@ -130,10 +131,11 @@ function ledger(g: Gen, h: House, year: number, rng: Rng): void {
   const grain = GOODS.findIndex((x) => x.key === 'grain');
   const pNow = g.price(h.settlement, grain, year);
   const pThen = g.price(h.settlement, grain, year - 50);
-  lines.push(`**Editorial note.** Prices are in ${unitLink}${curOk ? `, then of ${fmt(grams)} g of silver each` : ''}. ${pNow !== null && pThen !== null ? `Grain at ${d.n(`set:${t.id}`)} cost ${fmtPrice(pNow / grams)} the measure, against ${fmtPrice(pThen / grams)} fifty years earlier.` : ''} The house is described at ${d.title(`hou:${h.id}`)}.`);
+  const trend = pNow !== null && pThen !== null ? `Grain at ${d.n(`set:${t.id}`)} cost ${fmt(pNow)} g of silver the measure (${fmtPrice(pNow / grams)} in the house's money), against ${fmt(pThen)} g fifty years earlier${pNow > pThen * 1.4 ? ', a steep rise' : pNow < pThen * 0.7 ? ', a marked fall' : ''}.` : '';
+  lines.push(`**Editorial note.** Prices are in ${unitLink}${curOk ? `, then worth ${fmt(grams)} g of silver each` : ''}. ${trend} The house is described at ${d.title(`hou:${h.id}`)}.`.replace(/\s+/g, ' ').trim());
   g.add({
     sub: 'ledger', year, title: `${era <= 3 ? 'Day-book' : 'Ledger'} of the ${g.T.short.get(`hou:${h.id}`)}, AY ${year}`, author: author.id, polity: P.id,
-    lang, script: ctx.scriptOf(P, year), medium: era <= 1 ? 'clay tablets' : era <= 3 ? 'paper quires' : 'bound ledger', cell: t.cell, settlement: t.id,
+    lang, script: ctx.scriptOf(P, year), medium: era <= 1 ? 'clay tablets' : era === 2 ? 'papyrus rolls' : era === 3 ? (ctx.s.polities[P.id].techs.has(TK.paper) ? 'paper quires' : 'parchment quires') : 'bound ledger', cell: t.cell, settlement: t.id,
     about: [], body: lines.join('\n'), mentions: d.mentions, dateText: localDate(ctx, d, P, year), flagship: false,
     ledger: { columns: ['Date', 'Counterparty', 'Goods', 'Quantity', `Unit price`, 'Amount', 'Balance'], rows, notes },
     data: { entries },
@@ -168,13 +170,13 @@ function letter(g: Gen, h: House, year: number, rng: Rng): void {
   if (era <= 1) {
     lines.push(`To ${agentName}, say: thus says ${d.n(`per:${head}`)}.`);
     lines.push('');
-    lines.push(`${d.pick(['The tablet you sent has reached me.', 'Your servant arrived with the donkeys.', 'I have heard what you wrote.'])} ${pHere !== null ? `Here at ${d.n(`set:${h.settlement}`)} ${goodName(good)} sells for ${fmtPrice(pHere / grams)} ${unit} the ${goodUnit(good)}.` : ''} ${pThere !== null ? `If at ${d.n(`set:${partnerSet}`)} it is ${fmtPrice(pThere / grams)}, ${pThere > (pHere ?? 0) ? 'send me none; sell it there' : 'buy all you can and send it with the next caravan'}.` : ''}`);
+    lines.push(`${d.pick(['The tablet you sent has reached me.', 'Your servant arrived with the donkeys.', 'I have heard what you wrote.'])} ${pHere !== null ? `Here at ${d.n(`set:${h.settlement}`)} ${goodName(good)} ${pluralGood(good) ? 'sell' : 'sells'} for ${fmtPrice(pHere / grams)} ${unit} the ${goodUnit(good)}.` : ''} ${pThere !== null ? `If at ${d.n(`set:${partnerSet}`)} it is ${fmtPrice(pThere / grams)}, ${pThere > (pHere ?? 0) ? 'send me none; sell it there' : 'buy all you can and send it with the next caravan'}.` : ''}`);
     lines.push('');
     lines.push(`${d.pick(['Do not let the palace take the goods for the tax.', 'Seal the packets with my seal.', 'Do not trust the ferryman again.'])} ${d.pick(['Be quick!', 'Do not delay!', 'Write to me of the price.'])}`);
   } else {
     lines.push(`${d.n(`per:${head}`)}, at ${d.n(`set:${h.settlement}`)}, to ${agentName} at ${d.n(`set:${partnerSet}`)}, greeting.`);
     lines.push('');
-    lines.push(`${pHere !== null ? `${ordinal(1).replace('1st', 'First')}, ${goodName(good)} is quoted here at ${fmtPrice(pHere / grams)} ${unit} the ${goodUnit(good)}. ` : ''}${pThere !== null ? `Your last said ${fmtPrice(pThere / grams)} with you. ` : ''}${d.pick(['Act as you judge best, but do not extend credit to the court.', 'Remit the balance by bill, not in coin.', 'Hold the stock until the new season.'])}`);
+    lines.push(`${pHere !== null ? `First, ${goodName(good)} ${pluralGood(good) ? 'are' : 'is'} quoted here at ${fmtPrice(pHere / grams)} ${unit} the ${goodUnit(good)}. ` : ''}${pThere !== null ? `Your last said ${fmtPrice(pThere / grams)} with you. ` : ''}${d.pick(['Act as you judge best, but do not extend credit to the court.', 'Remit the balance by bill, not in coin.', 'Hold the stock until the new season.'])}`);
     lines.push('');
     lines.push(d.pick(['Farewell.', 'May the gods keep you.', 'Your friend and partner.']));
   }
@@ -184,6 +186,17 @@ function letter(g: Gen, h: House, year: number, rng: Rng): void {
     settlement: h.settlement, about: [], body: lines.join('\n'), mentions: d.mentions, dateText: localDate(ctx, d, P, year), flagship: false,
     durable: era <= 1 ? 0.7 : 0.25, tau: era <= 1 ? 3500 : 1200, seat: h.settlement,
   });
+}
+
+export function houseLabel(kind: string, name: string): string {
+  if (kind === 'company') return `the ${name} Company`;
+  if (kind === 'bank') return `the ${name} Bank`;
+  if (kind === 'corporation') return `the ${name} Corporation`;
+  return `the house of ${name}`;
+}
+
+function pluralGood(good: number): boolean {
+  return /s$/.test(GOODS[good].name);
 }
 
 export function fmtPrice(x: number): string {

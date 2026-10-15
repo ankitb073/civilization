@@ -1,6 +1,7 @@
 // Artifact framework: the Artifact record, author pools, modern scholars, survival and provenance.
 import type { Ctx } from '../archive/context.ts';
 import type { Titles } from '../archive/naming.ts';
+import { eventTitle } from '../archive/naming.ts';
 import { Doc } from '../archive/doc.ts';
 import type { LangId } from '../lang/index.ts';
 import type { InterlinearText } from '../export/contract.ts';
@@ -160,7 +161,10 @@ export function money(g: Gen, d: Doc, kg: number, polity: number | null, year: n
   const c = ctx.s.currencies[cur];
   const grams = ctx.contentAt(cur, year);
   const units = (kg * 1000) / Math.max(1e-6, grams);
-  return `${fmt(units)} ${d.link(`cur:${cur}`, d.nameOf(`cur:${cur}`))}${c.kind === 'weight' ? ' of silver' : ''}`;
+  const link = d.link(`cur:${cur}`, d.nameOf(`cur:${cur}`));
+  // large sums by weight are reckoned in talents, as scribes did
+  if (c.kind === 'weight' && kg >= 30) return `${fmt(kg / 30)} talent${kg >= 45 ? 's' : ''} of silver by the ${link} standard`;
+  return `${fmt(units)} ${link}${c.kind === 'weight' ? ' of silver' : ''}`;
 }
 
 export function fmt(x: number): string {
@@ -181,7 +185,11 @@ export function goodUnit(id: number): string {
 /** Record an archive-level event (e.g. an excavation) in the causal ledger. */
 export function archiveEvent(g: Gen, sub: string, year: number, cell: number, parts: [string, string][], causes: number[], data: Record<string, unknown>, sig = 0.1): number {
   const e = event(g.ctx.s, sub, year, { cell, parts, causes, data, sig });
-  g.T.pageRefs.add(`evt:${e.id}`);
+  const ref = `evt:${e.id}`;
+  g.T.pageRefs.add(ref);
+  const title = eventTitle(g.ctx, g.T, e);
+  g.T.title.set(ref, title);
+  g.T.short.set(ref, title);
   return e.id;
 }
 

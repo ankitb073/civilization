@@ -227,7 +227,7 @@ export interface StoryJson {
 /** A "Histomap": every state as a stream whose width is its share of the world's population.
  *  Streams are ordered west → east by capital, so neighbours flow side by side. */
 export interface HistomapJson {
-  years: number[];                       // sample years (every 25)
+  years: number[];                       // sample years (every 20)
   worldPop: number[];                    // total population per sample
   series: {
     id: string;                          // polity id, or 'other' / 'stateless'
