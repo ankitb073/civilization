@@ -8,6 +8,11 @@ import { periodTitle } from '../archive/doc.ts';
 const QUOTABLE = new Set(['chronicle', 'annals', 'treaty', 'scripture', 'treatise', 'decree', 'record']);
 const QUOTERS = new Set(['chronicle', 'annals', 'treatise', 'scripture', 'paper', 'travelogue']);
 
+/** "the Yidhe account of …", "the Annals of …": titles that read as common nouns take the article in running text. */
+function the(title: string): string {
+  return /^(Annals|Sayings|Teachings|Travels|Acts|Text) of /.test(title) || / account of the /.test(title) ? `the ${title}` : title;
+}
+
 export function applyFragments(g: Gen): number {
   const ctx = g.ctx;
   const s = ctx.s;
@@ -43,15 +48,16 @@ export function applyFragments(g: Gen): number {
     // the quoting work: a passage citing the lost one, before its editorial apparatus
     const [qText, ...qRest] = Q.body.split('\n---\n');
     const intro = r.pick(['As it is written in', 'So say the old books, in', 'We read in', 'In the words of']);
-    const cited = periodTitle(L.title).replace(/^Text of the /, '');
+    // a period writer cites the work by name, not by the editors' AY dating ("Edict on the price of grain, AY 746")
+    const cited = periodTitle(L.title).replace(/^Text of the /, '').replace(/(?:,| from| after) AY \d+(?:–\d+)?$/, '');
     const quote = `\n\n${intro} the *[[art:${L.id}|${cited}]]*:\n\n> ${frag}`;
     Q.body = qText.trimEnd() + quote + (qRest.length ? `\n\n---\n${qRest.join('\n---\n')}` : '') + `\n\n*Fragment:* the passage quoted from the ${L.title} is the only surviving witness to that work.`;
     // the lost work survives as a fragment page
     L.status = 'extant';
     L.condition = 'Lost; survives only as a fragment quoted in a later work.';
-    L.provenance = `Fragment preserved in ${Q.title} (${Q.catalog}, AY ${Q.year}).`;
+    L.provenance = `Fragment preserved in ${the(Q.title)} (${Q.catalog}, AY ${Q.year}).`;
     L.foundYear = null;
-    L.body = `> ${frag}\n\n---\n\n**Editorial note.** The ${L.title} is lost. This fragment survives because it was quoted in [[art:${Q.id}|${Q.title}]], written ${Q.year - L.year} years later. The rest of the work is unknown.`;
+    L.body = `> ${frag}\n\n---\n\n**Editorial note.** The ${L.title} is lost. This fragment survives because it was quoted in ${the(Q.title).slice(0, -Q.title.length)}[[art:${Q.id}|${Q.title}]], written ${Q.year - L.year} years later. The rest of the work is unknown.`;
     L.translator = Q.translator;
     L.interlinear = undefined;
     L.ledger = undefined;

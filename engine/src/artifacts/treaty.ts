@@ -1,7 +1,7 @@
 // Treaties: the text of every peace and alliance, in formulae that change with the era.
 // Terms are rendered from the structured treaty data, so text and territory log always agree.
 import type { Gen } from './gen.ts';
-import { money, fmt } from './gen.ts';
+import { money, fmt, techAt } from './gen.ts';
 import type { Doc } from '../archive/doc.ts';
 import { localDate } from '../archive/doc.ts';
 import type { SimEvent, Polity } from '../sim/state.ts';
@@ -39,7 +39,12 @@ function treaty(g: Gen, e: SimEvent, drafter: Polity, parties: Polity[]): void {
   const ruler = (p: Polity) => ctx.rulerAt(p.id, year);
   const rulerLink = (p: Polity) => {
     const r = ruler(p);
-    return r ? d.n(`per:${r.person}`) : `the ${govWord(ctx.govAt(p, year))} of ${d.n(`pol:${p.id}`)}`;
+    return r ? d.n(`per:${r.person}`) : `${govWord(ctx.govAt(p, year))} ${d.n(`pol:${p.id}`)}`;
+  };
+  /** Is the polity's sovereign a woman (for pronouns and kinship terms)? */
+  const fem = (p: Polity) => {
+    const r = ruler(p);
+    return !!r && s.persons[r.person].sex === 'f';
   };
   const title = (p: Polity) => {
     const r = ruler(p);
@@ -71,9 +76,10 @@ function treaty(g: Gen, e: SimEvent, drafter: Polity, parties: Polity[]): void {
   // ---------------------------------------------------------------- preamble
   if (kind === 'alliance') {
     if (era <= 1) {
-      lines.push(`Thus says ${rulerLink(A)}, ${title(A)} of ${d.n(`pol:${A.id}`)}, to ${rulerLink(B)}, ${title(B)} of ${d.n(`pol:${B.id}`)}, his brother:`);
+      const sibling = fem(B) ? 'sister' : 'brother';
+      lines.push(`Thus says ${rulerLink(A)}, ${title(A)} of ${d.n(`pol:${A.id}`)}, to ${rulerLink(B)}, ${title(B)} of ${d.n(`pol:${B.id}`)}, ${fem(A) ? 'her' : 'his'} ${sibling}:`);
       lines.push('');
-      lines.push(`Between ${d.n(`pol:${A.id}`)} and ${d.n(`pol:${B.id}`)} there shall be good peace and good brotherhood for ever. ${d.pick(['The enemy of the one is the enemy of the other; the friend of the one is the friend of the other.', 'If an enemy comes against the land of my brother, I will come to his aid with my chariots and my foot.', 'As the two rivers flow into one sea, so shall our two houses be one.'])}`);
+      lines.push(`Between ${d.n(`pol:${A.id}`)} and ${d.n(`pol:${B.id}`)} there shall be good peace and good brotherhood for ever. ${d.pick(['The enemy of the one is the enemy of the other; the friend of the one is the friend of the other.', `If an enemy comes against the land of my ${sibling}, I will come to ${fem(B) ? 'her' : 'his'} aid with my ${techAt(A, 'chariot', year) ? 'chariots' : 'spearmen'} and my foot.`, 'As the two rivers flow into one sea, so shall our two houses be one.'])}`);
     } else if (era <= 3) {
       lines.push(`In the name of ${faith(A)}. These are the terms of friendship sworn between ${d.n(`pol:${A.id}`)}, under ${rulerLink(A)}, and ${d.n(`pol:${B.id}`)}, under ${rulerLink(B)}.`);
     } else {
@@ -97,7 +103,7 @@ function treaty(g: Gen, e: SimEvent, drafter: Polity, parties: Polity[]): void {
       const tw = title(W);
       lines.push(`Thus says ${rulerLink(W)}, ${tw.startsWith('great') ? `${tw}, ${tw.replace('great ', '')}` : tw} of ${d.n(`pol:${W.id}`)}, beloved of ${gods(W, 1)[0] ?? 'the gods'}:`);
       lines.push('');
-      if (victor) lines.push(`${d.pick(['The gods of', 'The storm-god of', 'The lord of'])} ${d.n(`pol:${W.id}`)} went before me, and ${d.n(`pol:${L.id}`)} ${d.pick(['bowed down', 'sued for peace', 'sent tribute to my camp', 'came to my feet'])}. ${war !== null ? `The war which ${rulerLink(L)} ${d.pick(['began', 'stirred up', 'brought upon his own land'])} is ended.` : ''}`);
+      if (victor) lines.push(`${d.pick(['The gods of', 'The storm-god of', 'The lord of'])} ${d.n(`pol:${W.id}`)} went before me, and ${d.n(`pol:${L.id}`)} ${d.pick(['bowed down', 'sued for peace', 'sent tribute to my camp', 'came to my feet'])}. ${war !== null ? `The war which ${rulerLink(L)} ${d.pick(['began', 'stirred up', `brought upon ${fem(L) ? 'her' : 'his'} own land`])} is ended.` : ''}`);
       else lines.push(`${rulerLink(A)} and ${rulerLink(B)} have made peace, and set their words upon this tablet.`);
     } else if (era <= 3) {
       lines.push(`In the name of ${faith(W)}${pantheonOf(L)?.id !== pantheonOf(W)?.id ? ` and of ${faith(L)}` : ''}. ${victor ? `Peace is granted by ${rulerLink(W)}, ${title(W)} of ${d.n(`pol:${W.id}`)}, to ${rulerLink(L)} of ${d.n(`pol:${L.id}`)}, on these conditions.` : `Peace is made between ${d.n(`pol:${A.id}`)} and ${d.n(`pol:${B.id}`)} on these conditions.`}`);
@@ -208,7 +214,7 @@ function termClause(g: Gen, d: Doc, t: Term, era: number, year: number, W: Polit
     case 'independence':
       return era <= 3 ? `${P(t.from)} recognises ${P(t.to)} as a free land, owing it neither tribute nor service.` : `${P(t.from)} recognises the full sovereignty and independence of ${P(t.to)}.`;
     case 'annexation':
-      return era <= 1 ? `The land of ${P(t.from)} is joined to ${P(t.to)} for ever; its people shall serve the king of ${P(t.to)}.` : `${P(t.from)} is incorporated into ${P(t.to)} and ceases to exist as a separate realm.`;
+      return era <= 1 ? `The land of ${P(t.from)} is joined to ${P(t.to)} for ever; its people shall serve the ${(() => { const r = t.to !== undefined ? ctx.rulerAt(t.to, year) : null; return r && s.persons[r.person].sex === 'f' ? 'queen' : 'king'; })()} of ${P(t.to)}.` : `${P(t.from)} is incorporated into ${P(t.to)} and ceases to exist as a separate realm.`;
     case 'partition':
       return `The realm shall be divided: ${P(t.to)} shall hold the lands it now holds, and ${P(t.from)} the rest.`;
     case 'status-quo':

@@ -1,9 +1,9 @@
 // Further document types: decrees, annals, censuses, temple and weather records, coin catalogue
 // entries, travelogues, diplomatic letters, scriptures, council acts and polemics.
 import type { Gen } from './gen.ts';
-import { fmt, money, goodName } from './gen.ts';
+import { fmt, money, goodName, techAt } from './gen.ts';
 import type { Doc } from '../archive/doc.ts';
-import { localDate } from '../archive/doc.ts';
+import { localDate, onDate, disambiguateRulers } from '../archive/doc.ts';
 import type { Polity, SimEvent, Movement } from '../sim/state.ts';
 import { cap, ordinal } from '../archive/context.ts';
 import { Rng } from '../core/rng.ts';
@@ -35,6 +35,16 @@ export function genMore(g: Gen): void {
 
 function literate(g: Gen, p: Polity, year: number): boolean {
   return g.ctx.scriptOf(p, year) >= 0;
+}
+
+/** Is the realm's reigning monarch a queen? Then "the king" of a formula is "the queen". */
+function queenAt(g: Gen, p: Polity, year: number): boolean {
+  const r = g.ctx.rulerAt(p.id, year);
+  return !!r && r.role === 'ruler' && g.ctx.s.persons[r.person].sex === 'f';
+}
+
+function asQueen(line: string): string {
+  return line.replace(/\b([Tt])he king\b/g, '$1he queen');
 }
 
 function issuer(g: Gen, p: Polity, year: number): { author: number; byRuler: boolean } {
@@ -79,7 +89,7 @@ function decree(g: Gen, e: SimEvent, p: Polity, rng: Rng): void {
   const d = g.doc(lang, year, `decree:${e.id}`);
   const era = ctx.eraAt(p.id, year);
   const { author, byRuler } = issuer(g, p, year);
-  const voice = byRuler ? (era <= 1 ? `Thus says ${d.n(`per:${author}`)}, king of ${d.n(`pol:${p.id}`)}:` : era <= 3 ? `${d.n(`per:${author}`)}, by the grace of the gods ruler of ${d.n(`pol:${p.id}`)}, to all who hear these words, greeting.` : `By order of the government of ${d.n(`pol:${p.id}`)}:`) : `The chancery of ${d.n(`pol:${p.id}`)} proclaims:`;
+  const voice = byRuler ? (era <= 1 ? `Thus says ${d.n(`per:${author}`)}, ${s.persons[author].sex === 'f' ? 'queen' : 'king'} of ${d.n(`pol:${p.id}`)}:` : era <= 3 ? `${d.n(`per:${author}`)}, by the grace of the gods ruler of ${d.n(`pol:${p.id}`)}, to all who hear these words, greeting.` : `By order of the government of ${d.n(`pol:${p.id}`)}:`) : `The chancery of ${d.n(`pol:${p.id}`)} proclaims:`;
   const lines: string[] = [voice, ''];
   const first = (role: string) => e.parts.find(([, r]) => r === role)?.[0];
   let title = '';
@@ -140,6 +150,7 @@ function decree(g: Gen, e: SimEvent, p: Polity, rng: Rng): void {
       break;
     }
   }
+  if (queenAt(g, p, year)) for (let i = 0; i < lines.length; i++) lines[i] = asQueen(lines[i]);
   const m = medium(era, rng, e.sub === 'conversion' || e.sub === 'debasement' ? 'any' : 'soft');
   const capCity = ctx.capitalAt(p, year);
   g.add({
@@ -154,7 +165,8 @@ function closing(ctx: Gen['ctx'], d: Doc, p: Polity, year: number, era: number):
   if (era <= 1) return `Given ${date}.`;
   if (era <= 3) return `Given at the palace ${date}. ${d.pick(['Let it be proclaimed in every market.', 'Let it be read aloud at the gates of every city.', 'Let it be cut in stone at the temple door.'])}`;
   const capCity = ctx.capitalAt(p, year);
-  return `Done at ${d.n(`set:${capCity}`)}, ${date}. ${d.pick(['To be published in the official gazette.', 'By command of the government.', 'Printed by authority.'])}`;
+  const press = techAt(p, 'printing', year);
+  return `Done at ${d.n(`set:${capCity}`)}, ${date}. ${d.pick([press ? 'To be published in the official gazette.' : 'To be posted in every market.', 'By command of the government.', press ? 'Printed by authority.' : 'Copied by authority.'])}`;
 }
 
 function ratioWord(r: number): string {
@@ -251,7 +263,7 @@ function annals(g: Gen, p: Polity, from: number, to: number, evs: SimEvent[], rn
         line = `${pred ? d.n(pred) : 'The king'} ${d.pick([`went to ${his(pred)} fate`, 'died', `was gathered to ${his(pred)} fathers`, 'passed from the world'])}; ${heir} sat on the throne${e.data.regency ? ', being a child' : ''}.`;
         break;
       }
-      case 'usurpation': { const succ = e.parts.find(([, r]) => r === 'successor')?.[0]; line = `${succ ? d.n(succ) : 'A usurper'} ${d.pick(['seized the throne', 'took the palace by force', 'made himself king'])}.`; break; }
+      case 'usurpation': { const succ = e.parts.find(([, r]) => r === 'successor')?.[0]; line = `${succ ? d.n(succ) : 'A usurper'} ${d.pick(['seized the throne', 'took the palace by force', succ && s.persons[ctx.idNum(succ)].sex === 'f' ? 'made herself queen' : 'made himself king'])}.`; break; }
       case 'famine': line = `${d.pick(['The harvest failed', 'There was hunger in the land', 'Grain was dear', 'The granaries stood empty'])}${e.causes.some((c) => s.events[c].sub === 'drought') ? '; the rains did not come' : ''}.`; break;
       case 'plague': line = `${d.pick(['A sickness came', 'Pestilence struck the cities', 'The dead lay unburied'])}: the ${d.n(`evt:${e.id}`)}.`; break;
       case 'eruption': line = `${d.pick(['The sun was darkened', 'Ash fell from the sky', 'There was no summer'])}.`; break;
@@ -267,16 +279,21 @@ function annals(g: Gen, p: Polity, from: number, to: number, evs: SimEvent[], rn
       case 'movement-founding': { const m = e.parts.find(([, r]) => r === 'movement')?.[0]; line = `A teacher arose, preaching ${m ? `the ${d.n(m)}` : 'a new way'}.`; break; }
       default: continue;
     }
+    // "the king" of the annalist is the sovereign of that year, who may be a queen (accessions name their own people)
+    if (e.sub !== 'succession' && e.sub !== 'usurpation') {
+      const rr = ctx.rulerAt(p.id, e.year);
+      if (rr && rr.role === 'ruler' && s.persons[rr.person].sex === 'f') line = line.replace(/\b([Tt])he king\b/g, '$1he queen').replace('moved his seat', 'moved her seat');
+    }
     lines.push(`- **${when}.** ${line}`);
   }
   lines.push('');
   lines.push(`*Written by ${d.n(`per:${author.id}`)}, ${era <= 1 ? 'scribe of the house of tablets' : 'keeper of the annals'}.*`);
-  lines.push('', '---', '', `**Editorial note.** Court annals record what the court wished remembered. Of the ${evs.filter((e) => e.sub === 'battle').length} battles in which ${d.ed(`pol:${p.id}`)} fought in these years, the annalist mentions ${battlesMentioned}.`);
+  lines.push('', '---', '', `**Editorial note.** Court annals record what the court wished remembered. Of the ${evs.filter((e) => e.sub === 'battle').length} ${evs.filter((e) => e.sub === 'battle').length === 1 ? 'battle' : 'battles'} in which ${d.ed(`pol:${p.id}`)} fought in these years, the annalist mentions ${battlesMentioned}.`);
   const m = medium(era, rng, 'soft');
   const capCity = ctx.capitalAt(p, year);
   g.add({
     sub: 'annals', year, title: `Annals of ${g.T.short.get(`pol:${p.id}`)}, AY ${from}–${to}`, author: author.id, polity: p.id, lang, script: ctx.scriptOf(p, year),
-    medium: m.medium, cell: s.settlements[capCity].cell, settlement: capCity, about: chosen.map((e) => e.id), body: lines.join('\n'), mentions: d.mentions,
+    medium: m.medium, cell: s.settlements[capCity].cell, settlement: capCity, about: chosen.map((e) => e.id), body: disambiguateRulers(lines.join('\n'), g.T), mentions: d.mentions,
     dateText: localDate(ctx, d, p, year), flagship: false, durable: m.durable, tau: m.tau, seat: capCity,
   });
 }
@@ -317,7 +334,9 @@ function census(g: Gen, p: Polity, year: number, row: (number | string | null)[]
   }
   if (sum <= 0) return;
   const lines: string[] = [];
-  lines.push(`${d.pick(['Count of the households', 'Register of the people', 'The numbering of the land'])} of ${d.n(`pol:${p.id}`)}, made by order of the ${era <= 3 ? 'king' : 'government'} ${localDate(ctx, d, p, year)}.`);
+  const rc = ctx.rulerAt(p.id, year);
+  const sovereign = rc && rc.role === 'ruler' && s.persons[rc.person].sex === 'f' ? 'queen' : 'king';
+  lines.push(`${d.pick(['Count of the households', 'Register of the people', 'The numbering of the land'])} of ${d.n(`pol:${p.id}`)}, made by order of the ${era <= 3 ? sovereign : 'government'} ${onDate(localDate(ctx, d, p, year))}.`);
   lines.push('');
   lines.push('| Province | Households | Souls |');
   lines.push('|---|---|---|');
@@ -393,13 +412,14 @@ function record(g: Gen, e: SimEvent, p: Polity, rng: Rng): void {
       break;
     case 'drought': case 'cold-period':
       title = e.sub === 'drought' ? `Record of the dry years from AY ${e.year}` : `Record of the cold years from AY ${e.year}`;
-      lines.push(`${e.sub === 'drought' ? d.pick(['Year after year the rains failed', 'The wells ran dry and the river shrank to a stream', 'The herds were driven to the hills for water']) : d.pick(['The winters grew long and the summers short', 'Ice closed the rivers until the spring feasts', 'The harvest came late and thin'])}. ${pr !== null ? `Grain stood at ${fmtPrice(pr / grams)} ${unit} the measure.` : ''} ${e.sub === 'drought' ? d.pick(['The farmers left the upper fields to the thorns.', 'Water was sold in the market by the jar.', 'The canals stood dry and cracked.']) : d.pick(['Wolves came down to the villages.', 'The old and the young died in the long frosts.', 'The sowing was put off until the summer feasts.'])}`);
+      lines.push(`${e.sub === 'drought' ? d.pick(['Year after year the rains failed', 'The wells ran dry and the river shrank to a stream', 'The herds were driven to the hills for water']) : d.pick(['The winters grew long and the summers short', 'Ice closed the rivers until the spring feasts', 'The harvest came late and thin'])}. ${pr !== null ? `Grain stood at ${fmtPrice(pr / grams)} ${unit} the measure.` : ''} ${e.sub === 'drought' ? d.pick(['The farmers left the upper fields to the thorns.', 'Water was sold in the market by the jar.', 'The canals stood dry and cracked.']) : d.pick(['Wolves came down to the villages.', 'The old and the young died in the long frosts.', 'The sowing was put off until the summer feasts.'])}`.replace(/  +/g, ' '));
       break;
     case 'plague':
       title = `Record of the pestilence of AY ${e.year}`;
       lines.push(`${d.pick(['A sickness came by the ships', 'The fever came with the caravans', 'The sickness began in the poor quarter'])}. ${d.pick(['Those it took died within three days.', 'The dead were carried out by the cartload.', 'The markets were closed and the gates barred.'])} ${d.pick(['The priests burned incense day and night.', 'Whole streets stood empty.', 'The king fled to the hills.'])} ${d.pick(['Those who nursed the sick fell sick in turn.', 'The gravediggers could not keep pace with the dead.', 'Ships lay at anchor with none to unload them.'])}`);
       break;
   }
+  if (queenAt(g, p, year)) for (let i = 0; i < lines.length; i++) lines[i] = asQueen(lines[i]);
   lines.push('', `*${d.pick(['Set down by', 'Written by', 'Recorded by'])} ${d.n(`per:${author.id}`)}.*`);
   lines.push('', '---', '', `**Editorial note.** The record refers to the ${d.title(`evt:${e.id}`)}.`);
   const m = medium(era, rng, 'soft');
@@ -434,11 +454,12 @@ function coin(g: Gen, cid: number, p: Polity, year: number, content: number, iss
   const rng = new Rng(s.seed).fork('coin', cid, issue);
   const r = ctx.rulerAt(p.id, year);
   const capCity = ctx.capitalAt(p, Math.min(year, (p.died ?? 5000) - 1));
-  const legend = r ? `${ctx.s.lang.realize(s.persons[r.person].nameId, lang, year).scholarly.toUpperCase()} ${ctx.s.lang.word(lang, 'king', year).scholarly.toUpperCase()}` : ctx.s.lang.realize(p.nameId, lang, year).scholarly.toUpperCase();
+  const queen = !!r && s.persons[r.person].sex === 'f';
+  const legend = r ? `${ctx.s.lang.realize(s.persons[r.person].nameId, lang, year).scholarly.toUpperCase()} ${ctx.s.lang.word(lang, queen ? 'queen' : 'king', year).scholarly.toUpperCase()}` : ctx.s.lang.realize(p.nameId, lang, year).scholarly.toUpperCase();
   const fineness = Math.min(98, Math.round((content / c.history[0][1]) * (c.metal === 'gold' ? 96 : 92)));
   const weight = Math.round((c.metal === 'gold' ? content / 12 : content / Math.max(0.2, fineness / 100)) * 100) / 100;
   const lines = [
-    `**Obverse:** ${r ? `head of ${d.n(`per:${r.person}`)}, ${d.pick(['diademed', 'bearded', 'helmeted', 'laureate', 'veiled'])}, ${d.pick(['right', 'left'])}` : `the emblem of ${d.n(`pol:${p.id}`)}`}. Legend: *${legend}*.`,
+    `**Obverse:** ${r ? `head of ${d.n(`per:${r.person}`)}, ${d.pick(['diademed', queen ? 'diademed' : 'bearded', 'helmeted', 'laureate', 'veiled'])}, ${d.pick(['right', 'left'])}` : `the emblem of ${d.n(`pol:${p.id}`)}`}. Legend: *${legend}*.`,
     '',
     `**Reverse:** ${d.pick(['an eagle with spread wings', 'a bull walking', 'a wheat ear', 'a ship under sail', 'a temple façade', 'the city goddess seated', 'a horseman'])}; mint mark of ${d.n(`set:${capCity}`)}.`,
     '',
@@ -505,11 +526,11 @@ function travelogue(g: Gen, path: number[], year: number, rng: Rng): void {
   const lines: string[] = [];
   const firstPerson = d.chance(0.5);
   const purpose = d.pick(firstPerson
-    ? ['to see the cities of the world', 'on the business of my house', 'sent by the king to the far countries']
-    : ['to see the cities of the world', 'on the business of his house', 'sent by the king to the far countries']);
+    ? ['to see the cities of the world', 'on the business of my house', `sent by the ${queenAt(g, home, year) ? 'queen' : 'king'} to the far countries`]
+    : ['to see the cities of the world', 'on the business of his house', `sent by the ${queenAt(g, home, year) ? 'queen' : 'king'} to the far countries`]);
   lines.push(firstPerson
-    ? `I, ${d.n(`per:${author.id}`)}, set out from ${d.n(`set:${path[0]}`)} ${localDate(ctx, d, home, year)}, ${purpose}. These are the cities I saw.`
-    : `This is the account of ${d.n(`per:${author.id}`)}, who set out from ${d.n(`set:${path[0]}`)} ${localDate(ctx, d, home, year)}, ${purpose}.`);
+    ? `I, ${d.n(`per:${author.id}`)}, set out from ${d.n(`set:${path[0]}`)} ${onDate(localDate(ctx, d, home, year))}, ${purpose}. These are the cities I saw.`
+    : `This is the account of ${d.n(`per:${author.id}`)}, who set out from ${d.n(`set:${path[0]}`)} ${onDate(localDate(ctx, d, home, year))}, ${purpose}.`);
   let prevOwner = -2, prevRel = -2;
   for (const sid of path.slice(1)) {
     const t = s.settlements[sid];
@@ -523,7 +544,7 @@ function travelogue(g: Gen, path: number[], year: number, rng: Rng): void {
     const rule = o === prevOwner && o >= 0 ? `It too belongs to ${d.n(`pol:${o}`)}.` : o >= 0 ? `It belongs to ${d.n(`pol:${o}`)}${lord ? `, whose ruler is ${d.n(`per:${lord.person}`)}` : ''}.` : 'It obeys no king.';
     const faith = rel < 0 ? '' : rel === prevRel ? d.pick(['The same gods are honoured here.', '', 'The faith is the same as in the last city.']) : `The people worship after the ${d.n(`mov:${rel}`)}.`;
     const travelLine = d.pick(['The water is good.', 'Beware the money-changers.', 'The inns are dear.', 'The people are friendly to strangers.', 'Thieves abound.', 'The road here is paved.', 'We waited three days for the ferry.', '']);
-    lines.push(`**${d.n(`set:${sid}`)}.** ${cap(size)}. ${rule} ${faith} ${pr !== null ? `Grain sells for ${fmtPrice(pr / hg)} ${hunit} the measure.` : ''} ${travelLine}`.replace(/\s+/g, ' ').trim());
+    lines.push(`**${d.n(`set:${sid}`)}.** ${cap(size)}. ${rule} ${faith} ${pr !== null ? `Grain sells for ${fmtPrice(pr / hg)} ${fmtPrice(pr / hg) === '1' && !hcOk ? 'shekel of silver' : hunit} the measure.` : ''} ${travelLine}`.replace(/\s+/g, ' ').trim());
     prevOwner = o;
     prevRel = rel;
     const recent = (ctx.eventsByRef.get(`set:${sid}`) ?? []).map((i) => s.events[i]).filter((e) => e.year <= year && e.year > year - 40 && (e.sub === 'sack' || e.sub === 'siege' || e.sub === 'battle' || e.sub === 'founding-city'));
@@ -570,13 +591,14 @@ function dletter(g: Gen, e: SimEvent, A: Polity, B: Polity, from: number, to: nu
   const d = g.doc(lang, year, `dletter:${e.id}`);
   const era = ctx.eraAt(A.id, year);
   const lines: string[] = [];
-  const brother = era <= 1 ? 'my brother' : 'our cousin';
-  if (era <= 1) lines.push(`To ${d.n(`per:${to}`)}, king of ${d.n(`pol:${B.id}`)}, ${brother}, say: thus says ${d.n(`per:${from}`)}, king of ${d.n(`pol:${A.id}`)}, your brother. With me all goes well. With you, your wives, your sons, your chariots and your land, may all go very well.`);
+  const toF = s.persons[to].sex === 'f', fromF = s.persons[from].sex === 'f';
+  const brother = era <= 1 ? (toF ? 'my sister' : 'my brother') : 'our cousin';
+  if (era <= 1) lines.push(`To ${d.n(`per:${to}`)}, ${toF ? 'queen' : 'king'} of ${d.n(`pol:${B.id}`)}, ${brother}, say: thus says ${d.n(`per:${from}`)}, ${fromF ? 'queen' : 'king'} of ${d.n(`pol:${A.id}`)}, your ${fromF ? 'sister' : 'brother'}. With me all goes well. With you, ${toF ? 'your house' : 'your wives'}, your sons, ${techAt(B, 'chariot', year) ? 'your chariots' : 'your herds'} and your land, may all go very well.`);
   else lines.push(`${d.n(`per:${from}`)}, ruler of ${d.n(`pol:${A.id}`)}, to ${d.n(`per:${to}`)}, ruler of ${d.n(`pol:${B.id}`)}, ${brother}: greeting.`);
   lines.push('');
   if (e.sub === 'marriage') {
     const sp = e.parts.filter(([, r]) => r === 'spouse').map(([x]) => x);
-    lines.push(`${d.pick(['As our fathers were friends, let us be friends.', 'Let there be love between our houses.', 'I have heard of the beauty of your daughter.'])} ${sp.length === 2 ? `Let ${d.n(sp[0])} and ${d.n(sp[1])} be joined, and let the bride-price be sent with my envoy.` : 'Let a marriage join our houses.'} ${d.pick(['I send you gold, a chariot and two horses.', 'Send me much gold, for in your land gold is as dust.', 'I send you lapis and fine linen as a greeting-gift.'])}`);
+    lines.push(`${d.pick(['As our fathers were friends, let us be friends.', 'Let there be love between our houses.', 'I have heard of the beauty of your daughter.'])} ${sp.length === 2 ? `Let ${d.n(sp[0])} and ${d.n(sp[1])} be joined, and let the bride-price be sent with my envoy.` : 'Let a marriage join our houses.'} ${d.pick([techAt(A, 'chariot', year) ? 'I send you gold, a chariot and two horses.' : 'I send you gold, a bow and two oxen.', 'Send me much gold, for in your land gold is as dust.', 'I send you lapis and fine linen as a greeting-gift.'])}`);
   } else if (e.sub === 'treaty') {
     lines.push(`${d.pick(['The enemy grows strong on our borders.', 'Our common enemy prepares for war.', 'Let us stand together, as one house.'])} ${d.pick(['Let the oath be sworn before the gods of both lands.', 'My envoy carries the tablet of the oath; seal it and return it.', 'If he comes against you, I will come; if he comes against me, come you.'])}`);
   } else {
@@ -669,7 +691,11 @@ function sayings(g: Gen, m: Movement, p: Polity, year: number, rng: Rng): void {
   const lines: string[] = [];
   lines.push(m.kind === 'ideology'
     ? `*${d.pick(['Principles of', 'The program of', 'Articles of'])} the ${d.n(`mov:${m.id}`)}, ${d.pick(['as drawn up by', 'set out by', 'in the words of'])} ${d.n(`per:${m.founder!}`)}.*`
-    : `*${d.pick(['The sayings of', 'The words of', 'What was remembered of'])} ${d.n(`per:${m.founder!}`)}, ${d.pick([`as ${his} disciples remembered them`, `gathered by those who heard ${him}`, `set down after ${his} death`])}.*`);
+    : (() => {
+      const head = d.pick(['The sayings of', 'The words of', 'What was remembered of']);
+      const tail = d.pick([head === 'What was remembered of' ? `as ${his} disciples handed it down` : `as ${his} disciples remembered them`, `gathered by those who heard ${him}`, `set down after ${his} death`]);
+      return `*${head} ${d.n(`per:${m.founder!}`)}, ${tail}.*`;
+    })());
   lines.push('');
   pool.forEach((x, i) => {
     const o = rng.chance(0.4) ? rng.pick(opens) : '';
@@ -730,7 +756,7 @@ function council(g: Gen, e: SimEvent, host: Polity, rng: Rng): void {
     rng.pick(['That the feast of the founder shall be kept on one day in all the cities.', 'That the poor shall be fed at every assembly.', 'That none shall take interest from a brother in the faith.']),
   ];
   const lines = [
-    `Acts of the assembly of elders of the ${d.n(mov)}, gathered at ${d.n(`set:${ctx.capitalAt(host, year)}`)} ${localDate(ctx, d, host, year)}${dissent ? `, in the matter of the teachers of ${d.n(dissent)}` : ''}.`,
+    `Acts of the assembly of elders of the ${d.n(mov)}, gathered at ${d.n(`set:${ctx.capitalAt(host, year)}`)} ${onDate(localDate(ctx, d, host, year))}${dissent ? `, in the matter of the teachers of ${d.n(dissent)}` : ''}.`,
     '',
     'The assembly decreed:',
     '',

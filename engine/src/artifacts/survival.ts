@@ -40,6 +40,8 @@ export function applySurvival(g: Gen): void {
     } else if (r.chance(wear * 0.5)) {
       a.condition = r.pick(['Fragmentary; gaps marked [...].', 'Damaged by fire at the edges.', 'Several leaves missing.', 'Water-stained; partly illegible.']);
       a.body = lacunae(a.body, r);
+      // the condition must not promise gaps the text does not show
+      if (a.condition.startsWith('Fragmentary') && !a.body.split('\n---\n')[0].includes('[...]')) a.condition = 'Damaged by fire at the edges.';
     } else {
       a.condition = age > 1500 ? 'Complete, with minor losses.' : 'Complete.';
     }
@@ -120,6 +122,9 @@ function nearestSite(g: Gen, cell: number, year: number): number | null {
 /** Knock holes in a body of text without breaking links, headings or tables. */
 function lacunae(body: string, r: Rng): string {
   const lines = body.split('\n');
+  // the modern editorial apparatus below the first rule is not part of the object: decay never touches it
+  // (the draws are still made, so every other document keeps its holes where they were)
+  const apparatus = lines.indexOf('---');
   let holes = r.int(1, 3);
   for (let i = 0; i < lines.length && holes > 0; i++) {
     const L = lines[i];
@@ -133,7 +138,7 @@ function lacunae(body: string, r: Rng): string {
     const start = r.int(1, Math.max(1, words.length - 4));
     words.splice(start, r.int(2, 3), '[...]');
     parts[k] = words.join(' ');
-    lines[i] = parts.join('');
+    if (apparatus < 0 || i < apparatus) lines[i] = parts.join('');
     holes--;
   }
   return lines.join('\n');

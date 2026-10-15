@@ -1,7 +1,7 @@
 // Merchant ledgers and letters: day-books of trading houses with entries priced from the simulated
 // market series in the currency that circulated, and margin notes citing wars, famines, debasements.
 import type { Gen } from './gen.ts';
-import { fmt, goodName, goodUnit } from './gen.ts';
+import { fmt, goodName, goodUnit, techAt } from './gen.ts';
 import { localDate, months } from '../archive/doc.ts';
 import type { Doc } from '../archive/doc.ts';
 import type { House, Polity } from '../sim/state.ts';
@@ -72,6 +72,10 @@ function ledger(g: Gen, h: House, year: number, rng: Rng): void {
   let balance = 0;
   const rows: string[][] = [];
   const entries: { market: number; good: number; unit: number; grams: number }[] = [];
+  // the clerk works from the figures he writes down: amount = written unit price × quantity, and the
+  // running balance adds up the written amounts (kept in thousandths so the sums stay exact)
+  const shown: number[] = []; // written amounts, signed, in thousandths
+  const turnoverBase: string[] = []; // the unrounded amounts as first written (they fix the opening balance)
 
   for (const [mi, day] of dates) {
     const good = rng.pick(goods);
@@ -89,32 +93,42 @@ function ledger(g: Gen, h: House, year: number, rng: Rng): void {
     balance += buying ? -amount : amount;
     const pHouse = s.houses.find((x) => x.settlement === partner && x.id !== h.id && x.born <= year && (x.died ?? 9999) > year);
     const counter = pHouse ? d.link(`hou:${pHouse.id}`, d.nameOf(`hou:${pHouse.id}`)) : `agent at ${d.n(`set:${partner}`)}`;
+    const unitShown = Number(fmtPrice(unit).replace(/,/g, ''));
+    const amountText = fmtPrice(unitShown * qty);
+    shown.push((buying ? -1 : 1) * Math.round(Number(amountText.replace(/,/g, '')) * 1000));
+    turnoverBase.push(fmtPrice(amount));
     rows.push([
       `${day} ${ctx.name(ms[mi], lang, year)}`,
       `${buying ? 'Bought of' : 'Sold to'} ${counter}${pHouse ? ` (${d.n(`set:${partner}`)})` : ''}`,
       `${goodName(good)}`,
-      `${fmt(qty)} ${goodUnit(good)}${qty === 1 ? '' : 's'}`,
+      `${fmt(qty)} ${goodUnit(good)}${qty === 1 || goodUnit(good) === 'head' ? '' : 's'}`,
       fmtPrice(unit),
-      `${buying ? '−' : '+'}${fmtPrice(amount)}`,
+      `${buying ? '−' : '+'}${amountText}`,
       String(balance),
     ]);
   }
   if (rows.length < 4) return;
   // rebase the running balance on an opening balance proportional to the year's turnover
-  const turnover = entries.reduce((a, e) => a + 0, 0) + rows.reduce((a, r) => a + Math.abs(Number(r[5].replace(/[−+,]/g, ''))), 0);
+  const turnover = turnoverBase.reduce((a, x) => a + Math.abs(Number(x.replace(/[−+,]/g, ''))), 0);
   const openingBal = Math.round((turnover * (2 + rng.next() * 4)) / 10) * 10;
-  for (const r of rows) r[6] = fmtPrice(openingBal + Number(r[6]));
+  // the balance column carries as many decimals as the finest amount written
+  const dp = Math.max(0, ...rows.map((r) => (r[5].split('.')[1] ?? '').length));
+  let run = openingBal * 1000;
+  rows.forEach((r, i) => {
+    run += shown[i];
+    r[6] = (run / 1000).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  });
   // margin notes from the year's events
   const notes: string[] = [];
   const near = (ref: string) => (ctx.eventsByRef.get(ref) ?? []).map((i) => s.events[i]).filter((e) => e.year <= year && e.year >= year - 3);
   for (const e of near(`pol:${P.id}`)) {
     if (notes.length >= 3) break;
-    if (e.sub === 'war') notes.push(`${d.pick(['The roads are unsafe because of', 'Caravans are held back on account of', 'Insurance on goods doubled for'])} ${d.n(`evt:${e.id}`)}.`);
+    if (e.sub === 'war') notes.push(`${d.pick(['The roads are unsafe because of', 'Caravans are held back on account of', techAt(P, 'banking', year) ? 'Insurance on goods doubled for' : 'The caravan guards ask double because of'])} the ${d.n(`evt:${e.id}`)}.`);
     else if (e.sub === 'debasement') notes.push(`${d.pick(['The new coin is light;', 'Since the reminting'])} sellers ${d.pick(['will not take it at par', 'demand more of it'])} (${d.n(`evt:${e.id}`)}).`);
     else if (e.sub === 'famine') notes.push(`Grain is dear: ${d.n(`evt:${e.id}`)}.`);
     else if (e.sub === 'plague') notes.push(`No ships to the stricken ports: ${d.n(`evt:${e.id}`)}.`);
-    else if (e.sub === 'sack' || e.sub === 'conquest') notes.push(`Losses written off after ${d.n(`evt:${e.id}`)}.`);
-    else if (e.sub === 'panic' || e.sub === 'default') notes.push(`Credit refused everywhere since ${d.n(`evt:${e.id}`)}.`);
+    else if (e.sub === 'sack' || e.sub === 'conquest') notes.push(`Losses written off after the ${d.n(`evt:${e.id}`)}.`);
+    else if (e.sub === 'panic' || e.sub === 'default') notes.push(`Credit refused everywhere since the ${d.n(`evt:${e.id}`)}.`);
   }
   const author = s.persons[head];
   const lines: string[] = [];
@@ -135,7 +149,7 @@ function ledger(g: Gen, h: House, year: number, rng: Rng): void {
   lines.push(`**Editorial note.** Prices are in ${unitLink}${curOk ? `, then worth ${fmt(grams)} g of silver each` : ''}. ${trend} The house is described at ${d.title(`hou:${h.id}`)}.`.replace(/\s+/g, ' ').trim());
   g.add({
     sub: 'ledger', year, title: `${era <= 3 ? 'Day-book' : 'Ledger'} of the ${g.T.short.get(`hou:${h.id}`)}, AY ${year}`, author: author.id, polity: P.id,
-    lang, script: ctx.scriptOf(P, year), medium: era <= 1 ? 'clay tablets' : era === 2 ? 'papyrus rolls' : era === 3 ? (ctx.s.polities[P.id].techs.has(TK.paper) ? 'paper quires' : 'parchment quires') : 'bound ledger', cell: t.cell, settlement: t.id,
+    lang, script: ctx.scriptOf(P, year), medium: era <= 1 ? 'clay tablets' : era === 2 ? 'papyrus rolls' : era === 3 ? (techAt(P, 'paper', year) ? 'paper quires' : 'parchment quires') : 'bound ledger', cell: t.cell, settlement: t.id,
     about: [], body: lines.join('\n'), mentions: d.mentions, dateText: localDate(ctx, d, P, year), flagship: false,
     ledger: { columns: ['Date', 'Counterparty', 'Goods', 'Quantity', `Unit price`, 'Amount', 'Balance'], rows, notes },
     data: { entries },
@@ -176,7 +190,7 @@ function letter(g: Gen, h: House, year: number, rng: Rng): void {
   } else {
     lines.push(`${d.n(`per:${head}`)}, at ${d.n(`set:${h.settlement}`)}, to ${agentName} at ${d.n(`set:${partnerSet}`)}, greeting.`);
     lines.push('');
-    lines.push(`${pHere !== null ? `First, ${goodName(good)} ${pluralGood(good) ? 'are' : 'is'} quoted here at ${fmtPrice(pHere / grams)} ${unit} the ${goodUnit(good)}. ` : ''}${pThere !== null ? `Your last said ${fmtPrice(pThere / grams)} with you. ` : ''}${d.pick(['Act as you judge best, but do not extend credit to the court.', 'Remit the balance by bill, not in coin.', 'Hold the stock until the new season.'])}`);
+    lines.push(`${pHere !== null ? `First, ${goodName(good)} ${pluralGood(good) ? 'are' : 'is'} quoted here at ${fmtPrice(pHere / grams)} ${unit} the ${goodUnit(good)}. ` : ''}${pThere !== null ? `Your last said ${fmtPrice(pThere / grams)} with you. ` : ''}${d.pick(['Act as you judge best, but do not extend credit to the court.', techAt(P, 'banking', year) && techAt(P, 'coinage', year) ? 'Remit the balance by bill, not in coin.' : 'Remit the balance in silver, weighed and sealed.', 'Hold the stock until the new season.'])}`);
     lines.push('');
     lines.push(d.pick(['Farewell.', 'May the gods keep you.', 'Your friend and partner.']));
   }

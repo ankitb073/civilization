@@ -2,7 +2,7 @@
 // school exercises, almanacs and graffiti. Each is grounded in the record (owners, prices, armies,
 // routes, languages, rulers, climate) and dated so that it mentions nothing that did not yet exist.
 import type { Gen } from './gen.ts';
-import { fmt, goodName, goodUnit } from './gen.ts';
+import { fmt, goodName, goodUnit, techAt } from './gen.ts';
 import { localDate, months } from '../archive/doc.ts';
 import type { Doc } from '../archive/doc.ts';
 import type { Polity, SimEvent } from '../sim/state.ts';
@@ -71,6 +71,32 @@ export function money(g: Gen, d: Doc, grams: number, polity: number, year: numbe
   return `${fmtPrice(grams / ctx.contentAt(cur, year))} ${d.link(`cur:${cur}`, d.nameOf(`cur:${cur}`))}`;
 }
 
+/** A column of sums as a clerk writes it: each figure rounded as `money` rounds it, products taken from the
+ *  written figures, and totals that add up exactly to what is written above them. */
+export function moneyBook(g: Gen, d: Doc, polity: number, year: number) {
+  const ctx = g.ctx;
+  const cur = ctx.currencyAt(polity, year);
+  const shekels = cur < 0 || ctx.s.currencies[cur].born > year;
+  const per = shekels ? 8.3 : ctx.contentAt(cur, year);
+  const unit = shekels ? 'shekels of silver' : d.link(`cur:${cur}`, d.nameOf(`cur:${cur}`));
+  const write = (units: number) => (shekels ? fmt(units) : fmtPrice(units));
+  const val = (s: string) => Number(s.replace(/,/g, ''));
+  return {
+    /** the written figure for a sum in grams of silver */
+    units: (grams: number): number => val(write(grams / per)),
+    /** the written figure for a computed number of units (a product of written figures) */
+    round: (units: number): number => val(write(units)),
+    /** a written figure with its unit */
+    text: (units: number): string => `${write(units)} ${unit}`,
+    /** a total of written figures, carried to the finest decimal written among them */
+    total: (xs: number[]): string => {
+      const dp = Math.max(0, ...xs.map((x) => (write(x).split('.')[1] ?? '').length));
+      const sum = Math.round(xs.reduce((a, b) => a + Math.round(b * 1000), 0)) / 1000;
+      return `${sum.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp })} ${unit}`;
+    },
+  };
+}
+
 export function grainGrams(g: Gen, settlement: number, year: number): number {
   return g.price(settlement, GRAIN, year) ?? 8;
 }
@@ -126,7 +152,7 @@ function judgeName(g: Gen, d: Doc, P: Polity, year: number, era: number, key: st
   const r = g.ctx.rulerAt(P.id, year);
   if (era <= 2 && r) {
     const ruler = g.ctx.s.persons[r.person];
-    if (ruler.born + 16 <= year && ruler.died >= year) return `the king ${d.n(`per:${ruler.id}`)}`;
+    if (ruler.born + 16 <= year && ruler.died >= year) return `${ruler.sex === 'f' ? 'the queen' : 'the king'} ${d.n(`per:${ruler.id}`)}`;
   }
   return `the judge ${commoner(g, d, g.ctx.polityCulture(P, year), year, `judge:${key}`)}`;
 }
@@ -161,7 +187,8 @@ function landSuit(g: Gen, e: SimEvent, cede: Term, r: Rng): void {
   lines.push('');
   const wits = [...new Set([0, 1, 2, 3, 4].map((i) => commoner(g, d, ctx.polityCulture(P, year), year, `wit:${e.id}:${i}`)))].slice(0, 3);
   lines.push(`Witnesses: ${wits.join(', ')}.`);
-  lines.push('', '---', '', `**Editorial note.** A private consequence of the ${d.title(`evt:${e.id}`)}, by which ${d.ed(`pol:${L.id}`)} ceded ${(cede.cells ?? []).length} districts to ${d.ed(`pol:${P.id}`)}.`);
+  const nCells = (cede.cells ?? []).length;
+  lines.push('', '---', '', `**Editorial note.** A private consequence of the ${d.title(`evt:${e.id}`)}, by which ${d.ed(`pol:${L.id}`)} ceded ${nCells} district${nCells === 1 ? '' : 's'} to ${d.ed(`pol:${P.id}`)}.`);
   const author = g.author(P, 'scribe', year);
   addDoc(g, { sub: 'lawsuit', year, title: `Lawsuit over fields in ${g.T.short.get(`reg:${region}`)} after the ${g.T.short.get(`evt:${e.id}`)}`, author: author.id, p: P, d, body: lines, settlement: seat, about: [e.id], m: med(era, 'soft', r) });
 }
@@ -194,8 +221,11 @@ function debtSuit(g: Gen, e: SimEvent, r: Rng): void {
   lines.push(`In the matter of ${houseLabel(h.kind, d.n(`hou:${h.id}`))}, which has ${era >= 4 ? 'suspended payment' : 'failed and cannot pay'}${causes.length ? ` after the ${d.n(`evt:${causes[0]}`)}` : ''}. The creditors came before ${judgeName(g, d, P, year, era, `debt:${e.id}`)} and proved their claims:`);
   lines.push('');
   lines.push('| Creditor | Claim |', '|---|---|');
-  creditors.forEach((c, i) => lines.push(`| ${c} | ${money(g, d, claims[i], P.id, year)} |`));
-  lines.push(`| **Total** | **${money(g, d, total, P.id, year)}** |`);
+  const book = moneyBook(g, d, P.id, year);
+  const written = claims.map((x) => book.units(x));
+  creditors.forEach((c, i) => lines.push(`| ${c} | ${book.text(written[i])} |`));
+  lines.push(`| **Total** | **${book.total(written)}** |`);
+  void total;
   lines.push('');
   lines.push(`**Judgment.** The goods, ships and stores of the house shall be sold, and the creditors shall share what is found: ${share} in the hundred. ${r.pick(['The partners may not trade in the market for five years.', 'The house shall be struck from the roll of merchants.', 'What remains unpaid is forgiven by the court.'])}`);
   lines.push('', '---', '', `**Editorial note.** See the ${d.title(`evt:${e.id}`)}.`);
@@ -347,7 +377,13 @@ function muster(g: Gen, e: SimEvent, P: Polity, side: 'attacker' | 'defender', r
   lines.push(`${era <= 1 ? 'Tablet of the levy' : 'Roll of the muster'} of ${d.n(`pol:${P.id}`)}, ${localDate(ctx, d, P, year)}${cmd ? `, under the command of ${d.n(cmd)}` : ''}.`);
   lines.push('');
   lines.push('| Town | Arm | Men |', '|---|---|---|');
-  towns.forEach(([t], i) => lines.push(`| ${d.n(`set:${t.id}`)} | ${arms[(i + r.int(0, 3)) % arms.length]} | ${fmt(counts[i])} |`));
+  // arms the levy could not yet field are named by what stood in their place
+  const LATER: Record<string, [string, string]> = {
+    'chariot crews': ['chariot', 'axemen'], horsemen: ['cavalry', 'axemen'], cavalry: ['cavalry', 'skirmishers'], 'mounted knights': ['cavalry', 'spearmen'],
+    musketeers: ['gunpowder', 'halberdiers'], gunners: ['gunpowder', 'crossbowmen'], dragoons: ['gunpowder', 'light horse'],
+  };
+  const arm = (a: string) => (LATER[a] && !techAt(P, LATER[a][0], year) ? LATER[a][1] : a);
+  towns.forEach(([t], i) => lines.push(`| ${d.n(`set:${t.id}`)} | ${arm(arms[(i + r.int(0, 3)) % arms.length])} | ${fmt(counts[i])} |`));
   lines.push(`| **Total** | | **${fmt(total)}** |`);
   lines.push('');
   lines.push(r.pick(['Each man to bring bread for ten days.', 'The captains of hundreds answer for the absent.', 'Deserters to be branded and returned to their towns.', 'The horses to be counted again at the river.']));
@@ -392,20 +428,23 @@ function manifest(g: Gen, from: number, to: number, year: number, r: Rng): void 
   const ship = `the ${r.pick(SHIP_ADJ)} ${r.pick(SHIP_NOUN)}`;
   const captain = commoner(g, d, oa >= 0 ? ctx.polityCulture(oa, year) : A.culture, year, `captain:${from}:${year}`);
   const lines: string[] = [];
-  lines.push(`${era >= 5 ? 'Harbour register' : 'Register of the harbour'} of ${d.n(`set:${to}`)}, ${localDate(ctx, d, P, year)}. Entered: ${ship}${era >= 5 ? ' (steamer)' : ''}, master ${captain}, out of ${d.n(`set:${from}`)}${oa >= 0 && oa !== P.id ? ` in ${d.n(`pol:${oa}`)}` : ''}.`);
+  lines.push(`${era >= 5 ? 'Harbour register' : 'Register of the harbour'} of ${d.n(`set:${to}`)}, ${localDate(ctx, d, P, year)}. Entered: ${ship}${era >= 5 && techAt(P, 'steam', year) ? ' (steamer)' : ''}, master ${captain}, out of ${d.n(`set:${from}`)}${oa >= 0 && oa !== P.id ? ` in ${d.n(`pol:${oa}`)}` : ''}.`);
   lines.push('');
   lines.push('| Cargo | Quantity | Value | Toll |', '|---|---|---|---|');
-  let total = 0, tolls = 0;
   const rate = r.int(2, 10) / 100;
+  // the harbour clerk tolls the value he has written, and his totals add up what is written above them
+  const book = moneyBook(g, d, P.id, year);
+  const values: number[] = [], tolls: number[] = [];
   for (const gd of r.sample(goods, Math.min(goods.length, r.int(3, 5)))) {
     const [lo, hi] = QTY[gd.key] ?? [5, 50];
     const qty = r.int(lo, hi);
-    const value = (g.price(from, gd.id, year) ?? gd.base) * qty;
-    total += value;
-    tolls += value * rate;
-    lines.push(`| ${goodName(gd.id)} | ${units(qty, gd.id)} | ${money(g, d, value, P.id, year)} | ${money(g, d, value * rate, P.id, year)} |`);
+    const value = book.units((g.price(from, gd.id, year) ?? gd.base) * qty);
+    const toll = book.round(value * rate);
+    values.push(value);
+    tolls.push(toll);
+    lines.push(`| ${goodName(gd.id)} | ${units(qty, gd.id)} | ${book.text(value)} | ${book.text(toll)} |`);
   }
-  lines.push(`| **Total** | | **${money(g, d, total, P.id, year)}** | **${money(g, d, tolls, P.id, year)}** |`);
+  lines.push(`| **Total** | | **${book.total(values)}** | **${book.total(tolls)}** |`);
   lines.push('');
   lines.push(`Toll taken at ${Math.round(rate * 100)} in the hundred. ${r.pick(['Seals checked and found whole.', 'Two jars broken in the hold; not charged.', 'The master swears the cargo is his own.', 'Passengers: none.', 'Released to the quay at noon.'])}`);
   lines.push('', '---', '', `**Editorial note.** Values are reckoned at the market prices of ${d.ed(`set:${from}`)} in that decade; the route between the two ports appears on the atlas for the century.`);
@@ -528,7 +567,8 @@ function exercise(g: Gen, P: Polity, year: number, r: Rng): void {
       const yrs = Math.max(1, x.end - x.start);
       const shownName = i === wrong ? `~~${misspell(nm, r)}~~ ${d.link(`per:${x.person}`, nm)}` : d.link(`per:${x.person}`, nm);
       const shownYears = i === (wrong + 2) % reigns.length && !current ? `~~${yrs + r.int(1, 9)}~~ ${yrs}` : String(yrs);
-      lines.push(`${i + 1}. ${shownName}${current ? ` — ${r.pick(['may he live for ever', 'who reigns now', 'whom the gods keep'])}` : `, reigned ${shownYears} years`}`);
+      const she = g.ctx.s.persons[x.person].sex === 'f';
+      lines.push(`${i + 1}. ${shownName}${current ? ` — ${r.pick([she ? 'may she live for ever' : 'may he live for ever', 'who reigns now', 'whom the gods keep'])}` : `, reigned ${shownYears} year${yrs === 1 ? '' : 's'}`}`);
     });
   } else {
     kind = 'model letter';
@@ -536,7 +576,9 @@ function exercise(g: Gen, P: Polity, year: number, r: Rng): void {
     lines.push(`*A model letter, copied by the pupil ${student}:*`);
     lines.push('');
     const lord = r0 ? d.n(`per:${r0.person}`) : 'my lord';
-    lines.push(`> To ${lord}, my lord, say: thus says your servant. ${r.pick(['May the gods keep my lord.', 'All is well with the house of my lord.', 'The grain of my lord is safe in the granary.'])} ${r.pick(['I have sent the tablets as my lord commanded.', 'The ~~sheeps~~ sheep of my lord are counted.', 'The boat of my lord has arrived at the quay.'])}`);
+    const letter = `> To ${lord}, my lord, say: thus says your servant. ${r.pick(['May the gods keep my lord.', 'All is well with the house of my lord.', 'The grain of my lord is safe in the granary.'])} ${r.pick(['I have sent the tablets as my lord commanded.', 'The ~~sheeps~~ sheep of my lord are counted.', 'The boat of my lord has arrived at the quay.'])}`;
+    // a model letter to a reigning queen addresses her as "my lady"
+    lines.push(r0 && g.ctx.s.persons[r0.person].sex === 'f' ? letter.replace(/my lord/g, 'my lady') : letter);
   }
   lines.push('');
   lines.push(`*Teacher's note:* ${r.pick(['Write it again, ten times.', 'Your signs are crooked; the copy is good.', 'Careless! The names of the kings are sacred.', 'Better than yesterday.', 'You will be beaten if this happens again.'])}`);
@@ -607,14 +649,14 @@ function almanac(g: Gen, P: Polity, year: number, r: Rng): void {
   const drought = s.anomalies.find((a) => (a.kind === 'drought' || a.kind === 'cold') && a.start <= year && a.end >= year && (a.cells.length === 0 || a.cells.includes(cell)));
   const lines: string[] = [];
   const yearOnly = localDate(ctx, d, P, year).replace(/^in /, '').replace(/ \[AY \d+\]$/, '').replace(/^\d+ \[\[[^\]]+\]\] /, 'the year ').replace(/^the year the year /, 'the year ');
-  lines.push(`*${era >= 4 ? 'Almanac' : 'Calendar of the feasts and works'} of ${d.n(`pol:${P.id}`)} for ${yearOnly}, ${era >= 4 ? 'printed' : 'set out'} by the ${era >= 4 ? 'almanac-makers' : 'priests'} of ${d.n(`set:${seat}`)}.*`);
+  lines.push(`*${era >= 4 ? 'Almanac' : 'Calendar of the feasts and works'} of ${d.n(`pol:${P.id}`)} for ${yearOnly}, ${era >= 4 && techAt(P, 'printing', year) ? 'printed' : 'set out'} by the ${era >= 4 ? 'almanac-makers' : 'priests'} of ${d.n(`set:${seat}`)}.*`);
   lines.push('');
   lines.push('| Month | Feasts | Works of the field |', '|---|---|---|');
   for (let i = 0; i < 12; i++) lines.push(`| ${ms[i]} | ${(feasts.get(i) ?? []).join('; ') || '—'} | ${notes[i] || '—'} |`);
   lines.push('');
   if (drought) lines.push(`**Warning.** ${drought.kind === 'drought' ? 'The rains have failed these years. Sow the low fields first, keep back seed-corn, and trust no promise of rain.' : 'The winters are long these years. Sow late and keep the herds near the stalls.'}`);
   else lines.push(r.pick(['Lucky days: the third and the ninth of each month.', 'Do not begin a journey at the new moon.', 'Marriages are best made after the harvest.', 'On feast days the markets are closed.']));
-  lines.push('', '---', '', `**Editorial note.** Feasts follow the gods of the ${d.title(`mov:${m.id}`)}; the farming notes suit the climate of ${d.ed(`set:${seat}`)}.${drought ? ` The warning reflects the ${d.title(`cli:${drought.id}`)}.` : ''}`);
+  lines.push('', '---', '', `**Editorial note.** Feasts follow the ${m.deities.length ? 'gods' : 'calendar'} of the ${d.title(`mov:${m.id}`)}; the farming notes suit the climate of ${d.ed(`set:${seat}`)}.${drought ? ` The warning reflects the ${d.title(`cli:${drought.id}`)}.` : ''}`);
   const author = g.author(P, era >= 4 ? 'scribe' : 'priest', year);
   addDoc(g, { sub: 'almanac', year, title: `Almanac of ${g.T.short.get(`pol:${P.id}`)} for AY ${year}`, author: author.id, p: P, d, body: lines, settlement: seat, about: drought ? [drought.event] : [], m: med(era, 'print', r) });
 }
@@ -668,7 +710,12 @@ function soldierGraffito(g: Gen, e: SimEvent, B: Polity, town: number, r: Rng): 
     `Gods of ${d.n(`set:${town}`)}, forgive ${soldier}.`,
   ]);
   const lines = [`*Graffito ${surface} at ${d.n(`set:${town}`)}:*`, '', `> ${text}`, '', '---', '', `**Editorial note.** Left by a soldier of ${d.ed(`pol:${B.id}`)} during the ${d.title(`evt:${e.id}`)}.`];
-  addDoc(g, { sub: 'graffito', year, title: `Soldier's graffito at ${g.T.short.get(`set:${town}`)} (AY ${year})`, author: null, p: B, d, body: lines, settlement: town, about: [e.id], m: { medium: `graffito, ${surface.split(' ').slice(-2).join(' ')}`, durable: 0.6, tau: 3000 } });
+  // the medium names the surface, not the last words of the description ("graffito, a statue")
+  const SURFACE: Record<string, string> = {
+    'scratched on the base of a statue': 'graffito on a statue base', 'cut into the plaster of a temple wall': 'graffito on temple plaster',
+    'scratched on a column of the gate': 'graffito on a gate column', 'painted on the wall of a house': 'painted graffito on a house wall',
+  };
+  addDoc(g, { sub: 'graffito', year, title: `Soldier's graffito at ${g.T.short.get(`set:${town}`)} (AY ${year})`, author: null, p: B, d, body: lines, settlement: town, about: [e.id], m: { medium: SURFACE[surface] ?? 'graffito', durable: 0.6, tau: 3000 } });
 }
 
 function cityGraffito(g: Gen, town: number, P: Polity, year: number, r: Rng): void {
@@ -682,7 +729,7 @@ function cityGraffito(g: Gen, town: number, P: Polity, year: number, r: Rng): vo
   const head = ctx.rulerAt(P.id, year);
   const options = [
     `${a} loves ${b}.`,
-    `${a} owes me three ${era >= 2 ? 'coins' : 'measures of barley'}. Pay up, ${a}!`,
+    `${a} owes me three ${era >= 2 && techAt(P, 'coinage', year) ? 'coins' : 'measures of barley'}. Pay up, ${a}!`,
     `The wine at the sign of the ${r.pick(['Ram', 'Lamp', 'Two Fish', 'Bull'])} is water.`,
     `Here ${a} slept, and dreamed of ${b}.`,
     `${a} is a thief. Everybody knows it.`,

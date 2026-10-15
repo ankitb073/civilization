@@ -91,7 +91,7 @@ function eventList(ctx: Ctx, T: Titles, evs: SimEvent[], limit = 40): string {
 
 function docList(T: Titles, arts: Artifact[], limit = 30): string {
   const a = arts.slice().sort((x, y) => x.year - y.year).slice(0, limit);
-  return a.map((x) => `- ${L(T, `art:${x.id}`, x.title)} (${yr(x.year)})`).join('\n') + (arts.length > limit ? `\n- *…and ${arts.length - limit} more.*` : '');
+  return a.map((x) => `- ${L(T, `art:${x.id}`, x.title)}${x.title.includes(`(AY ${x.year})`) ? '' : ` (${yr(x.year)})`}`).join('\n') + (arts.length > limit ? `\n- *…and ${arts.length - limit} more.*` : '');
 }
 
 export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<string, PageJson> {
@@ -134,7 +134,8 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const govs = p.govs.map(([y, g]) => `${g.replace(/-/g, ' ')} (${yr(y)})`);
     const religions = [...new Set(stats.map((r) => r[11] as number).filter((x) => x >= 0))].slice(0, 6);
     const currencies = [...new Set(stats.map((r) => r[12] as number).filter((x) => x >= 0))].slice(0, 6);
-    pg.summary = `${T.short.get(ref)} was ${article(govLabel(mainGov(p)))} ${govLabel(mainGov(p))} of the ${T.short.get(`cul:${p.culture}`)} people, ${span(p.born, p.died)}. At its height it held ${plural(peakCells, 'district')} and about ${fmtNum(peakPop)} people.`;
+    // a state that rose and fell between two decadal surveys has no recorded extent: say nothing rather than "0 districts"
+    pg.summary = `${T.short.get(ref)} was ${article(govLabel(mainGov(p)))} ${govLabel(mainGov(p))} of the ${T.short.get(`cul:${p.culture}`)} people, ${span(p.born, p.died)}.${peakCells > 0 ? ` At its height it held ${plural(peakCells, 'district')} and about ${fmtNum(peakPop)} people.` : ''}`;
     pg.infobox = [
       ['Period', span(p.born, p.died)],
       ['Founded', LT(T, `evt:${p.foundEvent}`)],
@@ -147,8 +148,8 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
       ['Currency', currencies.map((c) => L(T, `cur:${c}`)).join(', ') || '—'],
       ...(p.predecessor !== null ? [['Preceded by', LT(T, `pol:${p.predecessor}`)] as [string, string]] : []),
       ...(p.successors.length ? [['Succeeded by', p.successors.map((x) => LT(T, `pol:${x}`)).join(', ')] as [string, string]] : []),
-      ['Peak extent', `${peakCells} districts`],
-      ['Peak population', fmtNum(peakPop)],
+      ['Peak extent', peakCells > 0 ? plural(peakCells, 'district') : 'not recorded'],
+      ['Peak population', peakCells > 0 ? fmtNum(peakPop) : 'not recorded'],
       ['Succession', p.successionLaw.replace(/-/g, ' ')],
     ];
     const reigns = ctx.reigns.get(p.id) ?? [];
@@ -434,7 +435,7 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     const ref = `mov:${m.id}`;
     const pg = blank(ref, T, m.kind, m.born, m.died ?? 5000, m.originCell);
     const children = s.movements.filter((x) => x.parent === m.id);
-    pg.summary = `${T.title.get(ref)}: ${m.kind === 'pantheon' ? `the ancestral religion of the ${T.short.get(`cul:${m.culture}`)}` : `a ${m.kind} founded ${m.founder !== null ? `by ${T.short.get(`per:${m.founder}`)} ` : ''}in ${yr(m.born)}`}. At its height it counted about ${fmtNum(m.peak)} adherents.`;
+    pg.summary = `${T.title.get(ref)}: ${m.kind === 'pantheon' ? `the ancestral religion of the ${T.short.get(`cul:${m.culture}`)}` : `${article(m.kind)} ${m.kind} founded ${m.founder !== null ? `by ${T.short.get(`per:${m.founder}`)} ` : ''}in ${yr(m.born)}`}. At its height it counted about ${fmtNum(m.peak)} adherents.`;
     pg.infobox = [
       ['Kind', m.kind],
       ...(m.founder !== null ? [['Founder', L(T, `per:${m.founder}`)] as [string, string]] : []),
@@ -859,12 +860,12 @@ function personNarrative(ctx: Ctx, T: Titles, pid: number, evs: SimEvent[]): str
   parts.push(`${T.short.get(`per:${pid}`)} was born in ${yr(p.born)} among the ${L(T, `cul:${p.culture}`)}${p.father !== null && T.pageRefs.has(`per:${p.father}`) ? `, child of ${L(T, `per:${p.father}`)}` : ''}.`);
   for (const r of p.roles) {
     const where = r.polity !== null ? ` of ${L(T, `pol:${r.polity}`)}` : '';
-    if (r.role === 'ruler') parts.push(`${p.sex === 'f' ? 'She' : 'He'} reigned${where} from ${yr(r.start)}${r.end !== null ? ` to ${yr(r.end)}` : ''}.`);
+    if (r.role === 'ruler') parts.push(`${p.sex === 'f' ? 'She' : 'He'} reigned${r.polity !== null ? ` over ${L(T, `pol:${r.polity}`)}` : ''} from ${yr(r.start)}${r.end !== null ? ` to ${yr(r.end)}` : ''}.`);
     else if (r.role === 'general') parts.push(`${p.sex === 'f' ? 'She' : 'He'} served as a commander${where}.`);
-    else if (r.role === 'merchant') parts.push(`${p.sex === 'f' ? 'She' : 'He'} headed ${r.ref ? L(T, r.ref) : 'a merchant house'}.`);
+    else if (r.role === 'merchant') parts.push(`${p.sex === 'f' ? 'She' : 'He'} headed ${r.ref ? `the ${L(T, r.ref)}` : 'a merchant house'}.`);
     else if (r.role === 'prophet' || r.role === 'philosopher') parts.push(`${p.sex === 'f' ? 'She' : 'He'} founded ${r.ref ? L(T, r.ref) : 'a movement'} in ${yr(r.start)}.`);
     else if (r.role === 'inventor') parts.push(`${p.sex === 'f' ? 'She' : 'He'} is credited with an invention in ${yr(r.start)}.`);
-    else parts.push(`${p.sex === 'f' ? 'She' : 'He'} was a ${r.role}${where}.`);
+    else parts.push(`${p.sex === 'f' ? 'She' : 'He'} was ${article(r.role)} ${r.role}${where}.`);
   }
   const battles = evs.filter((e) => e.sub === 'battle');
   if (battles.length) {

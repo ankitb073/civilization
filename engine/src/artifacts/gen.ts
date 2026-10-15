@@ -10,6 +10,27 @@ import { event, ref } from '../sim/state.ts';
 import { newPerson } from '../sim/people.ts';
 import { Rng } from '../core/rng.ts';
 import { GOODS } from '../sim/economy.ts';
+import { TK } from '../sim/tech.ts';
+
+/** Did polity `p` know technology `key` (a TECHS key such as 'chariot', 'printing') by `year`? */
+export function techAt(p: Polity | null | undefined, key: string, year: number): boolean {
+  if (!p) return false;
+  const y = p.techs.get(TK[key]);
+  return y !== undefined && y <= year;
+}
+
+/** Writing materials a state could not yet make: a printed medium before movable type, paper before paper-making.
+ *  Only the label changes; durability and the survival draw stay as they were, so the archive keeps its documents. */
+const UNPRINTED: Record<string, string> = {
+  'printed book': 'paper codex', 'printed broadsheet': 'manuscript register', 'printed sheet': 'paper', 'printed gazette': 'manuscript newsletter',
+};
+export function periodMedium(p: Polity | null | undefined, medium: string, year: number): string {
+  if (!p) return medium;
+  let m = medium;
+  if (/^printed /.test(m) && !techAt(p, 'printing', year)) m = UNPRINTED[m] ?? m.replace(/^printed /, 'manuscript ');
+  if (/\bpaper\b/.test(m) && !techAt(p, 'paper', year)) m = m.replace(/\bpaper\b/, 'parchment');
+  return m;
+}
 
 export interface Artifact {
   id: number;
@@ -93,7 +114,8 @@ export class Gen {
     const n = (this.counters.get(code) ?? 0) + 1;
     this.counters.set(code, n);
     const art: Artifact = {
-      ...a, id: this.artifacts.length, catalog: `PAL·${code}·${String(n).padStart(5, '0')}`,
+      ...a, medium: a.flagship ? a.medium : periodMedium(a.polity !== null ? this.ctx.s.polities[a.polity] : null, a.medium, a.year),
+      id: this.artifacts.length, catalog: `PAL·${code}·${String(n).padStart(5, '0')}`,
       condition: 'complete', provenance: '', translator: null, foundYear: null, status: 'extant',
     };
     this.artifacts.push(art);

@@ -484,7 +484,7 @@ function genScholarship(g: Gen): void {
   if (deb && who2) {
     const d = g.doc(lang, who2.year, 'econ-paper');
     const lines = [
-      `${d.n(`per:${who2.id}`)}. *The debasement of the ${d.title(`cur:${deb.id}`)} and the price of bread.* Economic History Review, ${who2.year}.`,
+      `${d.n(`per:${who2.id}`)}. *The debasement of the ${d.ed(`cur:${deb.id}`)} and the price of bread.* Economic History Review, ${who2.year}.`,
       '', '| Year | Silver per coin (g) |', '|---|---|', ...deb.history.slice(0, 20).map(([y, v]) => `| AY ${y} | ${v} |`),
       '', `Over ${deb.history[deb.history.length - 1][0] - deb.history[0][0]} years the coin lost ${Math.round((1 - deb.history[deb.history.length - 1][1] / deb.history[0][1]) * 100)}% of its silver. Merchant ledgers of the period show prices in the coin rising in step, while prices in silver weight barely moved.`,
     ];
@@ -544,7 +544,7 @@ export function genExcavationReports(g: Gen): void {
     const strata = [
       `Stratum I (top): ${t.abandoned !== null && t.abandoned < e.year ? `abandonment fill over the ruins, after AY ${t.abandoned}` : 'the modern town'}.`,
       ...shown.map((x, i) => `Stratum ${R[i + 1]}: ${d.pick(['burnt destruction layer, ash and fallen brick', 'a thick layer of ash over collapsed walls', 'burnt timbers and scattered arrowheads', 'destruction debris with traces of a great fire'])}, dated to AY ${x.year} (${d.title(`evt:${x.id}`)}).`),
-      ...(destr.length > shown.length ? [`Strata ${R[shown.length + 2] ?? 'below'} and below: ${destr.length - shown.length} earlier destruction horizons, not yet fully excavated.`] : []),
+      ...(destr.length > shown.length ? [`Strata ${R[shown.length + 1] ?? 'below'} and below: ${destr.length - shown.length} earlier destruction horizon${destr.length - shown.length === 1 ? '' : 's'}, not yet fully excavated.`] : []),
       `Lowest stratum: the foundation of the city, c. ${t.founded < 0 ? `${-t.founded} before AY 0` : `AY ${t.founded}`}.`,
     ];
     const finds = arts.slice().sort((a, b) => a.year - b.year);

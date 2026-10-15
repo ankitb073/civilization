@@ -68,7 +68,7 @@ function kingOf(polityName: NameId, great: boolean, female = false): NounPhrase[
   return out;
 }
 
-function render(g: Gen, d: Doc, p: Polity, year: number, clauses: Clause[], names: Names, damaged: boolean) {
+function render(g: Gen, d: Doc, p: Polity, year: number, clauses: Clause[], names: Names, damaged: boolean, female = false) {
   const ctx = g.ctx;
   const s = ctx.s;
   const scId = ctx.scriptOf(p, year);
@@ -85,7 +85,8 @@ function render(g: Gen, d: Doc, p: Polity, year: number, clauses: Clause[], name
     transliteration: strip(r.transliteration),
     normalized: strip(r.normalized),
     tokens: r.tokens.map((t) => ({ normalized: strip(t.normalized), segmented: strip(t.segmented), gloss: strip(t.gloss) })),
-    translation: r.translation,
+    // clauses without a subject continue the speaker's own voice; the translator's default "He" is wrong for a queen
+    translation: female ? r.translation.replace(/(^|[.!?] )He (?=[a-z])/g, '$1She ') : r.translation,
   };
   if (damaged && clauses.length > 1) {
     out.transliteration += ' [x x x x x]';
@@ -138,11 +139,11 @@ function victoryStele(g: Gen, e: SimEvent, W: Polity, rng: Rng): void {
   const clauses: Clause[] = [
     { verb: 'defeat', mood: 'past', subject: np(ruler.nameId, 'person', { apposition: kingOf(W.nameId, great, ruler.sex === 'f') }), object: np(L.nameId, 'land'), obliques: [{ role: 'locative', np: np(placeName, 'place') }] },
     { verb: 'kill', mood: 'past', object: { head: { concept: 'soldier' }, plural: true, count: claimed } },
-    { verb: 'erect', mood: 'past', object: { head: { concept: 'stele' }, demonstrative: true }, obliques: [{ role: 'benefactive', np: np(god.nameId, 'deity', { apposition: [{ head: { concept: god.sex === 'f' ? 'lady' : 'lord' }, possessorPronoun: '3sg.m' }] }) }] },
+    { verb: 'erect', mood: 'past', object: { head: { concept: 'stele' }, demonstrative: true }, obliques: [{ role: 'benefactive', np: np(god.nameId, 'deity', { apposition: [{ head: { concept: god.sex === 'f' ? 'lady' : 'lord' }, possessorPronoun: ruler.sex === 'f' ? '3sg.f' : '3sg.m' }] }) }] },
     { verb: 'destroy', mood: 'optative', subject: np(god.nameId, 'deity'), object: { head: { concept: 'name' }, possessor: { head: { concept: 'enemy' } } } },
   ];
   const damaged = rng.chance(0.35);
-  const { r, script } = render(g, d, W, year, clauses, names, damaged);
+  const { r, script } = render(g, d, W, year, clauses, names, damaged, ruler.sex === 'f');
   const medium = rng.pick(['basalt stele', 'limestone stele', 'diorite stele', 'rock relief']);
   const capCity = ctx.capitalAt(W, year);
   const findCell = near ? s.settlements[ctx.idNum(near)].cell : e.cell;
@@ -188,13 +189,13 @@ function dedication(g: Gen, p: Polity, rulerId: number, year0: number, rng: Rng)
   const great = ctx.govAt(p, year) === 'empire';
   const subject = np(ruler.nameId, 'person', { apposition: kingOf(p.nameId, great, ruler.sex === 'f') });
   const clauses: Clause[] = building === 'temple'
-    ? [{ verb: 'build', mood: 'past', subject, object: { head: { concept: 'temple' }, demonstrative: true }, obliques: [{ role: 'benefactive', np: np(god.nameId, 'deity', { apposition: [{ head: { concept: god.sex === 'f' ? 'lady' : 'lord' }, possessorPronoun: '3sg.m' }] }) }] },
-       { verb: 'protect', mood: 'optative', subject: np(god.nameId, 'deity'), object: { head: { concept: 'king' } } }]
+    ? [{ verb: 'build', mood: 'past', subject, object: { head: { concept: 'temple' }, demonstrative: true }, obliques: [{ role: 'benefactive', np: np(god.nameId, 'deity', { apposition: [{ head: { concept: god.sex === 'f' ? 'lady' : 'lord' }, possessorPronoun: ruler.sex === 'f' ? '3sg.f' : '3sg.m' }] }) }] },
+       { verb: 'protect', mood: 'optative', subject: np(god.nameId, 'deity'), object: { head: { concept: ruler.sex === 'f' ? 'queen' : 'king' } } }]
     : [{ verb: rng.chance(0.5) ? 'build' : 'restore', mood: 'past', subject, object: { head: { concept: building }, demonstrative: true }, obliques: [{ role: 'locative', np: np(t.nameId, 'place') }] },
        { verb: 'bless', mood: 'optative', subject: np(god.nameId, 'deity'), object: { head: { concept: 'city' } } }];
   if (building !== 'temple') names.map.set(t.nameId, `set:${t.id}`);
   const damaged = rng.chance(0.3);
-  const { r, script } = render(g, d, p, year, clauses, names, damaged);
+  const { r, script } = render(g, d, p, year, clauses, names, damaged, ruler.sex === 'f');
   const medium = rng.pick(['foundation tablet', 'inscribed brick', 'limestone slab', 'bronze plaque']);
   const lines: string[] = [];
   lines.push(headerFor(g, d, `building inscription`, `from the ${building} at ${d.n(`set:${capCity}`)}`, medium, d.link(`scr:${script.id}`, `${d.nameOf(`scr:${script.id}`)} script`), damaged, rng));
@@ -209,7 +210,7 @@ function dedication(g: Gen, p: Polity, rulerId: number, year0: number, rng: Rng)
   lines.push('');
   const reign = ctx.rulerAt(p.id, year);
   const issued = localDate(ctx, d, p, year);
-  lines.push(`Issued ${issued}${reign && !issued.includes(`per:${reign.person}|`) ? `, in the reign of ${d.ed(`per:${reign.person}`)}` : ''}. ${d.ed(`dei:${god.id}`)} was ${god.domain === 'sky' || god.domain === 'storm' ? 'the head of the pantheon' : `the ${god.sex === 'f' ? 'goddess' : 'god'} of ${domainPhrase(god.domain)}`} in the ${d.title(`mov:${mov.id}`)} tradition.`);
+  lines.push(`Issued ${issued}${reign && !issued.includes(`per:${reign.person}|`) ? `, in the reign of ${d.ed(`per:${reign.person}`)}` : ''}. ${d.ed(`dei:${god.id}`)} was ${god.domain === 'sky' || god.domain === 'storm' ? 'the head of the pantheon' : `the ${god.sex === 'f' ? 'goddess' : 'god'} of ${domainPhrase(god.domain)}`} in the ${d.title(`mov:${mov.id}`)}.`);
   g.add({
     sub: 'inscription', year, title: `${cap(building)} inscription of ${g.T.short.get(`per:${ruler.id}`)} at ${g.T.short.get(`set:${capCity}`)}`,
     author: ruler.id, polity: p.id, lang, script: script.id, medium, cell: t.cell, settlement: capCity, about: [],
@@ -245,7 +246,7 @@ function epitaph(g: Gen, p: Polity, rulerId: number, start: number, end: number,
     clauses.push({ verb: 'protect', mood: 'optative', subject: np(under.nameId, 'deity'), object: { head: { concept: 'soul' }, possessorPronoun: ruler.sex === 'f' ? '3sg.f' : '3sg.m' } });
   }
   const damaged = rng.chance(0.4);
-  const { r, script } = render(g, d, p, year, clauses, names, damaged);
+  const { r, script } = render(g, d, p, year, clauses, names, damaged, ruler.sex === 'f');
   const lines: string[] = [];
   lines.push(headerFor(g, d, 'funerary inscription', `from the royal tombs of ${d.n(`set:${capCity}`)}`, rng.pick(['sarcophagus lid', 'tomb lintel', 'funerary stele']), d.link(`scr:${script.id}`, `${d.nameOf(`scr:${script.id}`)} script`), damaged, rng));
   lines.push('');
@@ -257,7 +258,9 @@ function epitaph(g: Gen, p: Polity, rulerId: number, start: number, end: number,
   lines.push('');
   lines.push('## Commentary');
   lines.push('');
-  lines.push(`${d.ed(`per:${ruler.id}`)} reigned from AY ${start} to AY ${end} (${end - start} years) and ${ruler.deathCause === 'natural' ? 'died in office' : `died by ${ruler.deathCause}`}.`);
+  const len = end - start;
+  const DEATH: Record<string, string> = { natural: 'died in office', battle: 'fell in battle', executed: 'was executed' };
+  lines.push(`${d.ed(`per:${ruler.id}`)} reigned from AY ${start} to AY ${end} (${len === 0 ? 'less than a year' : `${len} year${len === 1 ? '' : 's'}`}) and ${DEATH[ruler.deathCause] ?? `died by ${ruler.deathCause}`}.`);
   g.add({
     sub: 'inscription', year, title: `Epitaph of ${g.T.short.get(`per:${ruler.id}`)}`, author: null, polity: p.id, lang, script: script.id,
     medium: 'stone', cell: s.settlements[capCity].cell, settlement: capCity, about: [], body: lines.join('\n'), mentions: d.mentions,
@@ -290,7 +293,7 @@ function boundaryStone(g: Gen, e: SimEvent, W: Polity, cede: Term, rng: Rng): vo
     { verb: 'curse', mood: 'optative', subject: np(god.nameId, 'deity'), object: { head: { concept: 'enemy' } } },
   ];
   const damaged = rng.chance(0.3);
-  const { r, script } = render(g, d, W, year, clauses, names, damaged);
+  const { r, script } = render(g, d, W, year, clauses, names, damaged, ruler.sex === 'f');
   const lines: string[] = [];
   lines.push(headerFor(g, d, 'boundary inscription', `found in ${d.n(`reg:${region}`)}`, 'kudurru-type stone', d.link(`scr:${script.id}`, `${d.nameOf(`scr:${script.id}`)} script`), damaged, rng));
   lines.push('');

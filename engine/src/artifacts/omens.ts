@@ -224,7 +224,7 @@ function candidates(g: Gen, d: Doc, P: Polity, year: number, eruptions: SimEvent
         if (!ours('polity')) break;
         const pred = num('predecessor');
         const succ = num('successor');
-        if (pred >= 0 && succ >= 0) o = { e, kind: 'usurp', good: false, who: () => `${per(succ)}, who seized the throne of ${d.nameOf(`per:${succ}`) === d.nameOf(`per:${pred}`) ? 'his namesake ' : ''}${per(pred)}` };
+        if (pred >= 0 && succ >= 0) o = { e, kind: 'usurp', good: false, who: () => `${per(succ)}, who seized the throne of ${d.nameOf(`per:${succ}`) === d.nameOf(`per:${pred}`) ? `${s.persons[succ].sex === 'f' ? 'her' : 'his'} namesake ` : ''}${per(pred)}` };
         break;
       }
       case 'revolt': {

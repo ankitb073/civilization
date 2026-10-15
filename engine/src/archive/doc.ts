@@ -129,6 +129,26 @@ export function resetCalendarCache(): void {
   monthCache.clear();
 }
 
+/** When one text dates by two different rulers who bear the same name ("the 1st year of Nakhiji" twice), give each
+ *  their regnal number, as editors do ("Nakhiji I", "Nakhiji II"). Other names are left as written. */
+export function disambiguateRulers(body: string, T: Titles): string {
+  const ids = new Map<string, Set<string>>();
+  for (const m of body.matchAll(/\[\[per:(\d+)\|([^\]]+)\]\]/g)) {
+    if (!ids.has(m[2])) ids.set(m[2], new Set());
+    ids.get(m[2])!.add(m[1]);
+  }
+  return body.replace(/\[\[per:(\d+)\|([^\]]+)\]\]/g, (all, id: string, name: string) => {
+    const set = ids.get(name)!;
+    const reg = T.regnal.get(Number(id));
+    return set.size > 1 && reg && [...set].every((x) => T.regnal.has(Number(x))) ? `[[per:${id}|${name}${reg}]]` : all;
+  });
+}
+
+/** A day-dated local date ("27 Nuernin 2278 of the …") needs "on" after a noun; regnal and era dates carry their own "in". */
+export function onDate(date: string): string {
+  return /^\d/.test(date) ? `on ${date}` : date;
+}
+
 /** A local date for a document issued by polity `p` in `year`, plus the normalized year. */
 /** An event or anomaly name as a contemporary would write it: no editorial year qualifiers or ids. */
 export function periodTitle(t: string): string {

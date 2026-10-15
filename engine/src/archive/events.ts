@@ -81,7 +81,7 @@ export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: stri
       const v = L(T, `pol:${e.data.winner}`);
       summary = `Battle fought in ${yr(e.year)} between ${P('attacker')} (${fmtNum(Number(e.data.attackerSize))} men) and ${P('defender')} (${fmtNum(Number(e.data.defenderSize))}); won by ${v}.`;
       infobox.push(['Strength (attacker)', fmtNum(Number(e.data.attackerSize))], ['Strength (defender)', fmtNum(Number(e.data.defenderSize))], ['Losses (attacker)', fmtNum(Number(e.data.attackerLosses))], ['Losses (defender)', fmtNum(Number(e.data.defenderLosses))]);
-      body.push(`${P('attacking commander')} led the army of ${P('attacker')}; ${P('defending commander')} that of ${P('defender')}. ${Number(e.data.decisive) > 0.7 ? 'The result was decisive.' : Number(e.data.decisive) < 0.3 ? 'The result was narrow.' : ''}${e.data.commanderKilled !== undefined ? ` ${L(T, `per:${e.data.commanderKilled}`)} was killed.` : ''}`);
+      body.push([`${P('attacking commander')} led the army of ${P('attacker')}; ${P('defending commander')} that of ${P('defender')}.`, Number(e.data.decisive) > 0.7 ? 'The result was decisive.' : Number(e.data.decisive) < 0.3 ? 'The result was narrow.' : '', e.data.commanderKilled !== undefined ? `${L(T, `per:${e.data.commanderKilled}`)} was killed.` : ''].filter(Boolean).join(' '));
       break;
     }
     case 'treaty': {
@@ -145,7 +145,7 @@ export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: stri
       summary = `${P('colonizer')} planted a colony at ${P('colony')} in ${P('region')} in ${yr(e.year)}${e.data.overseas ? ', across the sea' : ''}.`;
       break;
     case 'excavation':
-      summary = `Excavation at ${P('site')} in ${yr(e.year)} by ${P('excavator')}${e.data.finds ? `, yielding ${e.data.finds} catalogued documents` : ''}.`;
+      summary = `Excavation at ${P('site')} in ${yr(e.year)} by ${P('excavator')}${e.data.finds ? `, yielding ${e.data.finds} catalogued document${Number(e.data.finds) === 1 ? '' : 's'}` : ''}.`;
       break;
     case 'revolution': case 'reform':
       summary = `${e.sub === 'revolution' ? 'A revolution' : 'A reform'} in ${P('polity')} in ${yr(e.year)} turned the ${govWord(String(e.data.from))} into ${govArticle(String(e.data.to))}${first('leader') ? `, led by ${P('leader')}` : ''}${first('deposed') ? `; ${P('deposed')} was deposed` : ''}.`;

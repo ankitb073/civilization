@@ -1,9 +1,9 @@
 // Trade documents: sailing guides and caravan itineraries along the century's trade routes (distances from the map,
 // rulers, prices, merchant houses and the wars of the decade), and customs tariffs computed from market prices.
 import type { Gen } from './gen.ts';
-import { goodName, goodUnit } from './gen.ts';
+import { goodName, goodUnit, techAt } from './gen.ts';
 import type { Doc } from '../archive/doc.ts';
-import { localDate } from '../archive/doc.ts';
+import { localDate, onDate } from '../archive/doc.ts';
 import type { Polity, SimEvent } from '../sim/state.ts';
 import { Rng } from '../core/rng.ts';
 import { GOODS } from '../sim/economy.ts';
@@ -117,20 +117,20 @@ const STAGES = [
   'A ford must be crossed; in spring it is deep.', 'There is an inn with stabling for a hundred beasts.', 'The road climbs through a pass; hire guides in the town.',
 ];
 
-interface Units { dist: (km: number) => string; time: (km: number) => string; total: (km: number) => string }
+interface Units { dist: (km: number) => string; time: (km: number) => string; /** the sum of the written legs */ total: (n: number) => string; /** a leg as written, in its own unit */ value: (km: number) => number }
 
 function unitsFor(mode: 'sea' | 'land', era: number, desert: boolean): Units {
   const days = (n: number, what: 'sail' | 'day') => (what === 'sail' ? (n <= 1 ? "a day's sail" : `${n} days' sail`) : n <= 1 ? 'a day' : `${n} days`);
   const round = (x: number, step: number) => Math.max(step, Math.round(x / step) * step);
   if (mode === 'sea') {
-    if (era <= 2) return { dist: (km) => `${round(km / 0.185, 50).toLocaleString('en-US')} stadia`, time: (km) => days(Math.max(1, Math.round(km / 110)), 'sail'), total: (km) => `${round(km / 0.185, 50).toLocaleString('en-US')} stadia` };
-    if (era <= 4) return { dist: (km) => `${round(km / 5.556, 5)} leagues`, time: (km) => days(Math.max(1, Math.round(km / (era === 3 ? 140 : 200))), 'sail'), total: (km) => `${round(km / 5.556, 5)} leagues` };
-    return { dist: (km) => `${round(km / 1.852, 10)} nautical miles`, time: (km) => (km / 28 < 48 ? `${Math.max(1, Math.round(km / 28))} hours by steamer` : `${Math.round(km / 28 / 24)} days by steamer`), total: (km) => `${round(km / 1.852, 10).toLocaleString('en-US')} nautical miles` };
+    if (era <= 2) return { dist: (km) => `${round(km / 0.185, 50).toLocaleString('en-US')} stadia`, time: (km) => days(Math.max(1, Math.round(km / 110)), 'sail'), total: (n) => `${n.toLocaleString('en-US')} stadia`, value: (km) => round(km / 0.185, 50) };
+    if (era <= 4) return { dist: (km) => `${round(km / 5.556, 5)} leagues`, time: (km) => days(Math.max(1, Math.round(km / (era === 3 ? 140 : 200))), 'sail'), total: (n) => `${n} leagues`, value: (km) => round(km / 5.556, 5) };
+    return { dist: (km) => `${round(km / 1.852, 10)} nautical miles`, time: (km) => (km / 28 < 48 ? `${Math.max(1, Math.round(km / 28))} hours by steamer` : `${Math.round(km / 28 / 24)} days by steamer`), total: (n) => `${n.toLocaleString('en-US')} nautical miles`, value: (km) => round(km / 1.852, 10) };
   }
   const beast = desert ? 'camels' : era <= 2 ? 'donkeys' : 'mules';
-  if (era <= 2) return { dist: (km) => `${round(km / 10.7, 1)} double-hours`, time: (km) => `${days(Math.max(1, Math.round(km / 30)), 'day')} with laden ${beast}`, total: (km) => `${round(km / 10.7, 1)} double-hours` };
-  if (era <= 4) return { dist: (km) => `${round(km / 5.5, 1)} leagues`, time: (km) => `${days(Math.max(1, Math.round(km / (era === 3 ? 35 : 50))), 'day')} ${era === 3 ? `with ${beast}` : 'by coach'}`, total: (km) => `${round(km / 5.5, 1)} leagues` };
-  return { dist: (km) => `${round(km, 5)} km`, time: (km) => `${Math.max(1, Math.round(km / 60))} hours by rail`, total: (km) => `${round(km, 5).toLocaleString('en-US')} km` };
+  if (era <= 2) return { dist: (km) => `${round(km / 10.7, 1)} double-hours`, time: (km) => `${days(Math.max(1, Math.round(km / 30)), 'day')} with laden ${beast}`, total: (n) => `${n} double-hours`, value: (km) => round(km / 10.7, 1) };
+  if (era <= 4) return { dist: (km) => `${round(km / 5.5, 1)} leagues`, time: (km) => `${days(Math.max(1, Math.round(km / (era === 3 ? 35 : 50))), 'day')} ${era === 3 ? `with ${beast}` : 'by coach'}`, total: (n) => `${n} leagues`, value: (km) => round(km / 5.5, 1) };
+  return { dist: (km) => `${round(km, 5)} km`, time: (km) => `${Math.max(1, Math.round(km / 60))} hours by rail`, total: (n) => `${n.toLocaleString('en-US')} km`, value: (km) => round(km, 5) };
 }
 
 function periplus(g: Gen, path: number[], mode: 'sea' | 'land', year: number, riverAt: Map<number, number>, r: Rng): void {
@@ -144,7 +144,9 @@ function periplus(g: Gen, path: number[], mode: 'sea' | 'land', year: number, ri
   const kmPer = Math.sqrt((w.cellArea * w.n) / (w.width * w.height));
   const legKm = (a: number, b: number) => Math.hypot(w.x[T[a].cell] - w.x[T[b].cell], w.y[T[a].cell] - w.y[T[b].cell]) * kmPer * (mode === 'sea' ? 1.2 : 1.35);
   const desert = path.some((x) => w.biome[T[x].cell] === 8 || w.biome[T[x].cell] === 9);
-  const U = unitsFor(mode, era, desert);
+  // steamers and railways only once the realm has them: until then an industrial-era guide still reckons by sail and coach
+  const uEra = era >= 5 && !techAt(home, mode === 'sea' ? 'steam' : 'railway', year) ? 4 : era;
+  const U = unitsFor(mode, uEra, desert);
   const money = reckoning(g, d, home, year);
   // what is cheap and dear at each stop, against the average along the route
   const avg = new Map<number, number>();
@@ -155,8 +157,8 @@ function periplus(g: Gen, path: number[], mode: 'sea' | 'land', year: number, ri
   const pilot = commoner(g, d, ctx.polityCulture(home, year), year, `pilot:${path[0]}:${year}`);
   const lines: string[] = [];
   const intro = mode === 'sea'
-    ? (era >= 5 ? `Sailing directions from ${d.n(`set:${path[0]}`)} to ${d.n(`set:${path[path.length - 1]}`)}, compiled for the masters of merchant vessels by ${pilot}, pilot, ${localDate(ctx, d, home, year)}.` : `The coasting voyage from ${d.n(`set:${path[0]}`)} to ${d.n(`set:${path[path.length - 1]}`)}, as the pilot ${pilot} sailed it, written down for the merchants of ${d.n(`set:${path[0]}`)} ${localDate(ctx, d, home, year)}.`)
-    : (era >= 5 ? `Route book of the line from ${d.n(`set:${path[0]}`)} to ${d.n(`set:${path[path.length - 1]}`)}, compiled by ${pilot} for travelling agents, ${localDate(ctx, d, home, year)}.` : `The road from ${d.n(`set:${path[0]}`)} to ${d.n(`set:${path[path.length - 1]}`)}, stage by stage, as the caravan master ${pilot} travelled it, ${localDate(ctx, d, home, year)}.`);
+    ? (era >= 5 ? `Sailing directions from ${d.n(`set:${path[0]}`)} to ${d.n(`set:${path[path.length - 1]}`)}, compiled for the masters of merchant vessels by ${pilot}, pilot, ${localDate(ctx, d, home, year)}.` : `The coasting voyage from ${d.n(`set:${path[0]}`)} to ${d.n(`set:${path[path.length - 1]}`)}, as the pilot ${pilot} sailed it, written down for the merchants of ${d.n(`set:${path[0]}`)} ${onDate(localDate(ctx, d, home, year))}.`)
+    : (uEra >= 5 ? `Route book of the line from ${d.n(`set:${path[0]}`)} to ${d.n(`set:${path[path.length - 1]}`)}, compiled by ${pilot} for travelling agents, ${localDate(ctx, d, home, year)}.` : `The road from ${d.n(`set:${path[0]}`)} to ${d.n(`set:${path[path.length - 1]}`)}, stage by stage, as the caravan master ${pilot} travelled it, ${localDate(ctx, d, home, year)}.`);
   lines.push(intro, '');
   const homeCap = ctx.capitalAt(home, year) === path[0];
   lines.push(`${d.n(`set:${path[0]}`)} ${homeCap ? `is the ${era >= 5 ? 'capital' : 'royal city'} of` : 'belongs to'} ${d.n(`pol:${home.id}`)}. Prices below are given in ${money.unit}.`);
@@ -167,14 +169,14 @@ function periplus(g: Gen, path: number[], mode: 'sea' | 'land', year: number, ri
     const from = path[i];
     const t = T[sid];
     const km = legKm(from, sid);
-    total += km;
+    total += U.value(km);
     const parts: string[] = [];
     parts.push(`${U.dist(km)}, ${U.time(km)}.`);
     // the place itself
     const rv = riverAt.get(t.cell);
     const fixed = (xs: string[], key: string) => xs[new Rng(s.seed).fork(key, sid).int(0, xs.length - 1)];
-    if (mode === 'sea') parts.push(rv !== undefined && d.chance(0.6) ? `${era >= 5 ? 'Berth' : 'Anchor'} in the mouth of the ${d.n(`riv:${rv}`)}.` : era >= 5 ? fixed(HARBOURS_MODERN, 'harbour-m') : fixed(HARBOURS, 'harbour'));
-    else parts.push(rv !== undefined && d.chance(0.5) ? `The town stands on the ${d.n(`riv:${rv}`)}.` : era >= 5 ? fixed(STATIONS, 'station') : fixed(STAGES, 'stage'));
+    if (mode === 'sea') parts.push(rv !== undefined && d.chance(0.6) ? `${era >= 5 ? 'Berth' : 'Anchor'} in the mouth of the ${d.n(`riv:${rv}`)}.` : uEra >= 5 ? fixed(HARBOURS_MODERN, 'harbour-m') : fixed(HARBOURS, 'harbour'));
+    else parts.push(rv !== undefined && d.chance(0.5) ? `The town stands on the ${d.n(`riv:${rv}`)}.` : uEra >= 5 ? fixed(STATIONS, 'station') : fixed(STAGES, 'stage'));
     const o = ctx.ownerAt(t.cell, year);
     if (o < 0) parts.push('No king rules here; the elders of the town take the dues.');
     else if (o !== prevOwner) {
@@ -208,7 +210,7 @@ function periplus(g: Gen, path: number[], mode: 'sea' | 'land', year: number, ri
     const sack = t.sacks.map((x) => s.events[x]).filter((e) => e.year <= year && e.year > year - 25).pop();
     if (sack) {
       const by = sack.parts.find(([, x]) => x === 'besieger')?.[0];
-      parts.push(`The city was sacked${by ? ` by ${d.n(by)}` : ''} ${year - sack.year <= 1 ? 'last year' : `${year - sack.year} years ago`}, and the ${mode === 'sea' ? 'quays are' : 'walls are'} not yet repaired.`);
+      parts.push(`The city was sacked${by ? ` by ${d.n(by)}` : ''} ${year === sack.year ? 'this year' : year - sack.year === 1 ? 'last year' : `${year - sack.year} years ago`}, and the ${mode === 'sea' ? 'quays are' : 'walls are'} not yet repaired.`);
     }
     const plague = (ctx.eventsByRef.get(`set:${sid}`) ?? []).map((x) => s.events[x]).find((e) => e.sub === 'plague' && e.year <= year && e.end >= year - 3);
     if (plague) parts.push(`There is pestilence in the town; ${mode === 'sea' ? 'ships are held at anchor for forty days' : 'travellers are turned away at the gate'}.`);
@@ -216,7 +218,7 @@ function periplus(g: Gen, path: number[], mode: 'sea' | 'land', year: number, ri
   });
   lines.push('', `In all, ${U.total(total)} from ${d.n(`set:${path[0]}`)} to ${d.n(`set:${path[path.length - 1]}`)}. ${mode === 'sea' ? d.pick(['Keep the land on the right hand going out, and on the left coming home.', 'Sail in the summer months; in winter the coast is closed.', 'Water the ship at every second harbour.']) : d.pick(['Travel in the cool months; in summer the wells fail.', 'Pay the guards at every frontier and keep the receipts.', 'Do not travel the last stage after dark.'])}`);
   const warNote = wars.length ? ` Wars on the route that year: ${listJoin(wars.map((x) => d.title(`evt:${x}`)))}.` : '';
-  lines.push('', '---', '', `**Editorial note.** Distances are measured on the atlas map between the ports of the route network for AY ${Math.floor(year / 100) * 100}, with an allowance for the ${mode === 'sea' ? 'coastwise course' : 'windings of the road'}, and converted to ${era <= 2 ? (mode === 'sea' ? 'stadia of 185 m and a day\'s sail of about 110 km' : 'double-hours of about 10.7 km and a caravan day of about 30 km') : mode === 'sea' ? (era <= 4 ? 'sea leagues of 5.56 km' : 'nautical miles') : era <= 4 ? 'leagues of 5.5 km' : 'kilometres'}. Rulers, prices, merchant houses and hazards agree with the record for AY ${year}.${warNote}`);
+  lines.push('', '---', '', `**Editorial note.** Distances are measured on the atlas map between the ${mode === 'sea' ? 'ports' : 'towns'} of the route network for AY ${Math.floor(year / 100) * 100}, with an allowance for the ${mode === 'sea' ? 'coastwise course' : 'windings of the road'}, and converted to ${era <= 2 ? (mode === 'sea' ? 'stadia of 185 m and a day\'s sail of about 110 km' : 'double-hours of about 10.7 km and a caravan day of about 30 km') : mode === 'sea' ? (uEra <= 4 ? 'sea leagues of 5.56 km' : 'nautical miles') : uEra <= 4 ? 'leagues of 5.5 km' : 'kilometres'}. Rulers, prices, merchant houses and hazards agree with the record for AY ${year}.${warNote}`);
   const m = era >= 4 ? med(era, 'print', r) : med(era, 'soft', r);
   const title = mode === 'sea'
     ? `${era >= 5 ? 'Sailing directions' : 'Periplus'} from ${g.T.short.get(`set:${path[0]}`)} to ${g.T.short.get(`set:${path[path.length - 1]}`)} (AY ${year})`
@@ -260,7 +262,8 @@ function tariff(g: Gen, P: Polity, year: number, r: Rng): void {
   const surcharge = wars.length ? 1.5 : 1;
   const frac = (x: number) => {
     const table: [number, string][] = [[0.025, 'one part in forty'], [0.05, 'one part in twenty'], [0.075, 'three parts in forty'], [0.1, 'one part in ten'], [0.125, 'one part in eight'], [0.15, 'three parts in twenty'], [0.2, 'one part in five'], [0.25, 'one part in four'], [0.3, 'three parts in ten']];
-    if (era >= 4) return `${Math.round(x * 1000) / 10}%`;
+    // state the rate exactly (11.25%, not 11.3%), so that every due can be checked against it
+    if (era >= 4) return `${Math.round(x * 10000) / 100}%`;
     return table.find(([v]) => Math.abs(v - x) < 0.006)?.[1] ?? `${Math.round(x * 100)} in the hundred`;
   };
   const contraband = new Set<number>();
@@ -286,7 +289,7 @@ function tariff(g: Gen, P: Polity, year: number, r: Rng): void {
       continue;
     }
     if (!fixed) rate = Math.min(0.5, rate * surcharge);
-    const value = g.price(place, gd, year)! / money.grams;
+    const value = Number(fmtPrice(g.price(place, gd, year)! / money.grams).replace(/,/g, ''));
     rows.push(`| ${cap(goodName(gd))} | ${goodUnit(gd)} | ${fmtPrice(value)} | ${rate === 0 ? 'free' : fmtPrice(value * rate)} | ${rate === 0 ? why : `${frac(rate)}${why ? `; ${why}` : ''}`} |`);
   }
   // preamble
@@ -313,14 +316,14 @@ function tariff(g: Gen, P: Polity, year: number, r: Rng): void {
   if (wars.length) {
     const enemies = [...new Set(wars.map((x) => x.enemy))];
     notes.push(`For as long as the war with ${listJoin(enemies.map((x) => d.n(`pol:${x}`)))} lasts, every due but that on grain is raised by half.`);
-    if (contraband.size) notes.push(`No one shall carry ${listJoin([...contraband].map((x) => goodName(x)))} ${era >= 5 ? 'to the enemy or to neutral ports for his account' : 'out of the realm'}; the goods are forfeit and the ${era >= 5 ? 'shipper fined' : 'carrier flogged'}.`);
+    if (contraband.size) notes.push(`No one shall carry ${listJoin([...contraband].map((x) => goodName(x))).replace(/ and ([^,]*)$/, ' or $1')} ${era >= 5 ? 'to the enemy or to neutral ports for his account' : 'out of the realm'}; the goods are forfeit and the ${era >= 5 ? 'shipper fined' : 'carrier flogged'}.`);
     notes.push(era >= 5 ? `Goods of enemy origin are prohibited and will be seized.` : `Merchants of ${listJoin(enemies.map((x) => d.n(`pol:${x}`)))} shall not ${port ? 'enter the harbour' : 'pass the gate'}; their goods are forfeit to the ${era <= 3 ? lord : 'treasury'}.`);
   }
   if (famine) notes.push(`Because of the ${d.n(`evt:${famine.id}`)}, grain enters free until the granaries are full.`);
   if (era <= 3) notes.push(d.pick(['Whoever hides goods from the collectors shall pay the due fourfold.', 'Whoever bribes a collector shall lose his hand.', 'The collectors shall give a sealed receipt for every due.']));
   else notes.push(d.pick(['False declarations are punished by confiscation.', 'Receipts shall be given for every payment.', 'Goods in transit pay one tenth of the rate.']));
   lines.push(...notes.map((n, i) => `${i + 1}. ${n}`));
-  lines.push('', era <= 3 ? `Given ${localDate(ctx, d, P, year)}. Let it be written on the gate of the customs house.` : era === 4 ? `Given at ${d.n(`set:${ctx.capitalAt(P, year)}`)}, ${localDate(ctx, d, P, year)}. Printed by authority.` : `By order of the government.`);
+  lines.push('', era <= 3 ? `Given ${localDate(ctx, d, P, year)}. Let it be written on the gate of the customs house.` : era === 4 ? `Given at ${d.n(`set:${ctx.capitalAt(P, year)}`)}, ${localDate(ctx, d, P, year)}. ${techAt(P, 'printing', year) ? 'Printed' : 'Copied'} by authority.` : `By order of the government.`);
   const warNote = wars.length ? ` In AY ${year} ${g.T.short.get(`pol:${P.id}`)} was fighting the ${listJoin(wars.map((x) => d.title(`evt:${x.war.id}`)))}, hence the surcharge and the embargo.` : '';
   lines.push('', '---', '', `**Editorial note.** Values are the market prices of ${d.ed(`set:${place}`)} for the decade in the record, converted at the silver content of the ${money.unit === 'shekels of silver' ? 'shekel' : money.unit === 'grams of silver' ? 'reckoning' : 'currency'} that year; dues are computed at the stated rates.${warNote}`);
   addDoc(g, {
