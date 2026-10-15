@@ -288,7 +288,9 @@ function annals(g: Gen, p: Polity, from: number, to: number, evs: SimEvent[], rn
   }
   lines.push('');
   lines.push(`*Written by ${d.n(`per:${author.id}`)}, ${era <= 1 ? 'scribe of the house of tablets' : 'keeper of the annals'}.*`);
-  lines.push('', '---', '', `**Editorial note.** Court annals record what the court wished remembered. Of the ${evs.filter((e) => e.sub === 'battle').length} ${evs.filter((e) => e.sub === 'battle').length === 1 ? 'battle' : 'battles'} in which ${d.ed(`pol:${p.id}`)} fought in these years, the annalist mentions ${battlesMentioned}.`);
+  // a battle the polity both fought and won is listed under both roles: count each battle once
+  const fought = new Set(evs.filter((e) => e.sub === 'battle').map((e) => e.id)).size;
+  lines.push('', '---', '', `**Editorial note.** Court annals record what the court wished remembered. Of the ${fought} ${fought === 1 ? 'battle' : 'battles'} in which ${d.ed(`pol:${p.id}`)} fought in these years, the annalist mentions ${battlesMentioned}.`);
   const m = medium(era, rng, 'soft');
   const capCity = ctx.capitalAt(p, year);
   g.add({
