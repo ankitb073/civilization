@@ -80,7 +80,7 @@ export class Gen {
   readonly T: Titles;
   readonly rng: Rng;
   artifacts: Artifact[] = [];
-  private counters = new Map<string, number>();
+  counters = new Map<string, number>();
   private scribes = new Map<string, number[]>(); // `${polity}:${role}` -> persons
   scholars: number[] = [];
   priceIndex = new Map<string, number>();

@@ -6,3 +6,4 @@ atlas/public/data/
 *.log
 atlas/public/downloads/
 atlas/public/s/
+.claude/

@@ -1,8 +1,8 @@
 // Ingest agent-written flagship documents (flagships/*.md): validate against the record, then add
 // them to the archive as curated, always-extant documents.
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Gen } from '../artifacts/gen.ts';
+import type { Gen, Artifact } from '../artifacts/gen.ts';
 import { localDate } from '../archive/doc.ts';
 
 const FORM_SUB: [RegExp, string][] = [
@@ -24,7 +24,7 @@ const FORM_SUB: [RegExp, string][] = [
   [/exercise/, 'treatise'],
 ];
 
-export interface IngestReport { files: number; added: number; strippedLinks: number; rejected: string[] }
+export interface IngestReport { files: number; added: number; strippedLinks: number; rejected: string[]; fresh?: number }
 
 export function ingestFlagships(g: Gen, dir: string, simPersons: number, world?: string): IngestReport {
   const rep: IngestReport = { files: 0, added: 0, strippedLinks: 0, rejected: [] };
@@ -32,6 +32,11 @@ export function ingestFlagships(g: Gen, dir: string, simPersons: number, world?:
   const ctx = g.ctx;
   const s = ctx.s;
   const files = readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
+  // Catalogue numbers of flagships are frozen in catalog.json: other documents cite them, so adding a
+  // flagship must never renumber the ones after it in filename order. New flagships get fresh numbers.
+  const regPath = join(dir, 'catalog.json');
+  const registry: Record<string, string> = existsSync(regPath) ? JSON.parse(readFileSync(regPath, 'utf8')) : {};
+  const fresh: Artifact[] = [];
   for (const f of files) {
     rep.files++;
     const raw = readFileSync(join(dir, f), 'utf8');
@@ -80,14 +85,42 @@ export function ingestFlagships(g: Gen, dir: string, simPersons: number, world?:
     const seat = polity !== null ? ctx.capitalAt(s.polities[polity], Math.min(year, (s.polities[polity].died ?? 5000) - 1)) : null;
     const modern = year >= 4800 && /essay|article|lecture|biograph|preface/.test(form);
     const editorial = `\n\n---\n\n**Editorial note.** ${/^[aeiou]/i.test(form) ? 'An' : 'A'} ${form}${subject.startsWith('evt:') || subject.startsWith('per:') ? ` concerning [[${subject}|${g.T.title.get(subject) ?? ''}]]` : ''}. ${modern ? 'Modern scholarship by one of the archive’s own historians; it may cite documents by catalogue number.' : 'One of the archive’s flagship documents: a literary source, read with the usual caution about its author’s loyalties.'}`;
-    g.add({
+    const fid = fm.get('id') ?? f.replace(/\.md$/, '');
+    const art = g.add({
       sub, year, title, author, polity, lang, script: script >= 0 && s.scripts[script]?.born <= year ? script : -1, medium: fm.get('medium') ?? 'manuscript',
       cell, settlement: seat, about, body: body + editorial, mentions, dateText: dateFor(g, polity, lang, year, f), flagship: true, durable: 1, tau: 1e9, seat,
-      data: { flagshipId: fm.get('id') ?? f.replace(/\.md$/, ''), form },
+      data: { flagshipId: fid, form },
     });
+    const frozen = registry[fid];
+    if (frozen && frozen.split('·')[1] === art.catalog.split('·')[1]) art.catalog = frozen;
+    else fresh.push(art);
     rep.added++;
   }
+  // fresh flagships number after everything already used in their series
+  const used = new Map<string, number>();
+  for (const x of g.artifacts) {
+    if (fresh.includes(x)) continue;
+    const [, code, num] = x.catalog.split('·');
+    used.set(code, Math.max(used.get(code) ?? 0, Number(num)));
+  }
+  for (const x of fresh) {
+    const code = x.catalog.split('·')[1];
+    const n = (used.get(code) ?? 0) + 1;
+    used.set(code, n);
+    x.catalog = `PAL·${code}·${String(n).padStart(5, '0')}`;
+  }
+  for (const [code, n] of used) g.counters.set(code, Math.max(g.counters.get(code) ?? 0, n));
+  rep.fresh = fresh.length;
   return rep;
+}
+
+/** Write the frozen catalogue numbers of all ingested flagships (run once after a wave is accepted). */
+export function freezeCatalog(g: Gen, dir: string): number {
+  const reg: Record<string, string> = {};
+  for (const x of g.artifacts) if (x.flagship) reg[String(x.data?.flagshipId)] = x.catalog;
+  const sorted = Object.fromEntries(Object.entries(reg).sort(([a], [b]) => a.localeCompare(b)));
+  writeFileSync(join(dir, 'catalog.json'), JSON.stringify(sorted, null, 1) + '\n');
+  return Object.keys(sorted).length;
 }
 
 /** The document's date as its own culture would write it (modern essays keep AY). */
