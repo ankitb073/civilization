@@ -50,8 +50,9 @@ export function applySurvival(g: Gen): void {
       const site = a.settlement ?? nearestSite(g, a.cell);
       let ex = site !== null ? excavations.get(site) : undefined;
       if (site !== null && !ex) {
-        const year = r.int(4790, 4985);
-        const by = g.scholarFor(a.lang, year, 'archaeologist');
+        const by = g.scholarFor(a.lang, 4900, 'archaeologist');
+        const sp = s.persons[by];
+        const year = r.int(Math.max(4790, sp.born + 25), Math.max(Math.max(4790, sp.born + 25), Math.min(4985, sp.died - 3)));
         const t = s.settlements[site];
         const ev = archiveEvent(g, 'excavation', year, t.cell, [[`set:${site}`, 'site'], [`per:${by}`, 'excavator']], [], {}, 0.12);
         ex = { year, by, event: ev };

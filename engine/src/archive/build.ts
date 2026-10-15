@@ -12,6 +12,7 @@ import { genInscriptions } from '../artifacts/inscription.ts';
 import { genLedgers } from '../artifacts/ledger.ts';
 import { applySurvival } from '../artifacts/survival.ts';
 import { genMore } from '../artifacts/more.ts';
+import { genExcavationReports } from '../artifacts/modern.ts';
 import { resetCalendarCache } from './doc.ts';
 import type { PageJson } from '../export/contract.ts';
 
@@ -40,8 +41,11 @@ export function buildArchive(r: SimResult, log: (m: string) => void = () => {}):
   genMore(gen);
   log(`generated ${gen.artifacts.length} candidate documents (${((performance.now() - t0) / 1000).toFixed(1)}s)`);
   applySurvival(gen);
+  for (const a of gen.artifacts) if (a.status === 'extant') T.pageRefs.add(`art:${a.id}`);
+  const before = gen.artifacts.length;
+  genExcavationReports(gen);
+  for (const a of gen.artifacts.slice(before)) T.pageRefs.add(`art:${a.id}`);
   const extant = gen.artifacts.filter((a) => a.status === 'extant');
-  for (const a of extant) T.pageRefs.add(`art:${a.id}`);
   for (const a of extant) {
     T.title.set(`art:${a.id}`, `${a.catalog} ${a.title}`);
     T.short.set(`art:${a.id}`, a.title);
