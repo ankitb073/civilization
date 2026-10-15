@@ -11,7 +11,18 @@ Palimpsest generates a world from a single seed and simulates it century by cent
 
 Every document links to the people, places, states and events it mentions, and every page links back. A consistency checker audits the archive against the causal record on every build: about 1.8 million facts, zero violations.
 
-<!-- screenshots -->
+![Five thousand years of borders](docs/img/borders.gif)
+
+| | |
+|---|---|
+| ![The atlas at AY 3700](docs/img/map.png) | ![Two chronicles against the record](docs/img/compare.png) |
+| **The atlas.** Scrub 5,000 years; borders, cities, events and trade routes follow. | **Rival accounts.** Each side's chronicle set against what actually happened. |
+| ![An inscription with interlinear gloss](docs/img/inscription.png) | ![A flagship source](docs/img/poem.png) |
+| **Epigraphy.** Transliteration, normalized text, Leipzig gloss and translation, all from one clause. | **Flagship sources.** Literary documents written from dossiers and checked like everything else. |
+| ![The story view](docs/img/story.png) | ![The graph of history](docs/img/graph.png) |
+| **The story.** Scroll through the ages; the map flies to each turning point. | **The graph.** Every person, place, state, event and document, laid out by force. |
+
+**[The Histomap of Yüvinzhi →](docs/img/histomap.png)**: five millennia of states as streams of population share, in the spirit of John B. Sparks's 1931 *Histomap*.
 
 > Fiction. The peoples, languages and events are generated; any resemblance to real history comes from shared dynamics, not copying.
 
