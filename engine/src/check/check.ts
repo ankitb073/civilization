@@ -132,7 +132,9 @@ export function runChecks(dbPath: string): CheckReport {
     for (const r of all('SELECT person, role, start, end_year FROM roles')) {
       const p = persons.get(Number(r.person));
       const s = Number(r.start);
+      const e = r.end_year === null ? null : Number(r.end_year);
       if (!p || s < p.born || s > p.died) c.bad(`per:${r.person} ${r.role} from ${s} outside life ${p?.born}–${p?.died}`);
+      else if (e !== null && e > p.died) c.bad(`per:${r.person} ${r.role} until ${e}, after death in ${p.died}`);
       else c.ok();
     }
   }

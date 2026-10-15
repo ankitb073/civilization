@@ -188,7 +188,8 @@ export class WorldDb {
     ]), true);
     this.db.exec('DELETE FROM roles');
     const roles: Row[] = [];
-    for (const p of s.persons) for (const r of p.roles) roles.push([p.id, r.role, r.polity, r.start, r.end, r.event, r.ref ?? null]);
+    // offices end with their holder: the decadal step can close a role a few years after its holder died
+    for (const p of s.persons) for (const r of p.roles) roles.push([p.id, r.role, r.polity, r.start, r.end === null ? null : Math.min(r.end, Math.max(r.start, p.died)), r.event, r.ref ?? null]);
     this.insert('roles', roles);
     this.insert('dynasties', s.dynasties.map((d) => [d.id, d.nameId, d.founder, d.polity, d.start, d.end]), true);
     this.insert('settlements', s.settlements.map((t) => [t.id, t.nameId, t.cell, t.founded, t.abandoned, t.foundEvent, t.endEvent, t.culture, t.peakPop, t.port ? 1 : 0, JSON.stringify(t.names), JSON.stringify(t.sacks)]), true);
