@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { playing, setYear, theme, year, yearEnd } from '../state.ts';
-import { eraAt, mapData, meta } from '../store.ts';
+import { eraAt, layersVersion, mapData, meta } from '../store.ts';
 
 const SPEEDS = [25, 50, 100, 200];
 
@@ -138,7 +138,7 @@ export function TimeSlider({ compact = false }: { compact?: boolean }) {
       ctx.fillText(String(t), x + 3, h - 1);
     }
     void ink;
-  }, [w, m, d, theme.value, end]);
+  }, [w, m, d, theme.value, end, d?.timeline.events.length, layersVersion.value]);
 
   // global keys: ←/→ step the year (Shift = 100), space plays — unless typing somewhere
   useEffect(() => {

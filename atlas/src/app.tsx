@@ -13,6 +13,8 @@ const GraphView = lazy(() => import('./views/GraphView.tsx').then((m) => ({ defa
 const StoryView = lazy(() => import('./views/StoryView.tsx').then((m) => ({ default: m.StoryView })));
 const HistomapView = lazy(() => import('./views/HistomapView.tsx').then((m) => ({ default: m.HistomapView })));
 const LanguagesView = lazy(() => import('./views/LanguagesView.tsx').then((m) => ({ default: m.LanguagesView })));
+const CollectionsView = lazy(() => import('./views/CollectionsView.tsx').then((m) => ({ default: m.CollectionsView })));
+const DynastiesView = lazy(() => import('./views/DynastyView.tsx').then((m) => ({ default: m.DynastiesView })));
 const PricesView = lazy(() => import('./views/PricesView.tsx').then((m) => ({ default: m.PricesView })));
 
 const NAV = [
@@ -40,7 +42,7 @@ export function App() {
   }, [r.view, m]);
   useEffect(() => { if (r.view !== 'map' && r.view !== 'graph') window.scrollTo(0, 0); }, [r.view, r.id]);
 
-  const active = r.view === 'page' || r.view === 'compare' ? 'browse' : r.view === 'prices' ? 'about' : r.view;
+  const active = r.view === 'page' || r.view === 'compare' || r.view === 'collections' || r.view === 'dynasties' ? 'browse' : r.view === 'prices' ? 'about' : r.view;
   const tabActive = active === 'languages' || r.view === 'prices' ? 'browse' : active;
   const clean = r.params.get('clean') === '1';
   const og = r.params.get('og') === '1' || r.params.get('frames') === '1';
@@ -95,6 +97,16 @@ export function App() {
         {r.view === 'prices' && (
           <Suspense fallback={<div class="center-load"><div class="spinner" /> Opening the ledgers…</div>}>
             <PricesView />
+          </Suspense>
+        )}
+        {r.view === 'collections' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Opening the cabinets…</div>}>
+            <CollectionsView id={r.id} />
+          </Suspense>
+        )}
+        {r.view === 'dynasties' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Unrolling the pedigrees…</div>}>
+            <DynastiesView id={r.id} />
           </Suspense>
         )}
         {r.view === 'page' && r.id && <PageView id={r.id} />}

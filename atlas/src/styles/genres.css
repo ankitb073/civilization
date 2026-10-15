@@ -1,0 +1,289 @@
+/* ------------------------------------------------------------ shared: corrections, dash cells, totals */
+.prose del.err {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  color: var(--muted);
+}
+.prose ins.corr {
+  text-decoration: none;
+}
+.prose td.dash {
+  color: var(--faint);
+}
+.prose tr.total td {
+  border-top: 3px double var(--ink-2);
+  border-bottom: none;
+}
+
+/* ------------------------------------------------------------ glossary: two-column word table */
+.doc--glossary .prose table {
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+.doc--glossary .prose th {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  border-bottom: 2px solid var(--ink-2);
+}
+.doc--glossary .prose td:first-child {
+  font: 600 11.5px/1.6 var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  width: 26%;
+}
+.doc--glossary .prose td:not(:first-child) {
+  font-style: normal;
+}
+.doc--glossary .prose td em {
+  color: var(--muted);
+  font-size: 0.86em;
+}
+.doc--glossary .prose tbody tr:nth-child(odd) td {
+  background: color-mix(in srgb, var(--bg-2) 55%, transparent);
+}
+
+/* ------------------------------------------------------------ muster roll and harbour register: tallies */
+.doc--muster .prose table,
+.doc--manifest .prose table {
+  font-size: 14.5px;
+}
+.doc--muster .prose th,
+.doc--manifest .prose th {
+  font: 600 11px/1.4 var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 3px double var(--rule);
+}
+.doc--muster .prose td,
+.doc--manifest .prose td {
+  border-bottom: 1px dotted var(--rule);
+}
+.doc--muster .prose td:first-child,
+.doc--manifest .prose td:first-child {
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+.doc--muster .prose td:last-child {
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
+  font-weight: 500;
+}
+.doc--muster .prose th:last-child {
+  text-align: right;
+}
+.doc--muster .prose tr.total td,
+.doc--manifest .prose tr.total td {
+  font-size: 16px;
+}
+.doc--manifest {
+  background-image: repeating-linear-gradient(transparent 0 31px, var(--rule-2) 31px 32px);
+  background-size: auto;
+}
+
+/* ------------------------------------------------------------ will: testament */
+.doc--will {
+  padding: 40px 48px 30px;
+  border-top: 3px double var(--ink-2);
+  border-bottom: 3px double var(--ink-2);
+}
+.doc--will .prose > p:first-child {
+  text-align: center;
+  font-variant: small-caps;
+  letter-spacing: 0.03em;
+  font-size: 1.05em;
+  margin-bottom: 1.2em;
+}
+.doc--will .prose ol {
+  list-style: none;
+  counter-reset: bequest;
+  padding: 0;
+}
+.doc--will .prose ol > li {
+  counter-increment: bequest;
+  position: relative;
+  padding: 0.35em 0 0.35em 3.2em;
+  border-bottom: 1px solid var(--rule-2);
+}
+.doc--will .prose ol > li::before {
+  content: 'Item ' counter(bequest, upper-roman) '.';
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  font-variant: small-caps;
+  font-size: 0.82em;
+  color: var(--accent);
+}
+.doc--will .prose ol + p {
+  margin-top: 1.2em;
+  text-align: right;
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------ school exercise: red ink */
+.doc--exercise {
+  background-color: #f6efd9;
+  background-image: repeating-linear-gradient(transparent 0 30px, rgba(80, 110, 150, 0.16) 30px 31px);
+  border-color: #dccfa9;
+}
+:root[data-theme='dark'] .doc--exercise {
+  background-color: #262418;
+  background-image: repeating-linear-gradient(transparent 0 30px, rgba(140, 170, 210, 0.12) 30px 31px);
+  border-color: #4a4430;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .doc--exercise {
+    background-color: #262418;
+    background-image: repeating-linear-gradient(transparent 0 30px, rgba(140, 170, 210, 0.12) 30px 31px);
+    border-color: #4a4430;
+  }
+}
+.doc--exercise .prose {
+  line-height: 31px;
+}
+.doc--exercise .prose del.err {
+  color: var(--ink-2);
+  text-decoration-color: #c0261a;
+  text-decoration-thickness: 2px;
+}
+.doc--exercise .prose ins.corr,
+.doc--exercise .prose ins.corr a {
+  font-family: var(--font-hand);
+  font-size: 1.32em;
+  color: #c0261a !important;
+  text-decoration: none;
+  transform: rotate(-2deg);
+  display: inline-block;
+  line-height: 1;
+}
+.doc--exercise .prose p:has(> em:first-child) em:first-child {
+  font-style: normal;
+}
+.doc--exercise .prose > p:nth-of-type(2) {
+  font-family: var(--font-hand);
+  font-size: 1.35em;
+  color: #c0261a;
+  transform: rotate(-1deg);
+}
+
+/* ------------------------------------------------------------ graffito: scratched into stone */
+.doc--graffito {
+  background: linear-gradient(160deg, #c9c2b4, #b9b1a2);
+  border-color: #a59d8e;
+  color: #2b2620;
+}
+:root[data-theme='dark'] .doc--graffito {
+  background: linear-gradient(160deg, #3a3833, #2e2c28);
+  border-color: #4b4840;
+  color: #e7dfcf;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .doc--graffito {
+    background: linear-gradient(160deg, #3a3833, #2e2c28);
+    border-color: #4b4840;
+    color: #e7dfcf;
+  }
+}
+.doc--graffito .prose {
+  color: inherit;
+}
+.doc--graffito .prose blockquote {
+  border: none;
+  margin: 1em 0 1.2em;
+  padding: 0;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-style: normal;
+  font-size: 2.05em;
+  line-height: 1.2;
+  color: inherit;
+  transform: rotate(-2.2deg);
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.35), -1px -1px 0 rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.02em;
+}
+.doc--graffito .prose a.wl {
+  color: inherit;
+}
+
+/* ------------------------------------------------------------ almanac: a twelve-month grid */
+.doc--almanac .prose table,
+.doc--almanac .prose tbody {
+  display: block;
+}
+.doc--almanac .prose thead {
+  display: none;
+}
+.doc--almanac .prose tbody {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.doc--almanac .prose tr {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 108px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.doc--almanac .prose td {
+  display: block;
+  padding: 0;
+  border: none;
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.35;
+}
+.doc--almanac .prose td:first-child {
+  font-size: 18px;
+  font-weight: 600;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rule);
+}
+.doc--almanac .prose td:first-child a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.doc--almanac .prose td:nth-child(2):not(.dash) {
+  color: var(--accent);
+}
+.doc--almanac .prose td:nth-child(2):not(.dash)::before {
+  content: '✦ ';
+  font-size: 0.8em;
+}
+.doc--almanac .prose td:nth-child(3):not(.dash) {
+  font-style: italic;
+  color: var(--ink-2);
+}
+.doc--almanac .prose td.dash {
+  display: none;
+}
+.doc--almanac .table-wrap {
+  overflow: visible;
+}
+
+/* ------------------------------------------------------------ lawsuit: case record */
+.doc--lawsuit {
+  padding-top: 22px;
+}
+.doc--lawsuit .prose > p:first-child {
+  font-variant: small-caps;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.6em;
+}
+.doc--lawsuit .prose p:has(> strong:first-child) {
+  padding: 0.7em 1em;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+  border-radius: 0 6px 6px 0;
+}
+.doc--lawsuit .prose p:last-of-type:not(:has(strong)) {
+  font-size: 0.88em;
+  color: var(--muted);
+}

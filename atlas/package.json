@@ -5,17 +5,20 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -p tsconfig.json && vite build",
+    "dev": "node --disable-warning=ExperimentalWarning scripts/prepare-data.ts && vite",
+    "build": "node --disable-warning=ExperimentalWarning scripts/prepare-data.ts && tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "mock": "node --disable-warning=ExperimentalWarning scripts/mock-data.ts",
     "shoot": "node --disable-warning=ExperimentalWarning scripts/shoot.ts",
     "frames": "node --disable-warning=ExperimentalWarning scripts/frames.ts",
-    "fixtures": "node --disable-warning=ExperimentalWarning scripts/fixture-flagships.ts"
+    "fixtures": "node --disable-warning=ExperimentalWarning scripts/fixture-flagships.ts",
+    "prepare-data": "node --disable-warning=ExperimentalWarning scripts/prepare-data.ts",
+    "loadprobe": "node --disable-warning=ExperimentalWarning scripts/loadprobe.ts"
   },
   "dependencies": {
-    "@fontsource/eb-garamond": "5.3.0",
-    "@fontsource/inter": "5.3.0",
+    "@fontsource-variable/eb-garamond": "5.2.5",
+    "@fontsource-variable/inter": "5.2.5",
+    "@fontsource/caveat": "5.2.8",
     "@preact/signals": "2.11.3",
     "d3-delaunay": "6.0.4",
     "d3-force": "3.0.0",

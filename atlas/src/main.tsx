@@ -1,15 +1,14 @@
 import { render } from 'preact';
-import '@fontsource/eb-garamond/400.css';
-import '@fontsource/eb-garamond/400-italic.css';
-import '@fontsource/eb-garamond/500.css';
-import '@fontsource/eb-garamond/600.css';
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/500.css';
-import '@fontsource/inter/600.css';
+// variable fonts: one file per family/style instead of one per weight
+import '@fontsource-variable/eb-garamond/wght.css';
+import '@fontsource-variable/eb-garamond/wght-italic.css';
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource/caveat/500.css';
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/reader.css';
 import './styles/views2.css';
+import './styles/genres.css';
 import { App } from './app.tsx';
 
 render(<App />, document.getElementById('app')!);

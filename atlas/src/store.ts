@@ -1,8 +1,10 @@
-import { signal } from '@preact/signals';
+import { effect, signal } from '@preact/signals';
 import type { Layer, MetaJson, TimelineJson } from '../../engine/src/export/contract.ts';
+import { year } from './state.ts';
 import { fetchJson, loadMeta, loadTimeline, loadWorld, loadSearch, type SearchIndex } from './data.ts';
 import { buildGeo } from './geo.ts';
-import { LayerState, type LayerLike } from './layers.ts';
+import { ChunkedLayerState, LayerState, type LayerLike } from './layers.ts';
+import { TL_VERSION, expandEvents, expandLegend, expandPolities, type TlChunk, type TlCore, type TlEvents } from './tl.ts';
 import { buildLanguageLayer, loadLanguages } from './languages.ts';
 import type { MapData } from './views/mapRenderer.ts';
 import type { LayerName } from './state.ts';
@@ -24,25 +26,92 @@ export function ensureMeta(): Promise<MetaJson> {
   }).catch((e) => { loadError.value = String(e); throw e; });
 }
 
+/** Set once the map has drawn for the first time; secondary fetches wait for it. */
+export const firstPaint = signal(false);
+
+function whenIdle(fn: () => void, timeout = 1500) {
+  const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+  if (ric) ric(fn, { timeout }); else setTimeout(fn, 200);
+}
+
+/** After the first paint: the rest of the political layer, event titles and routes. */
+function loadDeferred(d: MapData, core: TlCore, political: ChunkedLayerState) {
+  // events (markers, titles) come first and quickly; the rest when the browser is idle
+  const events = () => fetchJson<TlEvents>(`tl/${core.events}`).then((E) => {
+    d.timeline.events = expandEvents(E);
+    layersVersion.value++;
+  }).catch(() => {});
+  const go = () => whenIdle(() => {
+    void political.prefetch(year.peek());
+    fetchJson<TimelineJson['routes']>(`tl/${core.routes}`).then((routes) => {
+      d.timeline.routes = routes;
+      layersVersion.value++;
+    }).catch(() => {});
+  });
+  const start = () => { void events().then(go); };
+  if (firstPaint.peek()) start();
+  else { const stop = effect(() => { if (firstPaint.value) { stop(); start(); } }); }
+}
+
 export function ensureMapData(): Promise<MapData> {
   if (!mapP) {
-    mapP = Promise.all([loadWorld(), loadTimeline()]).then(([world, timeline]) => {
+    const split = fetchJson<TlCore>('tl/core.json').then((c) => (c.v === TL_VERSION ? c : Promise.reject(new Error('tl version'))));
+    mapP = Promise.all([loadWorld(), split.catch(() => null)]).then(async ([world, core]) => {
       const geo = buildGeo(world);
+      if (!core) {
+        // a plain export without the atlas-side split: use timeline.json as is
+        const timeline = await loadTimeline();
+        const d: MapData = {
+          world, timeline, geo,
+          layers: { political: new LayerState(timeline.layers.political) },
+          polityByIdx: new Map(timeline.polities.map((p) => [p.idx, p])),
+          settlementByIdx: new Map(timeline.settlements.map((s) => [s.idx, s])),
+        };
+        // inline culture/religion layers (older exports, mock data) are used directly
+        if (timeline.layers.culture) d.layers.culture = new LayerState(timeline.layers.culture);
+        if (timeline.layers.religion) d.layers.religion = new LayerState(timeline.layers.religion);
+        firstPaint.value = true;
+        mapData.value = d;
+        return d;
+      }
+      const P = core.political;
+      const legend = expandLegend(P.legend);
+      const timeline: TimelineJson = {
+        layers: { political: { legend, keyframeEvery: P.keyframeEvery, keyframes: [], deltas: '', deltaCount: 0, deltaBase: 0 } },
+        layerFiles: core.layerFiles,
+        polities: expandPolities(core.polities),
+        settlements: core.settlements,
+        events: [],
+        climate: core.climate,
+        routes: [],
+      };
+      const political = new ChunkedLayerState({
+        legend, keyframeEvery: P.keyframeEvery, chunkYears: P.chunkYears, chunkCount: P.chunks.length, cells: geo.n,
+        fetchChunk: (i) => fetchJson<TlChunk>(`tl/${P.chunks[i].file}`).then((c) => ({ ...c, legend, keyframeEvery: P.keyframeEvery })),
+        onLoad: () => { layersVersion.value++; },
+      });
       const d: MapData = {
         world, timeline, geo,
-        layers: { political: new LayerState(timeline.layers.political) },
+        layers: { political },
         polityByIdx: new Map(timeline.polities.map((p) => [p.idx, p])),
         settlementByIdx: new Map(timeline.settlements.map((s) => [s.idx, s])),
       };
-      // inline culture/religion layers (older exports, mock data) are used directly
-      if (timeline.layers.culture) d.layers.culture = new LayerState(timeline.layers.culture);
-      if (timeline.layers.religion) d.layers.religion = new LayerState(timeline.layers.religion);
+      await political.ensure(year.peek());
       mapData.value = d;
+      loadDeferred(d, core, political);
       return d;
     });
     mapP.catch((e) => { loadError.value = String(e); mapP = null; });
   }
   return mapP;
+}
+
+/** Resolve when the political layer for `y` is loaded (for frame capture and tours). */
+export function ensurePoliticalYear(y: number): Promise<void> {
+  return ensureMapData().then((d) => {
+    const p = d.layers.political as LayerLike & { ensure?: (y: number) => Promise<void> };
+    return p.ensure ? p.ensure(y) : undefined;
+  });
 }
 
 const layerP = new Map<LayerName, Promise<LayerLike>>();

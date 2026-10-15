@@ -70,6 +70,8 @@ export function AboutView() {
         <h2 class="sect">More ways in</h2>
         <nav class="explore explore--wide" aria-label="Explore">
           <a href="#/story"><span>Story</span>Five thousand years in seven chapters</a>
+          <a href="#/collections"><span>Collections</span>Curated lists: queens, plagues, lost works, wars told twice</a>
+          <a href="#/dynasties"><span>Dynasties</span>Family trees of the great ruling houses</a>
           <a href="#/languages"><span>Languages</span>The Tree of Tongues: every language and its descendants</a>
           <a href="#/prices"><span>Prices</span>What things cost: grain, tin and iron over five millennia</a>
           <a href="#/graph"><span>Graph</span>The web of every person, place and event</a>

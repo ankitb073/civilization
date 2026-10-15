@@ -20,6 +20,9 @@ export function inline(src: string, title: TitleLookup = () => undefined): strin
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, t: string, u: string) => stash(`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`));
   s = esc(s);
   s = s.replace(/\[(\.\.\.|…|x(?: x)*)\]/g, '<span class="lac" title="lacuna — text lost">[$1]</span>');
+  // ~~error~~ correction  → struck-through error followed by the correction (school exercises)
+  s = s.replace(/~~([^~]+)~~(\s+)(\u0000\d+\u0000|[^\s<,.;:]+)?/g, (_m, err: string, sp: string, corr?: string) =>
+    `<del class="err">${err}</del>${sp}${corr ? `<ins class="corr">${corr}</ins>` : ''}`);
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, '$1<em>$2</em>');
   s = s.replace(/(^|[\s(])_([^_\s][^_]*?)_(?=[\s.,;:!?)]|$)/g, '$1<em>$2</em>');
@@ -51,15 +54,33 @@ export function render(md: string, title: TitleLookup = () => undefined, opts: {
       continue;
     }
     if (/^\s*\|/.test(l) && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i + 1])) {
-      const row = (r: string) => r.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+      // split on | but not inside [[id|text]] links
+      const row = (r: string) => {
+        const t = r.trim().replace(/^\|/, '').replace(/\|$/, '');
+        const cells: string[] = [];
+        let cur = '', depth = 0;
+        for (let k = 0; k < t.length; k++) {
+          if (t.startsWith('[[', k)) { depth++; cur += '[['; k++; continue; }
+          if (t.startsWith(']]', k) && depth > 0) { depth--; cur += ']]'; k++; continue; }
+          if (t[k] === '|' && depth === 0) { cells.push(cur.trim()); cur = ''; continue; }
+          cur += t[k];
+        }
+        cells.push(cur.trim());
+        return cells;
+      };
       const head = row(l);
       const aligns = row(lines[i + 1]).map((c) => (c.endsWith(':') ? 'right' : ''));
       i += 2;
       const body: string[][] = [];
       while (i < lines.length && /^\s*\|/.test(lines[i])) { body.push(row(lines[i])); i++; }
       const num = (c: string) => /^[−\-+]?[\d,.\s]+%?$/.test(c);
+      const dash = (c: string) => /^[—–-]$/.test(c.trim()) || c.trim() === '';
+      const total = (r: string[]) => /^\*\*(total|sum)/i.test(r[0] ?? '');
       out.push(`<div class="table-wrap"><table><thead><tr>${head.map((h, k) => `<th${aligns[k] ? ` class="r"` : ''}>${inline(h, title)}</th>`).join('')}</tr></thead><tbody>${body
-        .map((r) => `<tr>${r.map((c, k) => `<td${aligns[k] || num(c) ? ' class="r"' : ''}>${inline(c, title)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+        .map((r) => `<tr${total(r) ? ' class="total"' : ''}>${r.map((c, k) => {
+          const cls = [aligns[k] || num(c) ? 'r' : '', dash(c) ? 'dash' : ''].filter(Boolean).join(' ');
+          return `<td${cls ? ` class="${cls}"` : ''} data-col="${esc(head[k] ?? '').replace(/\[\[[^\]|]+\|([^\]]*)\]\]/g, '$1')}">${inline(c, title)}</td>`;
+        }).join('')}</tr>`).join('')}</tbody></table></div>`);
       continue;
     }
     if ((m = l.match(/^\s*([-*+]|\d+[.)])\s+/))) {

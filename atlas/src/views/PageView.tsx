@@ -6,12 +6,27 @@ import { fmtSpan, fmtYear, subLabel } from '../format.ts';
 import { KIND_LABEL, KINDS, kindFromId } from '../kinds.ts';
 import { inline, render } from '../md.ts';
 import { isMobile, mapHref, year } from '../state.ts';
+import { PersonHouse, PolityDynasties } from './DynastyView.tsx';
 import { titleOf } from '../store.ts';
+
+const DOC_LABEL: Record<string, string> = {
+  verse: 'Verse, in translation', diary: 'Entries, in translation', glossary: 'Word list', muster: 'Muster roll',
+  will: 'Testament, in translation', exercise: 'Exercise, with the teacher’s corrections', graffito: 'Scratched on the stone',
+  almanac: 'The year’s calendar', lawsuit: 'Case record, in translation', manifest: 'Harbour register',
+};
 
 const MAP_SELECTABLE = new Set(['polity', 'settlement', 'event', 'culture', 'movement']);
 
 export function docStyle(sub: string): string {
   const s = sub.toLowerCase();
+  if (/glossary|word-?list|lexicon/.test(s)) return 'glossary';
+  if (/muster/.test(s)) return 'muster';
+  if (/\bwill\b|testament/.test(s)) return 'will';
+  if (/exercise/.test(s)) return 'exercise';
+  if (/graffit/.test(s)) return 'graffito';
+  if (/almanac|calendar/.test(s)) return 'almanac';
+  if (/lawsuit|court|trial/.test(s)) return 'lawsuit';
+  if (/manifest|port-?register|cargo/.test(s)) return 'manifest';
   if (/poem|verse|song|hymn|elegy|lament|ode|epic/.test(s)) return 'verse';
   if (/diary|journal|day-?book of/.test(s)) return 'diary';
   if (/inscription|stele|epitaph|dedication|boundary|votive|monument|graffit/.test(s)) return 'stone';
@@ -111,7 +126,7 @@ function Page({ page }: { page: PageJson }) {
         {bodyHtml.trim() && (
           <section class={`doc${style ? ` doc--${style}` : ''}`} aria-label={page.kind === 'artifact' ? 'Text' : 'Article'}>
             {page.kind === 'artifact' && a?.interlinear && <div class="doc__label">Commentary</div>}
-            {page.kind === 'artifact' && !a?.interlinear && <div class="doc__label">{style === 'stone' ? 'Text' : style === 'verse' ? 'Verse, in translation' : style === 'diary' ? 'Entries, in translation' : 'Translation'}</div>}
+            {page.kind === 'artifact' && !a?.interlinear && <div class="doc__label">{DOC_LABEL[style] ?? (style === 'stone' ? 'Text' : 'Translation')}</div>}
             <Html class="doc__body prose" html={bodyHtml} />
           </section>
         )}
@@ -121,6 +136,9 @@ function Page({ page }: { page: PageJson }) {
         {page.accounts && page.accounts.sources.length > 0 && <AccountsTeaser page={page} label={label} />}
 
         {page.language && <LanguagePanel page={page} lang={page.language} label={label} />}
+
+        {page.kind === 'polity' && <PolityDynasties polity={page.id} />}
+        {page.kind === 'person' && <PersonHouse person={page.id} />}
 
         <LinkLists page={page} />
       </div>

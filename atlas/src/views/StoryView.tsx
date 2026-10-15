@@ -3,7 +3,7 @@ import type { StoryJson } from '../../../engine/src/export/contract.ts';
 import { fetchJson } from '../data.ts';
 import { inline, render } from '../md.ts';
 import { isMobile, mapHref, theme } from '../state.ts';
-import { ensureMapData, ensureMeta, eraAt, mapData, meta, titleOf } from '../store.ts';
+import { ensureMapData, ensureMeta, eraAt, layersVersion, mapData, meta, titleOf } from '../store.ts';
 import { MapRenderer } from './mapRenderer.ts';
 import { fmtYear } from '../format.ts';
 
@@ -68,6 +68,7 @@ export function StoryView() {
     return () => { ro.disconnect(); rendRef.current = null; };
   }, [d]);
   useEffect(() => { rendRef.current?.setTheme(theme.value); }, [theme.value]);
+  useEffect(() => { rendRef.current?.clearCaches(); }, [layersVersion.value]);
 
   const beaconCell = useRef(-1);
   const placeBeacon = () => {

@@ -2,11 +2,11 @@
 // Usage: npm --prefix atlas run build && npm --prefix atlas run shoot [-- --only=map,page]
 // Output: atlas/.shots/<name>-<viewport>[-dark].png, plus console errors on stdout.
 
-import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { serveDist } from './serve.ts';
 import type { MetaJson, SearchJson } from '../../engine/src/export/contract.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,6 +25,8 @@ const featured = (prefix: string) => meta.featured.find((f) => f.id.startsWith(p
 const firstOf = (kind: string, sub?: RegExp) => search.find((e) => e[2] === kind && (!sub || sub.test(e[5] ?? '')))?.[0];
 const featuredArt = (sub: RegExp) => meta.featured.map((f) => search.find((e) => e[0] === f.id)).find((e) => e && e[2] === 'artifact' && sub.test(e[5] ?? ''))?.[0];
 const war = meta.featured[0]?.id ?? firstOf('event', /war/);
+let dyn: { id: string; polity: string; members: unknown[] } | undefined;
+try { dyn = (JSON.parse(readFileSync(join(DATA, 'dynasties.json'), 'utf8')).dynasties as { id: string; polity: string; members: unknown[] }[]).sort((a, b) => b.members.length - a.members.length)[0]; } catch { /* older export */ }
 const polity = featured('pol:') ?? firstOf('polity');
 const person = search.filter((e) => e[2] === 'person').sort((a, b) => b[1].length - a[1].length)[Math.floor(search.length / 9) % 500]?.[0] ?? firstOf('person');
 const ids = {
@@ -73,6 +75,15 @@ const views: { name: string; hash: string; dark?: boolean; wait?: number; full?:
   { name: 'languages', hash: `#/languages`, wait: 1500, full: true },
   { name: 'prices', hash: `#/prices`, wait: 1800, full: true },
   { name: 'map-language', hash: `#/map?y=3200&l=language`, wait: 2000 },
+  { name: 'collections', hash: `#/collections`, wait: 1200 },
+  { name: 'collection-rival', hash: `#/collections/rival`, wait: 1200 },
+  { name: 'collection-queens', hash: `#/collections/queens`, wait: 1200 },
+  { name: 'dynasties', hash: `#/dynasties`, wait: 1500 },
+  ...(dyn ? [{ name: 'dynasty', hash: `#/dynasty/${dyn.id}`, wait: 1500 }, { name: 'polity-dyn', hash: `#/p/${dyn.polity}`, wait: 1500 }] : []),
+  ...['muster', 'will', 'exercise', 'graffito', 'lawsuit', 'almanac', 'glossary', 'manifest'].flatMap((sub) => {
+    const id = firstOf('artifact', new RegExp(`^${sub}$`));
+    return id ? [{ name: `genre-${sub}`, hash: `#/p/${id}`, wait: 900 }] : [];
+  }),
   { name: 'histomap-dark', hash: `#/histomap`, dark: true, wait: 1500 },
   { name: 'story', hash: `#/story`, wait: 2200 },
   { name: 'story-beat', hash: `#/story?at=c2b3`, wait: 3000 },
@@ -83,11 +94,8 @@ const views: { name: string; hash: string; dark?: boolean; wait?: number; full?:
   { name: 'search', hash: `#/search` },
 ];
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
-await new Promise<void>((resolve, reject) => {
-  const t = setTimeout(() => reject(new Error('preview server did not start')), 20000);
-  server.stdout!.on('data', (b: Buffer) => { if (b.toString().includes(String(PORT))) { clearTimeout(t); resolve(); } });
-});
+// gzip static server over dist/ (like GitHub Pages)
+const server = await serveDist(join(ROOT, 'dist'), PORT);
 
 // Prefer full Chromium with the real GPU (Metal on macOS); the headless shell falls back to software GL,
 // which makes WebGL/canvas timings meaningless.
@@ -280,7 +288,7 @@ try {
   }
 } finally {
   await browser.close();
-  server.kill();
+  server.close();
 }
 if (errors.length) {
   console.log(`\n${errors.length} console errors:`);

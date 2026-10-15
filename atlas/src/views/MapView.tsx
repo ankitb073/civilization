@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { effect } from '@preact/signals';
 import { route, layer, selection, showRoutes, theme, year, type LayerName, isMobile, panelCollapsed, PANEL_W, SHEET_PEEK, sheetSnap } from '../state.ts';
-import { ensureLayer, ensureMapData, eraAt, layersVersion, legendOf, mapData, meta } from '../store.ts';
+import { ensureLayer, ensureMapData, ensurePoliticalYear, eraAt, firstPaint, layersVersion, legendOf, mapData, meta } from '../store.ts';
 import { MapRenderer, type Hit } from './mapRenderer.ts';
 import { MapPanel } from './MapPanel.tsx';
 import { TimeSlider } from './TimeSlider.tsx';
@@ -35,8 +35,10 @@ export function MapView() {
     if (framesMode) {
       r.wholeWorld = true;
       (window as unknown as { __palimpsestSetYear?: (y: number) => Promise<void> }).__palimpsestSetYear = (y: number) => new Promise((res) => {
-        year.value = y;
-        requestAnimationFrame(() => requestAnimationFrame(() => res()));
+        ensurePoliticalYear(y).then(() => {
+          year.value = y;
+          requestAnimationFrame(() => requestAnimationFrame(() => res()));
+        });
       });
     }
     const insets = () => (route.peek().params.get('clean') === '1' || ogMode || framesMode ? [0, 0] : isMobile.peek() ? [0, sheetSnap.peek() === 'peek' ? SHEET_PEEK : Math.round((wrapRef.current?.clientHeight ?? 600) * 0.5)] : [panelCollapsed.peek() ? 0 : PANEL_W + 24, 0]);
@@ -59,9 +61,21 @@ export function MapView() {
       const [ir, ib] = insets();
       r.setInsets(ir, ib, ogMode ? 390 : 0);
     });
+    let lastVersion = layersVersion.peek();
+    r.onDraw = () => { if (!firstPaint.peek()) firstPaint.value = true; };
+    // labels are measured with the display font: redraw once web fonts arrive
+    document.fonts?.ready.then(() => r.clearCaches());
+    const onFonts = () => r.invalidate();
+    document.fonts?.addEventListener?.('loadingdone', onFonts);
     const dispose = effect(() => {
       r.year = year.value;
-      layersVersion.value;
+      if (layersVersion.value !== lastVersion) {
+        lastVersion = layersVersion.peek();
+        const hadEvents = r.eventCount();
+        r.clearCaches();
+        // a deep link to an event can only be centred once the events have arrived
+        if (!hadEvents && r.eventCount() && selection.peek()?.startsWith('evt:')) focusSelection(r, selection.peek(), false);
+      }
       const want = layer.value;
       if (d.layers[want]) r.layer = want;
       else ensureLayer(want).catch(() => {});
@@ -70,7 +84,7 @@ export function MapView() {
       r.setTheme(theme.value);
       r.invalidate();
     });
-    return () => { ro.disconnect(); dispose(); disposeInsets(); rendRef.current = null; };
+    return () => { ro.disconnect(); dispose(); disposeInsets(); document.fonts?.removeEventListener?.('loadingdone', onFonts); rendRef.current = null; };
   }, [d]);
 
   // pointer interactions: pan, pinch, wheel, tap

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { layer, selection, setYear, year, type LayerName } from '../state.ts';
-import { capitalAt, ensureLayer, eraAt, layersVersion, legendOf, mapData, meta, polityNameAt } from '../store.ts';
+import { capitalAt, ensureLayer, eraAt, firstPaint, layersVersion, legendOf, mapData, meta, polityNameAt } from '../store.ts';
 import { fmtCompact, fmtYear, subLabel } from '../format.ts';
 import { KIND_LABEL, kindFromId } from '../kinds.ts';
 import { PageCard } from '../components/PageCard.tsx';
@@ -8,6 +8,8 @@ import { MapRenderer } from './mapRenderer.ts';
 import { indexLanguages, loadLanguages, type LangIndex } from '../languages.ts';
 import { startTour } from '../components/Tour.tsx';
 import { HistomapThumb } from './HistomapView.tsx';
+import { CollectionStrip } from './CollectionsView.tsx';
+import { SurpriseButton } from '../components/Surprise.tsx';
 import { reducedMotion } from '../state.ts';
 
 export function MapPanel() {
@@ -96,9 +98,11 @@ function Intro() {
         {!reducedMotion && <button class="introlink" onClick={startTour}><span class="introlink__k">Watch</span>All 5,000 years in nine seconds ▶</button>}
       </div>
       <Featured />
+      {firstPaint.value && <CollectionStrip ids={['queens', 'rival', 'lives']} />}
+      <div class="introdice"><SurpriseButton label="Surprise me: a random document" /></div>
       <section class="hmsect">
         <h3 class="sect">The Histomap</h3>
-        <HistomapThumb height={86} />
+        {firstPaint.value ? <HistomapThumb height={86} /> : <div class="hmthumb hmthumb--wait" style={{ height: '120px' }} />}
       </section>
       {top.length > 0 && (
         <section class="legend">
@@ -251,7 +255,7 @@ function CellInfo({ cell }: { cell: number }) {
       if (dist < 90) out.push({ id: e.id, title: e.title, year: e.year, sub: e.sub, dist });
     }
     return out.sort((a, b) => Math.abs(a.year - y) - Math.abs(b.year - y)).slice(0, 8);
-  }, [cell, Math.floor(y / 5)]);
+  }, [cell, Math.floor(y / 5), layersVersion.value]);
   return (
     <div class="card">
       <dl class="kv">
@@ -271,7 +275,7 @@ function CellInfo({ cell }: { cell: number }) {
             <li>
               <button class="evlist__row" onClick={() => { selection.value = e.id; }}>
                 <span class="evlist__y">{e.year}</span>
-                <span class="evlist__t">{e.title}</span>
+                <span class="evlist__t">{e.title || '…'}</span>
                 <span class="evlist__s">{subLabel(e.sub)}</span>
               </button>
             </li>

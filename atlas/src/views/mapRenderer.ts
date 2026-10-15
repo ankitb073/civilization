@@ -1,6 +1,6 @@
 import type { TimelineJson, WorldJson } from '../../../engine/src/export/contract.ts';
 import { addCellToPath, type Geo } from '../geo.ts';
-import type { LayerLike, LayerState } from '../layers.ts';
+import type { LayerLike } from '../layers.ts';
 import type { LayerName } from '../state.ts';
 
 export interface MapData {
@@ -8,7 +8,7 @@ export interface MapData {
   timeline: TimelineJson;
   geo: Geo;
   /** political is always present; culture/religion load lazily. */
-  layers: { political: LayerState; culture?: LayerLike; religion?: LayerLike; language?: LayerLike };
+  layers: { political: LayerLike; culture?: LayerLike; religion?: LayerLike; language?: LayerLike };
   polityByIdx: Map<number, TimelineJson['polities'][number]>;
   settlementByIdx: Map<number, TimelineJson['settlements'][number]>;
 }
@@ -217,6 +217,20 @@ export class MapRenderer {
       }
     }
     this.rivers = [...byWidth.entries()].sort((a, b) => a[0] - b[0]).map(([width, path]) => ({ width, path }));
+  }
+
+  eventCount(): number {
+    return this.eventsSorted.length;
+  }
+
+  /** Drop per-year geometry (after more layer data arrives). */
+  clearCaches() {
+    this.yearCache.clear();
+    if (this.eventsSorted.length !== this.d.timeline.events.length) {
+      this.eventsSorted = this.d.timeline.events.slice().sort((a, b) => a.year - b.year);
+      this.eventYearIdx = Int32Array.from(this.eventsSorted.map((e) => e.year));
+    }
+    this.invalidate();
   }
 
   setTheme(t: 'light' | 'dark') {

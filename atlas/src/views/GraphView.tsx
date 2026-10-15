@@ -198,7 +198,7 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
         hideEdgesOnMove: true,
         hideLabelsOnMove: true,
         defaultEdgeColor: edgeColor,
-        labelFont: 'Inter, system-ui, sans-serif',
+        labelFont: "'Inter Variable', Inter, system-ui, sans-serif",
         labelSize: 12,
         labelWeight: '500',
         labelColor: { color: dark ? '#ece3cf' : '#1f1a14' },

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { fold } from '../data.ts';
 import { KIND_LABEL, KINDS } from '../kinds.ts';
 import { subLabel } from '../format.ts';
+import { SurpriseButton } from '../components/Surprise.tsx';
 import { route } from '../state.ts';
 import { ensureSearch, meta, searchIndex } from '../store.ts';
 
@@ -73,6 +74,8 @@ export function BrowseView() {
       <header class="browse__head">
         <h1 class="h-page">The archive</h1>
         <nav class="explore" aria-label="Explore">
+          <a href="#/collections"><span>Collections</span>Queens, plagues, wars told twice…</a>
+          <a href="#/dynasties"><span>Dynasties</span>The great ruling houses</a>
           <a href="#/story"><span>Story</span>Five thousand years in seven chapters</a>
           <a href="#/histomap"><span>Histomap</span>Every state as a stream</a>
           <a href="#/languages"><span>Languages</span>The Tree of Tongues</a>
@@ -80,6 +83,7 @@ export function BrowseView() {
         </nav>
         <p class="muted">{m ? `${KINDS.reduce((s, k) => s + (m.counts[k] ?? 0), 0).toLocaleString('en-US')} pages` : ''}{m?.counts.links ? ` · ${m.counts.links.toLocaleString('en-US')} links` : ''}. Filter by kind, period and name.</p>
       </header>
+      <div class="browse__dice"><SurpriseButton /></div>
       <div class="browse__filters">
         <input class="input" type="search" placeholder="Filter by name…" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Filter by name" />
         <div class="range">

@@ -8,7 +8,8 @@ It reads only the files defined in `../engine/src/export/contract.ts`, which liv
 npm install
 npm run mock       # stand-in data (refuses to overwrite a real export without -- --force)
 npm run dev        # http://localhost:5173
-npm run build      # tsc + vite build -> dist/
+npm run build      # prepare-data + tsc + vite build -> dist/
+npm run loadprobe  # first-load bytes and time to first map (gzip server, 4G throttling)
 npm run shoot      # screenshots (.shots/), interaction flows, slider perf probe
 npm run shoot -- --only=og --year=2750   # writes public/og.png social card (needs a build)
 ```
@@ -25,6 +26,16 @@ npm run shoot -- --only=og --year=2750   # writes public/og.png social card (nee
 | About | `#/about` | About the project. |
 
 `clean=1` hides the UI chrome. The social card uses it.
+
+## Data preparation
+
+`scripts/prepare-data.ts` runs before every build. It splits the engine's `timeline.json` into `public/data/tl/`, so that the first map paint loads only a small core and the political layer for the current millennium:
+
+- a columnar core;
+- six millennium chunks of the political layer;
+- events, and routes.
+
+Nothing changes in the engine contract; the atlas falls back to `timeline.json` when `tl/` is missing.
 
 ## Code layout
 
