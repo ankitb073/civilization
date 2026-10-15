@@ -236,6 +236,22 @@ export interface LanguagesJson {
   cultureLanguage: Record<number, string>;
 }
 
+// ---------------------------------------------------------------- words/index.json, words/<concept>.json (lazy)
+/** The Word Machine: how one word changed in every language, with each dated sound law. */
+export interface WordsIndexJson {
+  /** core: basic vocabulary; culture: kings, gods, money, war, writing, machines */
+  concepts: { id: string; group: 'core' | 'culture'; modern: string }[];
+  /** the language the modern sample is in (the archive's editorial language) */
+  sampleLanguage: string;
+}
+export interface WordJson {
+  concept: string;
+  /** Each language's own stretch of the word's history: the form it inherited at its birth (change null;
+   *  'proto' for a family root), then every change of form: a sound law's label, or 'replaced' when
+   *  the word itself was swapped (borrowing). Ancestors' steps are in their own entries. */
+  langs: { id: string; steps: [year: number, form: string, ipa: string, change: string | null][] }[];
+}
+
 // ---------------------------------------------------------------- economy.json
 /** Five millennia of prices: medians across markets, in grams of silver, plus every currency's
  *  silver content over time. */

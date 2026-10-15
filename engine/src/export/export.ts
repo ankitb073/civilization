@@ -7,13 +7,14 @@ import type { SimResult } from '../sim/run.ts';
 import type { Archive } from '../archive/build.ts';
 import type { CheckReport } from '../check/check.ts';
 import type {
-  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson, StoryJson, LanguagesJson, EconomyJson, CollectionsJson, DynastiesJson,
+  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson, StoryJson, LanguagesJson, EconomyJson, CollectionsJson, DynastiesJson, WordsIndexJson, WordJson,
 } from './contract.ts';
 import { SHARD_COUNT, shardOf, shardFile } from './contract.ts';
 import { BIOMES } from '../world/biomes.ts';
 import { TK } from '../sim/tech.ts';
 import { GOODS } from '../sim/economy.ts';
 import { Rng } from '../core/rng.ts';
+import { CONCEPTS } from '../lang/concepts.ts';
 import type { SimEvent } from '../sim/state.ts';
 
 export const ENGINE_VERSION = '1.0.0';
@@ -212,6 +213,14 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
 
   // ---------------------------------------------------------------- languages & economy
   writeSized('languages.json', languagesJson(r, a));
+  {
+    const { index, words } = wordsJson(r, a);
+    mkdirSync(join(dir, 'words'), { recursive: true });
+    writeSized('words/index.json', index);
+    let raw = 0;
+    for (const w of words) raw += write(`words/${w.concept}.json`, w);
+    log(`words: ${words.length} concepts, ${(raw / 1e6).toFixed(1)} MB raw`);
+  }
   writeSized('economy.json', economyJson(r, a));
 
   // ---------------------------------------------------------------- story
@@ -343,6 +352,45 @@ function languagesJson(r: SimResult, a: Archive): LanguagesJson {
       sample: ['water', 'king', 'god', 'mother'].map((c) => [c, s.lang.word(l.id, c, l.born).conventional, s.lang.word(l.id, c, Math.min(l.died ?? 5000, 5000)).conventional] as [string, string, string]),
     })),
     cultureLanguage: Object.fromEntries(s.cultures.map((c) => [c.id, `lan:${c.lang}`])),
+  };
+}
+
+const CULTURE_WORDS = ['king', 'queen', 'great-king', 'lord', 'god', 'goddess', 'priest', 'scribe', 'merchant', 'soldier', 'slave', 'city', 'temple', 'palace',
+  'war', 'peace', 'treaty', 'battle', 'army', 'law', 'tax', 'tribute', 'silver', 'gold', 'bronze', 'iron', 'coin', 'ship', 'road', 'market', 'sword',
+  'chariot', 'book', 'letter', 'prayer', 'truth', 'freedom', 'justice', 'empire', 'throne', 'crown', 'paper', 'bank', 'steam', 'machine', 'rail'];
+
+function wordsJson(r: SimResult, a: Archive): { index: WordsIndexJson; words: WordJson[] } {
+  const L = r.state.lang;
+  const langs = L.languages();
+  const ed = a.ctx.editorialLang;
+  const known = new Set(CONCEPTS.map((c) => c.id));
+  const picked: { id: string; group: 'core' | 'culture' }[] = [
+    ...CONCEPTS.filter((c) => c.core).map((c) => ({ id: c.id, group: 'core' as const })),
+    ...CULTURE_WORDS.filter((c) => known.has(c) && !CONCEPTS.find((x) => x.id === c)?.core).map((id) => ({ id, group: 'culture' as const })),
+  ];
+  const words: WordJson[] = picked.map(({ id: c }) => ({
+    concept: c,
+    langs: langs.map((l) => {
+      const end = Math.min(l.died ?? 5000, 5000);
+      const steps: WordJson['langs'][number]['steps'] = [];
+      let w = L.word(l.id, c, l.born);
+      steps.push([l.born, w.conventional, w.ipa, l.parent === null ? 'proto' : null]);
+      let prev = w.conventional;
+      const own = L.soundChanges(l.id).filter((ch) => ch.lang === l.id && ch.year > l.born && ch.year <= end);
+      for (const ch of own) {
+        const before = L.word(l.id, c, ch.year - 1);
+        if (before.conventional !== prev && ch.year - 1 > steps[steps.length - 1][0]) { steps.push([ch.year - 1, before.conventional, before.ipa, 'replaced']); prev = before.conventional; }
+        w = L.word(l.id, c, ch.year);
+        if (w.conventional !== prev) { steps.push([ch.year, w.conventional, w.ipa, ch.label]); prev = w.conventional; }
+      }
+      w = L.word(l.id, c, end);
+      if (w.conventional !== prev) steps.push([end, w.conventional, w.ipa, 'replaced']);
+      return { id: `lan:${l.id}`, steps };
+    }),
+  }));
+  return {
+    index: { concepts: picked.map(({ id, group }) => ({ id, group, modern: L.word(ed, id, 5000).conventional })), sampleLanguage: `lan:${ed}` },
+    words,
   };
 }
 
