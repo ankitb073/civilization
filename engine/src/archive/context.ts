@@ -199,6 +199,7 @@ export class Ctx {
         const full = this.s.lang.realize(nameId, o.lang, o.year).conventional;
         if (full.replace(/[^\p{L}]/gu, '').length > v.replace(/[^\p{L}]/gu, '').length) v = full;
       }
+      v = deBug(v);
       this.nameMemo.set(k, v);
     }
     return v;
@@ -258,6 +259,16 @@ export class Ctx {
   idNum(ref: string): number {
     return Number(ref.slice(ref.indexOf(':') + 1));
   }
+}
+
+/** A coined name that happens to spell a programmer's null ("None", "Null", "NaN") reads as a bug;
+ *  editors mark the final vowel instead (None → Nonë). */
+function deBug(v: string): string {
+  if (!/^(none|null|nil|nan|undefined|true|false|error|object)$/i.test(v)) return v;
+  const m = v.match(/^(.*)([aeiou])([^aeiou]*)$/i);
+  if (!m) return v + 'h';
+  const mark: Record<string, string> = { a: 'ä', e: 'ë', i: 'ï', o: 'ö', u: 'ü' };
+  return m[1] + (mark[m[2].toLowerCase()] ?? m[2]) + m[3];
 }
 
 export function roman(n: number): string {

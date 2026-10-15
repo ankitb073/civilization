@@ -33,7 +33,7 @@ Logs are non-decreasing in `year`. To get the map at year *Y*, apply all rows wi
 | Table | Notes |
 |---|---|
 | `polities` | states: culture, life span, founding and end events, `capitals` / `govs` / `techs` (JSON histories), predecessor, kind (`state`, `rebel`, …), succession law |
-| `polity_years` | decadal statistics per polity: cells, population, urban population, treasury (kg silver), army, stability, government, ruler, capital, religion, currency, era |
+| `polity_years` | decadal statistics per polity, recorded at the **end** of each decade (row year = decade start): cells, population, urban population, treasury (kg silver), army strength, stability, government, ruler, capital, religion, currency, era. For the ruler at an exact date use `roles`. |
 | `persons` | birth, death, cause and event of death, culture, parents, spouses (JSON), dynasty |
 | `roles` | `person, role, polity, start, end_year, event, ref`: rulers, generals, merchants, founders, prophets, scribes, historians, translators… |
 | `dynasties` | founder, polity, span |
