@@ -10,7 +10,7 @@ import type { Term } from '../sim/war.ts';
 import { Rng } from '../core/rng.ts';
 import { GOODS } from '../sim/economy.ts';
 import { fmtPrice, houseLabel } from './ledger.ts';
-import { cap, ordinal } from '../archive/context.ts';
+import { cap, ordinal, deBug } from '../archive/context.ts';
 import { domainPhrase } from '../archive/naming.ts';
 
 const GRAIN = GOODS.findIndex((x) => x.key === 'grain');
@@ -476,7 +476,7 @@ function glossary(g: Gen, A: number, B: number, borderCell: number, year: number
     for (const t of towns) {
       let nm = t.names[0][1];
       for (const [y, v] of t.names) if (y <= year) nm = v;
-      lines.push(`- ${d.link(`set:${t.id}`, s.lang.realize(nm, la, year).conventional)}, which they call *${s.lang.realize(nm, lb, year).conventional}*.`);
+      lines.push(`- ${d.link(`set:${t.id}`, deBug(s.lang.realize(nm, la, year).conventional))}, which they call *${deBug(s.lang.realize(nm, lb, year).conventional)}*.`);
     }
   }
   lines.push('');

@@ -263,7 +263,7 @@ export class Ctx {
 
 /** A coined name that happens to spell a programmer's null ("None", "Null", "NaN") reads as a bug;
  *  editors mark the final vowel instead (None → Nonë). */
-function deBug(v: string): string {
+export function deBug(v: string): string {
   if (!/^(none|null|nil|nan|undefined|true|false|error|object)$/i.test(v)) return v;
   const m = v.match(/^(.*)([aeiou])([^aeiou]*)$/i);
   if (!m) return v + 'h';

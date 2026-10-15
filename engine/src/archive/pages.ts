@@ -1,6 +1,6 @@
 // Entity pages: infobox, narrative, names through time, series, related documents.
 import type { Ctx } from './context.ts';
-import { cap, fmtNum, ordinal } from './context.ts';
+import { cap, fmtNum, ordinal, deBug } from './context.ts';
 import type { Titles } from './naming.ts';
 import { isPageEvent, mainGov, kindOfRef, domainPhrase } from './naming.ts';
 import type { PageJson, EntityKind } from '../export/contract.ts';
@@ -58,7 +58,7 @@ function nameHistory(ctx: Ctx, nameId: NameId, nativeLangAt: (y: number) => Lang
     const key = `${lang}|${r.conventional}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ year: y, lang: ctx.s.lang ? langLabel(ctx, lang) : '', form: r.conventional, scholarly: r.scholarly });
+    out.push({ year: y, lang: ctx.s.lang ? langLabel(ctx, lang) : '', form: deBug(r.conventional), scholarly: r.scholarly });
   }
   for (const lang of exo) {
     const info = s.lang.info(lang);
@@ -68,7 +68,7 @@ function nameHistory(ctx: Ctx, nameId: NameId, nativeLangAt: (y: number) => Lang
     const key = `${lang}|${r.conventional}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ year: y, lang: langLabel(ctx, lang), form: r.conventional, scholarly: r.scholarly });
+    out.push({ year: y, lang: langLabel(ctx, lang), form: deBug(r.conventional), scholarly: r.scholarly });
   }
   return out.sort((a, b) => a.year - b.year);
 }
