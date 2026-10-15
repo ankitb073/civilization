@@ -435,8 +435,10 @@ function genScholarship(g: Gen): void {
     if (leaves.length < 3) continue;
     const who = scholarAt(g, 4880, 4995, rng.fork(root.id));
     if (!who) continue;
+    // only languages already spoken when the paper was written
+    const sample = leaves.filter((l) => l.born <= who.year).slice(0, 6);
+    if (sample.length < 3) continue;
     const d = g.doc(lang, who.year, `ling:${root.id}`);
-    const sample = leaves.slice(0, 6);
     const concepts = ['water', 'fire', 'mother', 'king', 'god', 'river', 'stone', 'two', 'three', 'sun', 'house', 'silver'];
     const lines = [
       `${d.n(`per:${who.id}`)}. *Regular sound correspondences in the ${d.link(`lan:${root.id}`, g.T.short.get(`lan:${root.id}`) ?? '')} family.* Journal of Comparative Philology, ${who.year}.`,
