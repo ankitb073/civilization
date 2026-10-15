@@ -1,5 +1,6 @@
 // Screenshot key views of the built atlas at phone and desktop sizes.
 // Usage: npm --prefix atlas run build && npm --prefix atlas run shoot [-- --only=map,page]
+//        --only=readme [--readme=word-machine.png] writes the README stills in docs/img/ (all, or just those named)
 // Output: atlas/.shots/<name>-<viewport>[-dark].png, plus console errors on stdout.
 
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -7,7 +8,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { serveDist } from './serve.ts';
-import type { MetaJson, SearchJson } from '../../engine/src/export/contract.ts';
+import type { LanguagesJson, MetaJson, SearchJson, WordJson, WordsIndexJson } from '../../engine/src/export/contract.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, '.shots');
@@ -56,6 +57,30 @@ const lastChapter = book?.items.at(-1)?.id;
 const reading = book && book.items.length >= 3 && book.id === 'history'
   ? `localStorage.setItem('pal-reading', ${JSON.stringify(JSON.stringify({ id: book.items[2].id, part: 'Chapter 2', title: '', done: [book.items[0].id, book.items[1].id] }))});`
   : '';
+// the Word Machine: the language whose 'water' changed most (a long derivation), and the editorial language
+let wordLang: string | undefined, edLang: string | undefined, readmeLang: string | undefined;
+try {
+  const langs = (JSON.parse(readFileSync(join(DATA, 'languages.json'), 'utf8')) as LanguagesJson).languages;
+  const water = JSON.parse(readFileSync(join(DATA, 'words', 'water.json'), 'utf8')) as WordJson;
+  edLang = (JSON.parse(readFileSync(join(DATA, 'words', 'index.json'), 'utf8')) as WordsIndexJson).sampleLanguage;
+  const steps = new Map(water.langs.map((l) => [l.id, l.steps]));
+  const byId = new Map(langs.map((l) => [l.id, l]));
+  // changes along the derivation: each ancestor's own changes before the next language split off
+  const depthChanges = (id: string, until = Infinity): number => {
+    const l = byId.get(id);
+    if (!l) return 0;
+    const own = (steps.get(id) ?? []).filter((s, i) => i > 0 && s[0] < until).length;
+    return own + (l.parent ? depthChanges(l.parent, l.born) : 0);
+  };
+  const num = (id: string) => Number(id.split(':')[1]);
+  const rank = (a: { id: string }, b: { id: string }) => depthChanges(b.id) - depthChanges(a.id) || num(a.id) - num(b.id);
+  wordLang = langs.filter((l) => l.died === null).sort(rank)[0]?.id;
+  // for the README still: the same, within the largest family (drawn first, so its rows are on screen)
+  const size = new Map<string, number>();
+  for (const l of langs) size.set(l.family, (size.get(l.family) ?? 0) + 1);
+  const big = [...size.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  readmeLang = langs.filter((l) => l.died === null && l.family === big).sort(rank)[0]?.id;
+} catch { /* older export without words */ }
 const periplusOf = (re: RegExp) => search.find((e) => e[2] === 'artifact' && e[5] === 'periplus' && re.test(e[1]))?.[0];
 console.log('pages:', JSON.stringify({ ...ids, chapter, lastChapter }));
 
@@ -119,6 +144,16 @@ const views: { name: string; hash: string; dark?: boolean; wait?: number; full?:
   ...(ids.poem ? [{ name: 'poem', hash: `#/p/${ids.poem}` }] : []),
   ...(ids.diary ? [{ name: 'diary', hash: `#/p/${ids.diary}` }] : []),
   ...(ids.flagship ? [{ name: 'flagship', hash: `#/p/${ids.flagship}` }] : []),
+  ...(wordLang ? [
+    { name: 'word-picker', hash: `#/words`, wait: 1200 },
+    { name: 'word-machine', hash: `#/words/water?y=2112`, wait: 1500 },
+    { name: 'word-machine', hash: `#/words/king?y=3400`, wait: 1500, dark: true },
+    { name: 'word-early', hash: `#/words/water?y=-1200`, wait: 1500 },
+    { name: 'word-derivation', hash: `#/words/water?y=4200&l=${wordLang}`, wait: 1500 },
+    { name: 'word-derivation', hash: `#/words/king?l=${edLang}`, wait: 1500, dark: true },
+    { name: 'word-tap', hash: `#/words/water?y=3000`, wait: 1500, click: '.wl__i .wl__i .wl__b:visible, .wt-lab text:nth-child(8)' },
+    { name: 'word-law', hash: `#/words/water?l=${wordLang}`, wait: 1200, click: '.dv__c a' },
+  ] : []),
   { name: 'about', hash: `#/about` },
   { name: 'search', hash: `#/search` },
 ];
@@ -184,13 +219,23 @@ try {
       { file: 'story.png', hash: '#/story?at=c3b2', vp: { width: 1440, height: 900, scale: 2 }, wait: 3200 },
       { file: 'histomap.png', hash: '#/histomap?export=1', vp: { width: 1600, height: 1000, scale: 1 }, wait: 1500, full: true },
       { file: 'languages.png', hash: '#/languages?export=1', vp: { width: 2400, height: 1400, scale: 1 }, wait: 1500 },
+      ...(wordLang ? [{ file: 'word-machine.png', hash: `#/words/water?y=4600&l=${wordLang}`, vp: { width: 1600, height: 1000, scale: 1 }, wait: 1500 }] : []),
     ];
+    // --readme=word-machine.png,map.png renders just those
+    const pickReadme = (process.argv.find((a) => a.startsWith('--readme='))?.slice(9) ?? '').split(',').filter(Boolean);
     for (const sh of shots) {
+      if (pickReadme.length && !pickReadme.includes(sh.file)) continue;
       const ctx = await browser.newContext({ viewport: { width: sh.vp.width, height: sh.vp.height }, deviceScaleFactor: sh.vp.scale, isMobile: !!sh.vp.mobile, hasTouch: !!sh.vp.mobile, colorScheme: sh.dark ? 'dark' : 'light', reducedMotion: 'reduce' });
       const page = await ctx.newPage();
       page.on('pageerror', (e) => errors.push(`[readme ${sh.file}] PAGEERROR ${e.message}`));
       await page.goto(BASE + sh.hash, { waitUntil: 'networkidle' });
       await page.waitForTimeout(sh.wait ?? 1200);
+      // the Word Machine: bring the chosen language's row on screen (the derivation panel is sticky)
+      await page.evaluate(() => {
+        const r = document.querySelector('.wt-selband')?.getBoundingClientRect();
+        if (r && r.bottom > innerHeight - 30) window.scrollBy(0, r.top - innerHeight * 0.62);
+      });
+      await page.waitForTimeout(200);
       await page.screenshot({ path: join(IMG, sh.file), fullPage: !!sh.full });
       console.log(`docs/img/${sh.file}`);
       await ctx.close();
@@ -252,6 +297,26 @@ try {
       await page.keyboard.press('Enter');
       await page.locator('.yearview h1').waitFor({ timeout: 5000 });
       if (!/#\/year\/2310/.test(page.url())) throw new Error(page.url());
+    });
+    await step('word machine: arrows choose a language and move the year, and the URL carries both', async () => {
+      await page.goto(BASE + '#/words/water', { waitUntil: 'networkidle' });
+      await page.locator('.wt-lab text').first().waitFor({ timeout: 4000 });
+      await page.locator('.wt-wrap').focus();
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowLeft');
+      await page.locator('.dv__t').waitFor({ timeout: 2000 });
+      await page.waitForTimeout(400);
+      if (!/#\/words\/water\?y=4990&l=lan:\d+$/.test(page.url())) throw new Error(page.url());
+    });
+    await step('word machine: a sound law opens its language page at that law', async () => {
+      await page.locator('.dv__c a').first().click();
+      await page.locator('.sctl__item.is-hl').waitFor({ timeout: 4000 });
+    });
+    await step('word machine: a shared link restores word, year and language', async () => {
+      await page.goto(BASE + '#/words/king?y=-1500&l=lan:0', { waitUntil: 'networkidle' });
+      await page.locator('.dv__t').waitFor({ timeout: 4000 });
+      const t = await page.locator('.wm-year b').textContent();
+      if (t !== '−1500' || (await page.locator('.dv__t').textContent()) === '') throw new Error(String(t));
     });
     await step('keyboard: tab reaches the map and arrows pan it', async () => {
       await page.goto(BASE + '#/map?y=1000', { waitUntil: 'networkidle' });
@@ -335,6 +400,27 @@ try {
       const r = (window as unknown as { __palimpsestGraph: { refreshMs: number[] } }).__palimpsestGraph.refreshMs.slice().sort((a, b) => a - b);
       return { longs, refreshMedian: r[Math.floor(r.length / 2)], refreshP95: r[Math.floor(r.length * 0.95)], n: r.length };
     });
+    // the Word Machine: play from the start and time the frames
+    const p4 = await ctx.newPage();
+    await p4.goto(BASE + '#/words/water?y=-3200', { waitUntil: 'networkidle' });
+    await p4.waitForSelector('.wt-lab text');
+    const wp = await p4.evaluate(async () => {
+      const longs: number[] = [];
+      const po = new PerformanceObserver((l) => { for (const e of l.getEntries()) longs.push(e.duration); });
+      po.observe({ type: 'longtask', buffered: false });
+      (document.querySelector('.wm-play') as HTMLButtonElement).click();
+      const gaps: number[] = [];
+      let last = performance.now();
+      const t0 = last;
+      await new Promise<void>((res) => {
+        const f = (now: number) => { gaps.push(now - last); last = now; if (now - t0 < 4000) requestAnimationFrame(f); else res(); };
+        requestAnimationFrame(f);
+      });
+      po.disconnect();
+      gaps.sort((a, b) => a - b);
+      return { frames: gaps.length, median: gaps[gaps.length >> 1], p95: gaps[Math.floor(gaps.length * 0.95)], longs, year: (document.querySelector('.wm-range') as HTMLInputElement).value };
+    });
+    console.log(`perf: word machine play 4 s — ${wp.frames} frames, interval median ${wp.median.toFixed(1)}ms, p95 ${wp.p95.toFixed(1)}ms, reached year ${wp.year}; long tasks: ${wp.longs.length ? wp.longs.map((x) => Math.round(x)).join(',') : 'none'}`);
     console.log(`perf: graph scrub — ${lt.n} refreshes, median ${lt.refreshMedian?.toFixed(1)}ms, p95 ${lt.refreshP95?.toFixed(1)}ms; long tasks: ${lt.longs.length ? lt.longs.map((x) => Math.round(x)).join(',') : 'none'}`);
     await ctx.close();
   }

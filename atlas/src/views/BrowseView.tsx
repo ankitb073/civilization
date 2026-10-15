@@ -82,6 +82,7 @@ export function BrowseView() {
           <a href="#/story"><span>Story</span>Five thousand years in seven chapters</a>
           <a href="#/histomap"><span>Histomap</span>Every state as a stream</a>
           <a href="#/languages"><span>Languages</span>The Tree of Tongues</a>
+          <a href="#/words"><span>Word Machine</span>One word, 126 languages, 8,200 years</a>
           <a href="#/prices"><span>Prices</span>What things cost</a>
         </nav>
         <p class="muted">{m ? `${KINDS.reduce((s, k) => s + (m.counts[k] ?? 0), 0).toLocaleString('en-US')} pages` : ''}{m?.counts.links ? ` · ${m.counts.links.toLocaleString('en-US')} links` : ''}. Filter by kind, period and name.</p>

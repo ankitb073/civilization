@@ -1608,6 +1608,10 @@ a.badge--flag:hover {
   border-bottom: 1px solid var(--rule-2);
   font-size: 14px;
 }
+.sctl__item.is-hl {
+  background: var(--hl);
+  box-shadow: -8px 0 0 var(--hl), 8px 0 0 var(--hl);
+}
 .sctl__y {
   color: var(--muted);
   font-variant-numeric: tabular-nums;

@@ -1,6 +1,6 @@
 import { signal, effect, computed } from '@preact/signals';
 
-export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap' | 'languages' | 'prices' | 'collections' | 'dynasties' | 'year' | 'today';
+export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap' | 'languages' | 'prices' | 'collections' | 'dynasties' | 'year' | 'today' | 'words';
 export type LayerName = 'political' | 'culture' | 'religion' | 'language';
 
 export interface Route {
@@ -20,6 +20,7 @@ function parseHash(): Route {
   if (head === 'collections') return { view: 'collections', id: parts[1] ?? null, params };
   if (head === 'year' && parts[1]) return { view: 'year', id: parts[1], params };
   if (head === 'today') return { view: 'today', id: parts[1] ?? null, params };
+  if (head === 'words') return { view: 'words', id: parts[1] ?? null, params };
   if (head === 'dynasties') return { view: 'dynasties', id: null, params };
   if (head === 'dynasty' && parts[1]) return { view: 'dynasties', id: parts.slice(1).join('/'), params };
   if (head === 'graph' || head === 'browse' || head === 'about' || head === 'search' || head === 'story' || head === 'histomap' || head === 'languages' || head === 'prices') return { view: head, id: null, params };
@@ -146,5 +147,5 @@ export const SHEET_PEEK = 72;
 export const sheetSnap = signal<'peek' | 'half' | 'full'>('peek');
 
 /** True when the visitor arrived without a year in the URL (a fresh landing, not a shared permalink). */
-export const freshLanding = !/[?&]y=/.test(location.hash) && !/^#\/(p|compare|browse|about|search|graph|story|histomap|languages|prices|collections|dynast|year|today)/.test(location.hash);
+export const freshLanding = !/[?&]y=/.test(location.hash) && !/^#\/(p|compare|browse|about|search|graph|story|histomap|languages|prices|collections|dynast|year|today|words)/.test(location.hash);
 export const reducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;

@@ -24,6 +24,10 @@ Every document links to the people, places, states and events it mentions, and e
 | ![The story view](docs/img/story.png) | ![The graph of history](docs/img/graph.png) |
 | **The story.** Scroll through the ages; the map flies to each turning point. | **The graph.** Every person, place, state, event and document, laid out by force. |
 
+![The Word Machine: 'water' through 8,200 years of sound change](docs/img/word-machine.png)
+
+**The Word Machine.** Pick a word and scrub through time: *\*kikweka* "water" becomes *yiv* in Simem by AY 4919, one dated sound law at a time, while Tasemem swaps it for a borrowing. 114 words, 126 languages.
+
 **[The Histomap of Yüvinzhi →](docs/img/histomap.png)**: five millennia of states as streams of population share, in the spirit of John B. Sparks's 1931 *Histomap*.
 
 > Fiction. The peoples, languages and events are generated; any resemblance to real history comes from shared dynamics, not copying.

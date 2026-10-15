@@ -5,7 +5,7 @@ import { Sparkline } from '../components/Sparkline.tsx';
 import { fmtBytes, fmtSpan, fmtYear, subLabel } from '../format.ts';
 import { KIND_LABEL, KINDS, kindFromId } from '../kinds.ts';
 import { inline, render } from '../md.ts';
-import { isMobile, mapHref, reducedMotion, year } from '../state.ts';
+import { isMobile, mapHref, reducedMotion, route, year } from '../state.ts';
 import { PersonHouse, PolityDynasties } from './DynastyView.tsx';
 import { CiteButton } from '../components/Cite.tsx';
 import { Territory } from '../components/Territory.tsx';
@@ -130,6 +130,7 @@ function Page({ page }: { page: PageJson }) {
             {a?.rival && <a class="btn btn--accent" href={`#/compare/${a.rival.eventId}`}>Compare with rival accounts</a>}
             {(page.kind === 'currency' || (page.kind === 'artifact' && /ledger|market/.test(page.sub))) && <a class="btn btn--ghost" href="#/prices">Prices over 5,000 years</a>}
             {page.kind === 'language' && <a class="btn btn--ghost" href="#/languages">Tree of Tongues</a>}
+            {page.kind === 'language' && <a class="btn btn--ghost" href={`#/words/water?l=${page.id}`}>Word Machine</a>}
             {a && <CiteButton page={page} label={label} />}
             <ShareButton title={page.title} />
           </div>
@@ -427,7 +428,17 @@ function Names({ names }: { names: NonNullable<PageJson['names']> }) {
 const STAGE_COLORS = ['#8e2f1f', '#b5683a', '#a88a3a', '#5f7f45', '#3e7a86', '#4d5f9a', '#7a4f8f', '#9a4a6a'];
 
 function LanguagePanel({ page, lang, label }: { page: PageJson; lang: NonNullable<PageJson['language']>; label: (id: string) => string | undefined }) {
-  const [all, setAll] = useState(false);
+  // ?sc=<year>&law=<label> (from the Word Machine): open the full list at that dated law
+  const sc = route.value.params.get('sc'), law = route.value.params.get('law');
+  const [all, setAll] = useState(!!sc);
+  useEffect(() => {
+    if (!sc) return;
+    setAll(true);
+    requestAnimationFrame(() => {
+      const el = [...document.querySelectorAll<HTMLElement>(`.sctl__item[data-y="${sc}"]`)].find((e) => !law || e.dataset.l === law);
+      if (el) { el.classList.add('is-hl'); el.scrollIntoView({ block: 'center' }); }
+    });
+  }, [sc, law, page.id]);
   const changes = useMemo(() => lang.soundChanges.slice().sort((a, b) => a.year - b.year), [lang]);
   // name -> id for languages linked from this page (body links carry the short names)
   const nameToId = useMemo(() => {
@@ -496,7 +507,7 @@ function LanguagePanel({ page, lang, label }: { page: PageJson; lang: NonNullabl
                   <ol class="sctl__items">
                     {hidden > 0 && <li class="sctl__more muted small">… {hidden} earlier change{hidden === 1 ? '' : 's'}</li>}
                     {items.map((c) => (
-                      <li class="sctl__item">
+                      <li class="sctl__item" data-y={c.year} data-l={c.label}>
                         <span class="sctl__y">{c.year < 0 ? `${-c.year} BAY` : c.year}</span>
                         <span class="sctl__l">{c.label}</span>
                         <code class="sctl__r">{c.rule}</code>

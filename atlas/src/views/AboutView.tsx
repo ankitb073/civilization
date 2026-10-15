@@ -100,6 +100,7 @@ export function AboutView() {
           <a href="#/collections"><span>Collections</span>Curated lists: queens, plagues, lost works, wars told twice</a>
           <a href="#/dynasties"><span>Dynasties</span>Family trees of the great ruling houses</a>
           <a href="#/languages"><span>Languages</span>The Tree of Tongues: every language and its descendants</a>
+          <a href="#/words"><span>Word Machine</span>Watch a word wear down, sound law by sound law, in every language</a>
           <a href="#/prices"><span>Prices</span>What things cost: grain, tin and iron over five millennia</a>
           <a href="#/graph"><span>Graph</span>The web of every person, place and event</a>
         </nav>

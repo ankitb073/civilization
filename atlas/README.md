@@ -26,6 +26,11 @@ npm run shoot -- --only=og --year=2750   # writes public/og.png social card (nee
 | About | `#/about` | About the project. |
 | Collections | `#/collections[/<id>]` | Curated lists. `#/collections/history` is the History's contents page. |
 | Today | `#/today[/YYYY-MM-DD]` | Opens the document of the day: a flagship picked by hashing the viewer's local date, the same for everyone. |
+| Story, Histomap, Prices | `#/story`, `#/histomap`, `#/prices` | The guided story, every state as a stream, prices over five millennia. |
+| Dynasties | `#/dynasties`, `#/dynasty/<id>` | Family trees of the ruling houses. |
+| Year | `#/year/<y>` | One year: mini-map, great powers, events and the documents written then. |
+| Languages | `#/languages` | The Tree of Tongues. |
+| Word Machine | `#/words`, `#/words/<concept>?y=&l=` | One word in all 126 languages: a year scrubber with play, and the derivation of any language from its proto-form, law by law. |
 
 `clean=1` hides the UI chrome. The social card uses it.
 
@@ -52,3 +57,4 @@ Nothing changes in the engine contract; the atlas falls back to `timeline.json` 
 - `src/views/mapRenderer.ts` is an imperative Canvas 2D renderer. Terrain is cached as Path2D groups. The per-year fills, borders and labels are computed once per (layer, year) and cached.
 - `src/layers.ts` reconstructs ownership, culture and religion at any year from keyframes plus deltas.
 - `src/md.ts` is a small Markdown renderer that handles `[[id|text]]` WikiLinks.
+- `src/tongueLayout.ts` lays out the language families; the Tree of Tongues and the Word Machine share it. `src/words.ts` turns a word file into a derivation (see `docs/lld/atlas.md`).

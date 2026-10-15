@@ -1,42 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { indexLanguages, loadLanguages, type Lang, type LangIndex } from '../languages.ts';
+import { indexLanguages, loadLanguages, type LangIndex } from '../languages.ts';
+import { bandName, layoutTongues } from '../tongueLayout.ts';
 import { isMobile, navigate, route } from '../state.ts';
 import { ensureMeta, meta } from '../store.ts';
 
 const X0 = -3200, X1 = 5000;
-
-interface Row { lang: Lang; row: number; parentRow: number }
-interface FamilyBlock { id: string; name: string; color: string; size: number; top: number; bottom: number }
-
-/** Lay out each family as a tree: later-born daughters sit closest to their parent so branches never cross a living line. */
-function layout(ix: LangIndex): { rows: Row[]; blocks: FamilyBlock[]; total: number } {
-  const kids = new Map<string, Lang[]>();
-  for (const l of ix.data.languages) if (l.parent) { if (!kids.has(l.parent)) kids.set(l.parent, []); kids.get(l.parent)!.push(l); }
-  const rows: Row[] = [];
-  const blocks: FamilyBlock[] = [];
-  let cursor = 1; // leave a row for the first family's label
-  const order = (l: Lang): Lang[] => {
-    const ks = (kids.get(l.id) ?? []).slice().sort((a, b) => b.born - a.born || a.id.localeCompare(b.id)); // latest first
-    const above: Lang[] = [], below: Lang[] = [];
-    ks.forEach((k, i) => (i % 2 === 0 ? above : below).push(k));
-    above.reverse(); // farthest (earliest) at the top
-    return [...above.flatMap(order), l, ...below.flatMap(order)];
-  };
-  for (const f of ix.families) {
-    const root = ix.byId.get(f.id);
-    if (!root) continue;
-    const seq = order(root);
-    const top = cursor;
-    const at = new Map<string, number>();
-    seq.forEach((l, i) => at.set(l.id, top + i));
-    for (const l of seq) rows.push({ lang: l, row: at.get(l.id)!, parentRow: l.parent ? at.get(l.parent) ?? -1 : -1 });
-    cursor += seq.length;
-    blocks.push({ id: f.id, name: f.name, color: f.color, size: f.size, top, bottom: cursor - 1 });
-    cursor += 2; // gap between families
-  }
-  return { rows, blocks, total: cursor - 2 };
-  // (total counts the leading label row)
-}
 
 export function LanguagesView() {
   const [ix, setIx] = useState<LangIndex | null>(null);
@@ -57,7 +25,7 @@ export function LanguagesView() {
   }, [ix]);
   useEffect(() => { document.title = `${m?.title ?? 'Palimpsest'} — The Tree of Tongues`; }, [m]);
 
-  const lay = useMemo(() => (ix ? layout(ix) : null), [ix]);
+  const lay = useMemo(() => (ix ? layoutTongues(ix) : null), [ix]);
   const lineage = useMemo(() => {
     if (!ix || !hover) return null;
     const set = new Set<string>([hover.id]);
@@ -100,6 +68,7 @@ export function LanguagesView() {
           a branch is a daughter splitting from its mother. Thicker lines changed more — {ix.data.languages.reduce((s, l) => s + l.soundChanges, 0).toLocaleString('en-US')} sound laws in all.
           {!exportMode && <> {mobile ? 'Tap' : 'Hover'} a line for its words then and now.</>}
         </p>
+        {!exportMode && <a class="tongues__wm" href="#/words">Watch one word change in all {ix.data.languages.length} languages: <strong>the Word Machine</strong> →</a>}
       </header>
       <div class="tongues__chart" ref={wrapRef} onPointerLeave={() => { if (!mobile) setHover(null); }}>
         {w > 0 && (
@@ -118,7 +87,7 @@ export function LanguagesView() {
             {eras.map((e, i) => (
               <g>
                 <line x1={X(e.start)} x2={X(e.start)} y1={TOP - 4} y2={height - BOT + 4} class={i === 0 ? 'tt-zero' : 'tt-era'} />
-                {!mobile && X(e.end) - X(e.start) > 70 && <text x={X(e.start) + 5} y={TOP - 10} class="tt-band">{e.name.replace(/^Age of (the )?/, '').toUpperCase()}</text>}
+                {!mobile && X(e.end) - X(e.start) > bandName(e.name).length * 6.4 + 8 && <text x={X(e.start) + 5} y={TOP - 10} class="tt-band">{bandName(e.name)}</text>}
               </g>
             ))}
             {/* axis */}

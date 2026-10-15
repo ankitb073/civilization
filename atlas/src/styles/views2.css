@@ -647,6 +647,11 @@
   color: var(--ink-2);
   margin: 0;
 }
+.tongues__wm {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 15px;
+}
 .tongues__chart {
   position: relative;
 }
