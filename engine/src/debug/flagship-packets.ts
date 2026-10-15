@@ -2,7 +2,7 @@
 // world (same fingerprint) and writes, per flagship, the figures, participants, armies and documents it relies on
 // that changed, plus leads: numbers in its text (digits or words) that match an old figure and no new one, and
 // phrases about relative losses that may have flipped. A reviser agent works from the packet (decision 0015).
-// Usage: node engine/src/debug/flagship-packets.ts <before.sqlite> <after.sqlite> [--out=dir] [--flagships=dir]
+// Usage: node engine/src/debug/flagship-packets.ts <before.sqlite> <after.sqlite> [--out=dir] [--flagships=dir] [--strict]
 //          [--dossiers-before=dir --dossiers-after=dir] [fl-NNN …]
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -14,6 +14,8 @@ const opt = (k: string, d: string) => args.find((a) => a.startsWith(`--${k}=`))?
 const [beforePath, afterPath, ...only] = args.filter((a) => !a.startsWith('--'));
 const OUT = opt('out', 'build/packets'), DIR = opt('flagships', 'flagships');
 const DOSS_B = opt('dossiers-before', ''), DOSS_A = opt('dossiers-after', '');
+// --strict: after a revision, flag a number only if NO new figure in its window matches it (fewer false leads)
+const STRICT = args.includes('--strict');
 if (!beforePath || !afterPath) { console.error('usage: flagship-packets.ts <before.sqlite> <after.sqlite> [--out=dir] [fl-NNN …]'); process.exit(2); }
 mkdirSync(OUT, { recursive: true });
 
@@ -187,6 +189,7 @@ for (const fid of files) {
     // ordinals, ages and durations are not figures
     if (/^(st|nd|rd|th)\b|^[\s-]*(years?|summers?|winters?|harvests?|months?|days?|seasons?)\b/i.test(masked.slice(n.end, n.end + 12))) continue;
     const tol = evs.size && pairs.length < 400 ? 0.12 : 0.06;
+    if (STRICT && pairs.some((p) => p.news.some((x) => near(n.v, x, tol)))) continue;
     if (pairs.some((p) => near(n.v, p.old, tol) && !p.news.some((x) => near(n.v, x, tol)))) leads.push(`  "${n.s}" ≈ ${Math.round(n.v).toLocaleString('en-US')}: …${ctx.replace(/\s+/g, ' ')}…`);
   }
   for (const m of body.matchAll(PHRASES)) leads.push(`  phrase "${m[0]}": …${body.slice(Math.max(0, m.index! - 100), m.index! + m[0].length + 80).replace(/\s+/g, ' ')}…`);
