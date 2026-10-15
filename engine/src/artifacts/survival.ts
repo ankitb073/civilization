@@ -27,7 +27,7 @@ export function applySurvival(g: Gen): void {
     }
     p = Math.min(0.97, p * 1.6);
     const r = rng.fork(a.id);
-    if (!r.chance(p)) {
+    if (!a.flagship && !r.chance(p)) {
       a.status = 'lost';
       continue;
     }

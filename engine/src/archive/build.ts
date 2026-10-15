@@ -13,6 +13,13 @@ import { genLedgers } from '../artifacts/ledger.ts';
 import { applySurvival } from '../artifacts/survival.ts';
 import { genMore } from '../artifacts/more.ts';
 import { genExcavationReports } from '../artifacts/modern.ts';
+import { ingestFlagships } from '../flagships/ingest.ts';
+import { worldFingerprint } from '../export/export.ts';
+
+/** Persons created by the simulation itself (archive-created authors come after). */
+export function simPersonCount(r: SimResult): number {
+  return r.simPersons ?? r.state.persons.length;
+}
 import { resetCalendarCache } from './doc.ts';
 import type { PageJson } from '../export/contract.ts';
 
@@ -39,6 +46,10 @@ export function buildArchive(r: SimResult, log: (m: string) => void = () => {}):
   genInscriptions(gen);
   genLedgers(gen);
   genMore(gen);
+  const simPersons = r.state.persons.length - 0;
+  const fl = ingestFlagships(gen, 'flagships', simPersonCount(r), worldFingerprint(r));
+  if (fl.files) log(`flagships: ${fl.added}/${fl.files} added, ${fl.strippedLinks} invalid links stripped${fl.rejected.length ? `, rejected: ${fl.rejected.join('; ')}` : ''}`);
+  void simPersons;
   log(`generated ${gen.artifacts.length} candidate documents (${((performance.now() - t0) / 1000).toFixed(1)}s)`);
   applySurvival(gen);
   for (const a of gen.artifacts) if (a.status === 'extant') T.pageRefs.add(`art:${a.id}`);

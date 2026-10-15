@@ -184,8 +184,9 @@ export function buildTitles(ctx: Ctx): Titles {
   }
   assignEpithets(ctx, T);
 
-  // --- names for entities
-  for (const ref of T.pageRefs) {
+  // --- names for entities (events last: their titles use the other names)
+  const ordered = [...T.pageRefs].sort((a, b) => (a.startsWith('evt:') ? 1 : 0) - (b.startsWith('evt:') ? 1 : 0));
+  for (const ref of ordered) {
     const k = ref.slice(0, 3);
     const id = ctx.idNum(ref);
     let short = '';
@@ -229,7 +230,7 @@ export function buildTitles(ctx: Ctx): Titles {
       case 'cli': {
         const a = s.anomalies[id];
         const nm = editorialName(ctx, ref);
-        if (a.kind === 'eruption') title = `Eruption of Mount ${nm} (AY ${a.start})`;
+        if (a.kind === 'eruption') title = `Volcanic Winter of Mount ${nm} (AY ${a.start})`;
         else if (a.kind === 'drought') title = `The Great Drought of AY ${a.start}–${a.end}`;
         else if (a.kind === 'cold') title = `The Cold Spell of AY ${a.start}–${a.end}`;
         else title = 'The Industrial Warming';

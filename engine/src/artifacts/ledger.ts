@@ -67,10 +67,11 @@ function ledger(g: Gen, h: House, year: number, rng: Rng): void {
   const dates: [number, number][] = [];
   for (let i = 0; i < n; i++) dates.push([rng.int(0, 11), rng.int(1, 29)]);
   dates.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  let balance = Math.round((h.capital * 1000) / grams / 10) * 10 * (0.6 + rng.next() * 0.8);
+  // opening balance: a few months' trading at this house's scale (filled in once the entries are known)
+  let balance = 0;
   const rows: string[][] = [];
   const entries: { market: number; good: number; unit: number; grams: number }[] = [];
-  const opening = Math.round(balance);
+
   for (const [mi, day] of dates) {
     const good = rng.pick(goods);
     const partner = rng.pick(partners);
@@ -94,10 +95,14 @@ function ledger(g: Gen, h: House, year: number, rng: Rng): void {
       `${fmt(qty)} ${goodUnit(good)}${qty === 1 ? '' : 's'}`,
       fmtPrice(unit),
       `${buying ? '−' : '+'}${fmtPrice(amount)}`,
-      fmtPrice(balance),
+      String(balance),
     ]);
   }
   if (rows.length < 4) return;
+  // rebase the running balance on an opening balance proportional to the year's turnover
+  const turnover = entries.reduce((a, e) => a + 0, 0) + rows.reduce((a, r) => a + Math.abs(Number(r[5].replace(/[−+,]/g, ''))), 0);
+  const openingBal = Math.round((turnover * (2 + rng.next() * 4)) / 10) * 10;
+  for (const r of rows) r[6] = fmtPrice(openingBal + Number(r[6]));
   // margin notes from the year's events
   const notes: string[] = [];
   const near = (ref: string) => (ctx.eventsByRef.get(ref) ?? []).map((i) => s.events[i]).filter((e) => e.year <= year && e.year >= year - 3);
@@ -112,7 +117,7 @@ function ledger(g: Gen, h: House, year: number, rng: Rng): void {
   }
   const author = s.persons[head];
   const lines: string[] = [];
-  lines.push(`${era <= 1 ? 'Accounts' : era <= 3 ? 'Day-book' : 'Journal'} of the ${d.n(`hou:${h.id}`)}, kept at ${d.n(`set:${t.id}`)} by ${d.n(`per:${head}`)}, ${localDate(ctx, d, P, year)}. Sums in ${unitLink}${curOk ? '' : ''}. Opening balance ${fmtPrice(opening)}.`);
+  lines.push(`${era <= 1 ? 'Accounts' : era <= 3 ? 'Day-book' : 'Journal'} of the ${d.n(`hou:${h.id}`)}, kept at ${d.n(`set:${t.id}`)} by ${d.n(`per:${head}`)}, ${localDate(ctx, d, P, year)}. Sums in ${unitLink}${curOk ? '' : ''}. Opening balance ${fmtPrice(openingBal)}.`);
   if (notes.length) {
     lines.push('');
     lines.push('Notes in the margin:');

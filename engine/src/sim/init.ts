@@ -148,6 +148,11 @@ export function initState(seed: number): State {
     s.pop[c] = s.cap[c] * 0.5;
   }
 
+  // silver in circulation: calibrated so the price level starts at 1
+  let totalPop = 0;
+  for (const c of geo.landCells) totalPop += s.pop[c];
+  s.silverStock = totalPop * 0.02;
+
   // ---------------- first towns
   const cands = geo.landCells.slice().sort((a, b) => s.pop[b] * siteScore(s, b) - s.pop[a] * siteScore(s, a) || a - b);
   const towns: number[] = [];

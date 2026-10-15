@@ -24,6 +24,8 @@ export interface SimResult {
   thought: ThoughtPresence;
   /** State before any log entry: replaying the logs from here reproduces every year exactly. */
   initial: { owner: Int32Array; culture: Int32Array; religion: Int32Array };
+  /** Number of persons created by the simulation (archive-created persons follow). */
+  simPersons?: number;
 }
 
 export interface SimHooks {
@@ -98,5 +100,6 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
       }
     }
   }
+  result.simPersons = s.persons.length;
   return result;
 }

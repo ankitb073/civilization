@@ -4,7 +4,7 @@ import { simulate } from '../sim/run.ts';
 import { WorldDb } from '../db/writer.ts';
 import { buildArchive } from '../archive/build.ts';
 import { runChecks } from '../check/check.ts';
-import { exportAtlas } from '../export/export.ts';
+import { exportAtlas, worldNameOf } from '../export/export.ts';
 import { writeVault } from '../export/vault.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, statSync, createReadStream, createWriteStream, rmSync, existsSync } from 'node:fs';
@@ -35,8 +35,7 @@ const downloads: { label: string; href: string; bytes: number }[] = [];
 const dl = 'atlas/public/downloads';
 if (!skipDownloads) {
   mkdirSync(dl, { recursive: true });
-  const worldName = r.state.lang.word(archive.ctx.editorialLang, 'earth', 5000).conventional;
-  const v = writeVault(archive, 'build/vault', worldName[0].toUpperCase() + worldName.slice(1));
+  const v = writeVault(archive, 'build/vault', worldNameOf(r, archive));
   log(`vault: ${v.files.toLocaleString('en-US')} files`);
   if (existsSync(`${dl}/palimpsest-vault.zip`)) rmSync(`${dl}/palimpsest-vault.zip`);
   execFileSync('zip', ['-qr', '-9', '../atlas/public/downloads/palimpsest-vault.zip', 'vault'], { cwd: 'build' });

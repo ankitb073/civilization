@@ -114,7 +114,7 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
     byCentury.get(c)!.push(e);
   }
   for (const [, evs] of [...byCentury].sort((x, y) => x[0] - y[0])) {
-    for (const e of evs.sort((x, y) => y.sig - x.sig || x.id - y.id).slice(0, 110).sort((x, y) => x.year - y.year || x.id - y.id)) {
+    for (const e of evs.sort((x, y) => y.sig - x.sig || x.id - y.id).slice(0, 80).sort((x, y) => x.year - y.year || x.id - y.id)) {
       markers.push({ id: `evt:${e.id}`, year: e.year, end: e.end, sub: e.sub, title: T.title.get(`evt:${e.id}`) ?? '', cell: e.cell, sig: Math.round(e.sig * 100) / 100 });
     }
   }
@@ -212,7 +212,7 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
   counts.links = a.links;
   counts.years = 5000;
   counts.events = s.events.length;
-  const worldName = capFirst(s.lang.word(a.ctx.editorialLang, 'earth', 5000).conventional);
+  const worldName = worldNameOf(r, a);
   const meta: MetaJson = {
     title: 'Palimpsest',
     subtitle: `A 5,000-year archive of ${worldName}, a world that never existed`,
@@ -230,6 +230,8 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
     editorialLanguage: T.short.get(`lan:${a.ctx.editorialLang}`) ?? '',
     downloads: o.downloads ?? [],
     featured: featured(r, a),
+    flagships: a.artifacts.filter((x) => x.flagship).map((x) => `art:${x.id}`),
+    world: worldFingerprint(r),
   };
   writeSized('meta.json', meta);
   for (const [f, [rawB, gz]] of Object.entries(sizes)) log(`  ${f}: ${(rawB / 1024).toFixed(0)} KB raw, ${(gz / 1024).toFixed(0)} KB gz`);
@@ -244,6 +246,28 @@ function trim(x: string, n: number): string {
 function rankRef(ref: string): number {
   const p = ref.slice(0, 3);
   return p === 'art' ? 0 : p === 'evt' ? 1 : p === 'pol' ? 2 : 3;
+}
+
+/** A short fingerprint of the simulated world: changes whenever simulation output changes. */
+export function worldFingerprint(r: SimResult): string {
+  let h = 0x811c9dc5;
+  const mix = (x: number) => { h = Math.imul(h ^ (x | 0), 0x01000193) >>> 0; };
+  mix(r.state.seed);
+  mix(r.state.events.length);
+  mix(r.simPersons ?? r.state.persons.length);
+  for (const e of r.state.events) { mix(e.year); mix(e.sub.length); mix(e.parts.length); mix(e.cell); }
+  return h.toString(16).padStart(8, '0');
+}
+
+export function worldNameOf(r: SimResult, a: Archive): string {
+  const s = r.state;
+  for (const c of ['earth', 'land', 'realm', 'world']) {
+    try {
+      const w = capFirst(s.lang.word(a.ctx.editorialLang, c, 5000).conventional);
+      if (w.replace(/[^\p{L}]/gu, '').length >= 4) return w;
+    } catch { /* concept missing */ }
+  }
+  return capFirst(s.lang.realize(s.lang.info(a.ctx.editorialLang).endonym, a.ctx.editorialLang, 5000).conventional);
 }
 
 function capFirst(x: string): string {

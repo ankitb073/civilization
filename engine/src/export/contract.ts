@@ -51,6 +51,10 @@ export interface MetaJson {
   editorialLanguage: string;
   downloads: { label: string; href: string; bytes: number }[];
   featured: { id: string; title: string; why: string }[]; // curated entry points
+  /** Ids of the agent-written flagship documents. */
+  flagships: string[];
+  /** Fingerprint of the simulated world the archive was generated from. */
+  world: string;
 }
 
 // ---------------------------------------------------------------- world.json
