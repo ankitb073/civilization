@@ -60,7 +60,11 @@ export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: stri
         trade: 'over trade', independence: 'for independence', civil: 'between rival claimants', invasion: 'as an invasion from the steppe', colonial: 'over colonies', unification: 'for unification',
       };
       summary = `${T.title.get(`evt:${e.id}`)}, ${yr(e.year)}–${e.end}: ${P('attacker')} against ${P('defender')}, ${goalText[goal] ?? goal}. ${outcome === 'attacker' ? `${P('attacker')} prevailed.` : outcome === 'defender' ? `${P('defender')} prevailed.` : outcome === 'stalemate' ? 'It ended in stalemate.' : 'It ended without a settlement.'}`;
-      infobox.push(['Aim', goal], ['Outcome', outcome], ['Losses (attacker)', fmtNum(Number(e.data.lossesA ?? 0))], ['Losses (defender)', fmtNum(Number(e.data.lossesD ?? 0))]);
+      // wars that dissolved without a peace carry no totals: sum their battles
+      const fought = (ctx.eventsByRef.get(`evt:${e.id}`) ?? []).map((i) => s.events[i]).filter((b) => b.sub === 'battle');
+      const lossA = e.data.lossesA !== undefined ? Number(e.data.lossesA) : fought.reduce((acc, b) => acc + Number(b.data.attackerLosses ?? 0), 0);
+      const lossD = e.data.lossesD !== undefined ? Number(e.data.lossesD) : fought.reduce((acc, b) => acc + Number(b.data.defenderLosses ?? 0), 0);
+      infobox.push(['Aim', goal], ['Outcome', outcome], ['Losses (attacker)', fmtNum(lossA)], ['Losses (defender)', fmtNum(lossD)]);
       if (typeof e.data.treaty === 'number') infobox.push(['Ended by', LT(T, `evt:${e.data.treaty}`)]);
       const battles = (ctx.eventsByRef.get(`evt:${e.id}`) ?? []).map((i) => s.events[i]).filter((b) => b.sub === 'battle' || b.sub === 'siege' || b.sub === 'sack').sort((a, b) => a.year - b.year || a.id - b.id);
       if (battles.length) {
