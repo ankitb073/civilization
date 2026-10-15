@@ -369,6 +369,8 @@ export function buildHistoriography(a: Archive): Dossier[] {
     const seen = new Set<string>();
     for (const ref of links) {
       if (seen.has(ref) || !T.pageRefs.has(ref) || !isOk(ref)) continue;
+      const st = startOf(a, ref);
+      if (st !== null && st > year) continue;
       seen.add(ref);
       allowed.push({ id: ref, text: T.short.get(ref) ?? d.nameOf(ref), what: T.title.get(ref) ?? '' });
       if (allowed.length >= 45) break;
@@ -511,6 +513,8 @@ export function buildLives(a: Archive, exclude: Set<string>): Dossier[] {
     const allowed: Dossier['allowedLinks'] = [];
     for (const ref of links) {
       if (!T.pageRefs.has(ref) || (ref.startsWith('per:') && ctx.idNum(ref) >= simPersons) || (ref.startsWith('evt:') && ctx.idNum(ref) >= simEvents)) continue;
+      const st = startOf(a, ref);
+      if (st !== null && st > year) continue;
       const sexNote = ref.startsWith('per:') ? ` (${s.persons[ctx.idNum(ref)].sex === 'f' ? 'woman; she/her' : 'man; he/him'})` : '';
       allowed.push({ id: ref, text: T.short.get(ref) ?? d.nameOf(ref), what: (T.title.get(ref) ?? '') + sexNote });
       if (allowed.length >= 60) break;
