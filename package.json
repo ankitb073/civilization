@@ -1,0 +1,31 @@
+{
+  "name": "palimpsest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A deterministic 5,000-year synthetic civilization: simulation, primary-source archive, and interactive web atlas.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test --disable-warning=ExperimentalWarning engine/test/",
+    "sim": "node --disable-warning=ExperimentalWarning engine/src/cli/sim.ts",
+    "archive": "node --disable-warning=ExperimentalWarning engine/src/cli/archive.ts",
+    "check": "node --disable-warning=ExperimentalWarning engine/src/cli/check.ts",
+    "export": "node --disable-warning=ExperimentalWarning engine/src/cli/export.ts",
+    "build": "npm run sim && npm run archive && npm run check && npm run export && npm --prefix atlas run build",
+    "dev": "npm --prefix atlas run dev"
+  },
+  "dependencies": {
+    "d3-delaunay": "^6.0.4",
+    "graphology": "^0.26.0",
+    "graphology-layout-forceatlas2": "^0.10.1"
+  },
+  "devDependencies": {
+    "@types/d3-delaunay": "^6.0.4",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}
