@@ -323,6 +323,7 @@ function makePeace(s: State, agg: PolityAgg, w: War, A: Polity, D: Polity, year:
       }
     } else if (outcome === 'defender') {
       sub = 'suppression';
+      annex = true;
       terms.push({ kind: 'annexation', from: A.id, to: D.id, cells: aCells });
       if (A.ruler !== null && rng.chance(0.6)) terms.push({ kind: 'amnesty', persons: [] });
     } else {

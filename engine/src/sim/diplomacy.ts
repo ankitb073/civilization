@@ -5,11 +5,23 @@ import type { PolityAgg } from './polities.ts';
 import { endPolity } from './polities.ts';
 import { marriageBetween, atWar } from './war.ts';
 
-export function diplomacyStep(s: State, agg: PolityAgg, y0: number): void {
-  const rng = s.rng.fork('diplomacy', y0);
+export function diplomacyStep(s: State, agg: PolityAgg, year: number): void {
+  const y0 = year;
+  const rng = s.rng.fork('diplomacy', year);
   const alive = s.polities.filter((p) => alivePolity(p, y0));
-  // opinion drift along borders
-  for (const p of alive) {
+  const decadal = year % 10 === 0;
+  // rivals per polity (opinion below -0.35), computed once
+  const rivals = new Map<number, number[]>();
+  for (const [k, rr] of s.relations) {
+    if (rr.opinion > -0.35) continue;
+    const a = Math.floor(k / 65536), b = k % 65536;
+    if (!rivals.has(a)) rivals.set(a, []);
+    if (!rivals.has(b)) rivals.set(b, []);
+    rivals.get(a)!.push(b);
+    rivals.get(b)!.push(a);
+  }
+  // opinion drift along borders (once a decade)
+  for (const p of decadal ? alive : []) {
     const nb = agg.borders.get(p.id);
     if (!nb) continue;
     for (const [q, len] of nb) {
@@ -38,7 +50,6 @@ export function diplomacyStep(s: State, agg: PolityAgg, y0: number): void {
         // alliances lapse when opinion sours or after 60 years
         const started = s.events[r.alliance].year;
         if (r.opinion < -0.1 || y0 - started > 60) {
-          const year = y0 + rng.int(0, 9);
           event(s, 'alliance-lapse', year, { parts: [[ref('pol', p.id), 'party'], [ref('pol', q), 'party']], causes: [r.alliance], sig: 0.05 });
           r.alliance = null;
         }
@@ -47,16 +58,12 @@ export function diplomacyStep(s: State, agg: PolityAgg, y0: number): void {
       if (r.opinion < 0.25) continue;
       // common rival
       let rival = -1;
-      for (const [k, rr] of s.relations) {
-        if (rr.opinion > -0.35) continue;
-        const a = Math.floor(k / 65536), b = k % 65536;
-        const other = a === p.id ? b : b === p.id ? a : -1;
-        if (other < 0 || other === q) continue;
-        if (rel(s, q, other).opinion < -0.2) { rival = other; break; }
+      for (const other of rivals.get(p.id) ?? []) {
+        if (other === q) continue;
+        if (rel(s, q, other).opinion < -0.2 && alivePolity(s.polities[other], y0)) { rival = other; break; }
       }
-      if (rival < 0 || !alivePolity(s.polities[rival], y0)) continue;
-      if (!rng.chance(0.3)) continue;
-      const year = y0 + rng.int(0, 9);
+      if (rival < 0) continue;
+      if (!rng.chance(0.03)) continue;
       const parts: [string, string][] = [[ref('pol', p.id), 'party'], [ref('pol', q), 'party'], [ref('pol', rival), 'against']];
       if (p.ruler !== null) parts.push([ref('per', p.ruler), 'signatory']);
       if (Q.ruler !== null) parts.push([ref('per', Q.ruler), 'signatory']);
@@ -77,8 +84,7 @@ export function diplomacyStep(s: State, agg: PolityAgg, y0: number): void {
       const Q = s.polities[q];
       if (!alivePolity(Q, y0) || Q.dynasty === null || Q.ruler === null) continue;
       const r = rel(s, p.id, q);
-      if (r.opinion < 0.1 || !rng.chance(0.08)) continue;
-      const year = y0 + rng.int(0, 9);
+      if (r.opinion < 0.1 || !rng.chance(0.008)) continue;
       const m = marriageBetween(s, p, Q, year, rng);
       if (!m) continue;
       event(s, 'marriage', year, {
@@ -93,24 +99,19 @@ export function diplomacyStep(s: State, agg: PolityAgg, y0: number): void {
   for (const p of alive) {
     if (p.overlord === null) continue;
     const o = s.polities[p.overlord];
-    if (!alivePolity(o, y0)) { p.overlord = null; continue; }
+    if (!alivePolity(o, y0) || !alivePolity(p, y0)) { p.overlord = null; continue; }
     if (atWar(s, p.id).length || atWar(s, o.id).length) continue;
     if (p.cells > o.cells / 3) {
-      if (o.stability < 0.3 && rng.chance(0.15)) {
-        const year = y0 + rng.int(0, 9);
+      if (o.stability < 0.3 && rng.chance(0.015)) {
         event(s, 'repudiation', year, { parts: [[ref('pol', p.id), 'vassal'], [ref('pol', o.id), 'overlord']], sig: 0.2 });
         p.overlord = null;
       }
       continue;
     }
-    if (s.cultures[p.culture].lang === s.cultures[o.culture].lang && rng.chance(0.05)) {
-      const year = Math.max(y0 + rng.int(0, 9), s.lastLogYear.territory);
-      if (year > y0 + 9) continue;
+    if (s.cultures[p.culture].lang === s.cultures[o.culture].lang && rng.chance(0.005)) {
       const ev = event(s, 'annexation', year, { cell: s.settlements[p.capital].cell, parts: [[ref('pol', p.id), 'annexed'], [ref('pol', o.id), 'overlord']], sig: 0.3 });
-      // territory changes must be logged in year order: annex at the decade boundary
-      const cells = agg.cells.get(p.id) ?? [];
-      void cells;
-      pendingAnnex.push({ vassal: p.id, overlord: o.id, event: ev.id, year });
+      for (let c = 0; c < s.world.n; c++) if (s.owner[c] === p.id) setOwner(s, c, o.id, year, ev.id);
+      endPolity(s, p, year, ev.id);
     }
   }
 }

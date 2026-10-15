@@ -282,7 +282,7 @@ export function housesStep(s: State, agg: PolityAgg, mem: EconMemory, y0: number
     if (d < 0.05) continue;
     const existing = s.houses.filter((h) => h.died === null && h.settlement === t.id).length;
     if (existing >= 3) continue;
-    if (!rng.chance(Math.min(0.2, 0.025 + d * 0.15))) continue;
+    if (!rng.chance(Math.min(0.05, 0.004 + d * 0.035))) continue;
     const year = y0 + rng.int(0, 9);
     const culture = s.culture[t.cell] >= 0 ? s.culture[t.cell] : P.culture;
     const founder = newPerson(s, { sex: rng.chance(0.1) ? 'f' : 'm', born: year - rng.int(25, 45), culture, polity: o, key: `merchant:${t.id}:${year}`, adult: true, minDeath: year + 1 });
@@ -312,7 +312,7 @@ export function housesStep(s: State, agg: PolityAgg, mem: EconMemory, y0: number
     const hp = s.persons[head];
     if (hp.died <= y0 + 9) {
       const year = Math.max(hp.died, y0);
-      if (year <= y0 + 9 && rng.chance(0.85)) {
+      if (year <= y0 + 9 && rng.chance(Math.max(0.3, 0.8 - (year - h.born) / 400))) {
         const heir = newPerson(s, { sex: rng.chance(0.12) ? 'f' : 'm', born: year - rng.int(22, 40), culture: hp.culture, polity: o >= 0 ? o : null, key: `head:${h.id}:${year}`, adult: true, minDeath: year + 1, father: rng.chance(0.7) ? hp.id : null });
         if (heir.father !== null) hp.children.push(heir.id);
         heir.roles.push({ role: 'merchant', polity: o >= 0 ? o : null, start: year, end: null, event: null, ref: ref('hou', h.id) });

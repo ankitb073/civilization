@@ -27,6 +27,7 @@ export interface Polity {
   nameId: NameId;
   nameBasis: 'city' | 'people' | 'region' | 'dynasty';
   culture: number;
+  cultures: [number, number][]; // [year, culture] history
   born: number;
   died: number | null;
   foundEvent: number;

@@ -43,7 +43,7 @@ export function createPolity(
   const cultureRng = s.rng.fork('culture-law', o.culture);
   const law = cultureRng.weighted(['male-primogeniture', 'primogeniture', 'seniority', 'elective'] as const, [0.62, 0.12, 0.16, 0.1]);
   const p: Polity = {
-    id, nameId, nameBasis: basis, culture: o.culture, born: year, died: null, foundEvent: ev.id, endEvent: null,
+    id, nameId, nameBasis: basis, culture: o.culture, cultures: [[year, o.culture]], born: year, died: null, foundEvent: ev.id, endEvent: null,
     capital: o.capital, capitals: [[year, o.capital]], gov: o.gov, govs: [[year, o.gov]], ruler: null, dynasty: null,
     religion: -1, currency: -1, treasury: 0, debt: 0, stability: 0.65, army: 0, techs: new Map(), overlord: null,
     tributes: [], color: pickColor(s, o.cells, id), predecessor: o.predecessor ?? null, successors: [], kind: o.kind ?? 'state',
@@ -487,11 +487,13 @@ export function collapse(s: State, geo: Geo, p: Polity, cells: number[], year: n
   });
 }
 
-/** Decadal: government evolution, vassal annexation, horde formation. */
-export function governmentStep(s: State, agg: PolityAgg, y0: number): void {
-  const rng = s.rng.fork('gov', y0);
+/** Yearly: government evolution (rates are per decade, applied as a tenth per year). */
+export function governmentStep(s: State, agg: PolityAgg, year: number): void {
+  const rng = s.rng.fork('gov', year);
+  const y0 = year;
   for (const p of s.polities) {
     if (!alivePolity(p, y0) || p.kind === 'rebel') continue;
+    if (!rng.chance(0.1)) continue;
     const era = eraOf(p);
     const cells = p.cells;
     const capPop = s.settlements[p.capital].pop;
@@ -552,7 +554,7 @@ export function governmentStep(s: State, agg: PolityAgg, y0: number): void {
       next = rng.chance(0.5) ? 'republic' : 'constitutional-monarchy';
       sub = 'revolution';
     }
-    if (next && next !== p.gov) changeGov(s, p, next, y0 + rng.int(0, 9), sub, rng);
+    if (next && next !== p.gov) changeGov(s, p, next, year, sub, rng);
   }
 }
 
@@ -577,9 +579,13 @@ export function changeGov(s: State, p: Polity, gov: GovType, year: number, sub: 
     p.dynasty = d.id;
     setRuler(s, p, king, year, ev.id, 'ruler');
   } else if (isRepublican(gov) && p.ruler !== null) {
-    // keep the head of state but retitle the role
+    // keep a living head of state but retitle the role; a dead one is replaced
     const r = s.persons[p.ruler];
-    setRuler(s, p, r, year, ev.id, headRole(gov));
+    if (r.died > year) setRuler(s, p, r, year, ev.id, headRole(gov));
+    else {
+      const head = newPerson(s, { sex: 'm', born: year - rng.int(35, 60), culture: p.culture, polity: p.id, key: `head2:${p.id}:${year}`, adult: true, minDeath: year + 1 });
+      setRuler(s, p, head, year, ev.id, headRole(gov));
+    }
   }
 }
 

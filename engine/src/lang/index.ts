@@ -288,6 +288,11 @@ export class LanguageEngine {
     return { conventional: conv, scholarly: sch, ipa: '/' + segs.map(ipa).join(joiner === ' ' ? ' ' : '') + '/' };
   }
 
+  /** Number of names coined so far (ids are 0..count-1). */
+  nameCount(): number {
+    return this.names.length;
+  }
+
   nameMeaning(name: NameId): string | null {
     return this.nameRec(name).meaning;
   }

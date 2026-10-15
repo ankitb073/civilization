@@ -52,6 +52,7 @@ export function cultureStep(s: State, geo: Geo, agg: PolityAgg, y0: number, cent
       const year = y0 + rng.int(0, 9);
       event(s, 'acculturation', year, { cell: s.settlements[p.capital].cell, parts: [[ref('pol', p.id), 'polity'], [ref('cul', p.culture), 'from'], [ref('cul', maj), 'to']], sig: 0.2 });
       p.culture = maj;
+      p.cultures.push([year, maj]);
     }
   }
   // language contact along cultural borders (once per century)
@@ -141,7 +142,10 @@ function splitCultures(s: State, geo: Geo, agg: PolityAgg, year: number, rng: im
     // polities of that culture whose seat is in the group switch identity
     for (const p of s.polities) {
       if (p.died !== null || p.culture !== cid) continue;
-      if (group.includes(s.settlements[p.capital].cell)) p.culture = child.id;
+      if (group.includes(s.settlements[p.capital].cell)) {
+        p.culture = child.id;
+        p.cultures.push([year, child.id]);
+      }
     }
     // settlements in the group are now spoken of in the new language
     for (const t of s.settlements) if (t.abandoned === null && group.includes(t.cell)) s.lang.localize(t.nameId, lang, year);

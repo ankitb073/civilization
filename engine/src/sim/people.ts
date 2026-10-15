@@ -106,7 +106,7 @@ export function ensureFamily(s: State, ruler: Person): void {
   const first = Math.max(mother.born + 17, father.born + 17);
   const last = Math.min(mother.born + 42, mother.died - 1, father.died);
   if (last < first) return;
-  const n = Math.min(8, rng.poisson(3.3));
+  const n = Math.min(7, rng.poisson(2.8));
   const births: number[] = [];
   for (let i = 0; i < n; i++) births.push(rng.int(first, last));
   births.sort((a, b) => a - b);

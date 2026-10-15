@@ -26,6 +26,7 @@ export interface SimResult {
 }
 
 export interface SimHooks {
+  onStart?: (r: SimResult) => void;
   onCentury?: (r: SimResult, year: number) => void;
   log?: (msg: string) => void;
 }
@@ -40,6 +41,7 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
   const initial = { owner: new Int32Array(s.world.n).fill(-1), culture: s.culture.slice(), religion: s.religion.slice() };
   const result: SimResult = { state: s, econ, thought, initial };
   let centuryExpansion = new Map<number, number>();
+  hooks.onStart?.(result);
   const t0 = performance.now();
 
   for (let y0 = 0; y0 < yearEnd; y0 += 10) {
@@ -57,20 +59,21 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
     priceStep(s, econ, y0);
     housesStep(s, agg, econ, y0);
     stabilityStep(s, agg, y0);
-    governmentStep(s, agg, y0);
-    diplomacyStep(s, agg, y0);
-    religionStep(s, geo, agg, thought, y0);
     const centuryEnd = y0 % 100 === 90;
-    cultureStep(s, geo, agg, y0, centuryEnd);
     for (let y = y0; y < y0 + 10; y++) {
       const rng = s.rng.fork('year', y);
       applyPendingAnnex(s, y);
+      governmentStep(s, agg, y);
+      diplomacyStep(s, agg, y);
       politicsYear(s, geo, agg, y, rng);
       declareYear(s, agg, y, rng);
       warYear(s, agg, pm, y, rng);
       expansionYear(s, agg, y, rng, centuryExpansion);
       if (y % 5 === 4) agg = aggregate(s, geo, y);
     }
+    // cultural and religious change is logged at the end of the decade, after the political year loop
+    religionStep(s, geo, agg, thought, y0);
+    cultureStep(s, geo, agg, y0, centuryEnd);
     // decadal statistics
     for (const p of s.polities) {
       if (!alivePolity(p, y0)) continue;

@@ -10,7 +10,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --test --disable-warning=ExperimentalWarning engine/test/",
+    "test": "node --test --disable-warning=ExperimentalWarning engine/test/*.test.ts",
     "sim": "node --disable-warning=ExperimentalWarning engine/src/cli/sim.ts",
     "archive": "node --disable-warning=ExperimentalWarning engine/src/cli/archive.ts",
     "check": "node --disable-warning=ExperimentalWarning engine/src/cli/check.ts",
