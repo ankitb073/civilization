@@ -159,7 +159,8 @@ export function buildHistory(a: Archive): Dossier[] {
       const pol = s.polities[pid];
       const reigns = (ctx.reigns.get(pid) ?? []).filter((r) => r.end > y0 && r.start < y1).sort((x, y) => (y.end - y.start) - (x.end - x.start)).slice(0, 3);
       const cap = row[10] as number;
-      facts.push(`Great power: ${titleOf(`pol:${pid}`)} (AY ${pol.born}–${pol.died ?? 'present'}): peak ${fmt(row[3] as number)} people and ${row[2]} districts in AY ${row[1]}; capital ${cap >= 0 ? name(`set:${cap}`) : 'none'}; government ${row[8]}${reigns.length ? `; long reigns: ${reigns.map((r) => `${name(`per:${r.person}`)} (${r.start}–${r.end})`).join(', ')}` : ''}.`);
+      const life = (ctx.polityStats.get(pid) ?? []).reduce<(number | string | null)[] | null>((m, r) => (m === null || (r[3] as number) > (m[3] as number) ? r : m), null);
+      facts.push(`Great power: ${titleOf(`pol:${pid}`)} (AY ${pol.born}–${pol.died ?? 'present'}): largest within this chapter ${fmt(row[3] as number)} people and ${row[2]} districts (survey of the ${row[1]}s)${life && life[1] !== row[1] ? `; its all-time peak came later or earlier: ${fmt(life[3] as number)} people and ${life[2]} districts (survey of the ${life[1]}s)` : '; this was its all-time peak'}; capital ${cap >= 0 ? name(`set:${cap}`) : 'none'}; government ${row[8]}${reigns.length ? `; long reigns: ${reigns.map((r) => `${name(`per:${r.person}`)} (${r.start}–${r.end})`).join(', ')}` : ''}.`);
       links.push(`pol:${pid}`);
       if (cap >= 0) links.push(`set:${cap}`);
       for (const r of reigns) links.push(`per:${r.person}`);
@@ -223,14 +224,14 @@ export function buildHistory(a: Archive): Dossier[] {
     const laws = s.lang.languages().flatMap((l) => s.lang.soundChanges(l.id).filter((c) => c.year >= y0 && c.year < y1).map((c) => ({ l, c })));
     const own = new Map<string, typeof laws[number]>();
     for (const x of laws) if (!own.has(x.c.label + x.c.year)) own.set(x.c.label + x.c.year, x);
-    if (own.size) facts.push(`Sound changes dated to the period: ${own.size}; for example ${[...own.values()].slice(0, 3).map((x) => `${x.c.label} in ${name(`lan:${x.l.id}`)} c. AY ${x.c.year}`).join('; ')}.`);
+    if (own.size) facts.push(`Distinct sound changes (by rule and year) dated to the period: ${own.size} (${laws.length} counting each language separately); for example ${[...own.values()].slice(0, 3).map((x) => `${x.c.label} in ${name(`lan:${x.l.id}`)} c. AY ${x.c.year}`).join('; ')}.`);
     for (const e of evs.filter((e) => e.sub === 'script-adoption').slice(0, 3)) { facts.push(`Writing, AY ${e.year}: ${titleOf(`evt:${e.id}`)}.`); links.push(`evt:${e.id}`); }
 
     // sources
     const docs = a.artifacts.filter((x) => x.year >= y0 && x.year < y1 && !x.flagship);
     const subs = new Map<string, number>();
     for (const x of docs) subs.set(x.sub, (subs.get(x.sub) ?? 0) + 1);
-    facts.push(`Surviving procedural documents from the period: ${docs.length} (${[...subs].sort((x, y) => y[1] - x[1]).slice(0, 6).map(([k2, v]) => `${k2} ${v}`).join(', ')}).`);
+    facts.push(`Surviving documents from the period: ${docs.length + a.artifacts.filter((x) => x.year >= y0 && x.year < y1 && x.flagship).length} in all: ${docs.length} procedural documents, and ${a.artifacts.filter((x) => x.year >= y0 && x.year < y1 && x.flagship).length} literary works and essays (the procedural ones: ${[...subs].sort((x, y) => y[1] - x[1]).slice(0, 6).map(([k2, v]) => `${k2} ${v}`).join(', ')}).`);
     const key = docs.filter((x) => x.about.some((e) => s.events[e] && s.events[e].sig >= 0.5)).sort((x, y) => Math.max(...y.about.map((e) => s.events[e]?.sig ?? 0)) - Math.max(...x.about.map((e) => s.events[e]?.sig ?? 0))).slice(0, 8);
     for (const x of key) facts.push(`Source: ${x.catalog} "${x.title}" (${x.sub}, AY ${x.year}).`);
     const lit = a.artifacts.filter((x) => x.flagship && x.year >= y0 && x.year < y1).slice(0, 10);
