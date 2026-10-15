@@ -138,3 +138,19 @@ Tools: `engine/src/debug/realism.ts <db…>` (every row below) and `engine/src/d
    - But readers mostly cannot see it, and it costs the whole flagship corpus. It is worth paying once, for a batch of changes, not for these alone.
 
 **Why.** The bugs that hurt credibility are in the numbers, not in who wins. Stage 1 separates the two, so the world can be fixed where readers look, at a known and bounded cost. The deeper model waits on the branch, measured, until a full rewrite is worth paying for.
+
+**Status (2026-10-15): stage 1 adopted on main.** The commits `87a1671` (stage 1) and `b146c84` (the archive guard) were cherry-picked, with three follow-ups found on the way:
+- A record-only pass drops a currency's ruler who fell in battle before the event's nominal year inside the decade. That case had 23 left after stage 1.
+- Stage 1 emits four more newspapers and one more pamphlet. Their numbers collided with frozen flagship numbers (PAL·NP·01077–01080 and PAL·PM·00055), so two documents shared each number, and the checker did not notice. Generated documents now skip numbers that are reserved for flagships, and a new invariant, `catalogue-unique`, guards this.
+- Flagships always survive, but their condition, provenance and lacunae were drawn from the artifact's position in the list. Stage 1 shifted every position, which silently re-rolled what the essays and the History say about those documents. They are now drawn from the frozen flagship id.
+
+The revision went well beyond the 99 flagships that `flagship-drift.ts` flagged:
+- `flagship-drift.ts` reads digits only. The flagships also give figures in words ("seventeen thousand spears against a thousand", "ten millions"), make claims about relative losses ("more of ours fell than of theirs", "a costly victory"), and describe documents without citing them.
+- A new tool, `engine/src/debug/flagship-packets.ts`, writes one packet per flagship. Each packet lists the changed figures, participants, armies and documents, the regenerated fact sheet, and leads in digits or words. Wider sweeps and a phrase search found the rest.
+- Agent revisers worked from the packets in about twenty batches. Most of the 656 flagships were edited: the History (all 21 chapters), every Life, nearly every rival-chronicle essay, and over a hundred period sources and voices. Many premises flipped. Rebels "of thirty men" became armies of thousands, and "won at great cost" became "won cheaply". A conqueror's "arithmetic" became the arithmetic of overwhelming force. Where a title rested on a small number ("the Twenty-Four"), the number now means sworn men in front of a host.
+- Flagships quote flagships, so a final pass reconciled the 24 citing files with their sources' surviving text.
+- Two frontmatter titles were changed: fl-219 "An Awkward Victory Twice Told" and fl-613 "…the half-million-man army".
+
+Result on seed 5: the checker passes with 17 invariants over 1,946,013 facts, and the quotation check matches all 572 quotations. `flagship-packets.ts --strict` leaves only ages, regnal years, district counts and deliberate small numbers. The world fingerprint (`ef5abe84`) and the canon test are unchanged.
+
+Fixed by stage 1: #16, #1, #6, #9, #8 and #15. #7 is down from 10 cases to 1. Stage 2 stays on branch `sim-v2` for a second edition, with #17 and #18.
