@@ -9,7 +9,9 @@ Palimpsest generates a world from a single seed and simulates it century by cent
 - royal inscriptions in reconstructed languages, with transliteration, interlinear gloss and translation;
 - rival chronicles of the same war, each lying in its own way, and modern scholars arguing about them.
 
-Every document links to the people, places, states and events it mentions, and every page links back. A consistency checker audits the archive against the causal record on every build: about 1.8 million facts, zero violations.
+Every document links to the people, places, states and events it mentions, and every page links back. A consistency checker audits the archive against the causal record on every build: about 1.9 million facts, zero violations.
+
+**Start here:** [*A History of Yüvinzhi*](https://ankitb073.github.io/civilization/#/collections/history), five thousand years in twenty chapters by the archive's own historians, citing the sources by catalogue number. Or take it with you: **[The Reader (EPUB)](https://ankitb073.github.io/civilization/downloads/palimpsest-reader.epub)** collects the History, about 600 literary sources, 40 Lives and the scholars' essays.
 
 ![Five thousand years of borders](docs/img/borders.gif)
 
@@ -35,9 +37,9 @@ Every document links to the people, places, states and events it mentions, and e
 | Wars | ~5,000, with ~17,000 battles and ~3,500 peace treaties |
 | People with pages | ~35,000 rulers, generals, prophets, merchants, inventors, scribes and scholars |
 | Languages | ~125 in six families, each with dated sound laws |
-| Surviving documents | ~16,000 of ~29,000 written, across 25 genres, including ~450 lost works known only from quotation |
-| Flagship sources | ~240 literary documents and scholarly essays written from database dossiers and validated by the checker |
-| Pages and links | ~100,000 pages, ~850,000 links, all bidirectional |
+| Surviving documents | ~18,500 across 35 genres, including ~450 lost works known only from quotation |
+| Flagship sources | ~660: turning points, rival-chronicle studies, 40 Lives, 107 "voices from below" and a 21-part History, all written from database dossiers, fact-checked, and validated by the checker |
+| Pages and links | ~106,000 pages, ~950,000 links, all bidirectional |
 
 ## What's inside
 
@@ -46,10 +48,10 @@ Every document links to the people, places, states and events it mentions, and e
 | **World** | Voronoi continents, rivers by flow accumulation, rain shadows, biomes, and resources (rare tin forces Bronze Age trade). |
 | **Simulation** | Climate (volcanic winters, droughts, cold centuries, industrial warming), population and famine, cities, states, succession and usurpation, war and treaties, revolts, collapse, trade routes, prices, currencies and debasement, merchant houses and panics, plagues along trade routes, first contact across the ocean with virgin-soil epidemics, colonies and colonial wars, religions and schisms, philosophies and ideologies, and technology from writing to computer networks. |
 | **Languages** | Proto-languages with Poisson-timed sound changes (lenition, apocope, palatalization…), daughters that inherit up to the split, borrowing with phonological adaptation, five kinds of script, and Leipzig glosses. A city's name in a Bronze Age inscription and in a modern newspaper are linked by dated sound laws. |
-| **Archive** | 25 genres: treaties, rival chronicles, stelae, dedications, boundary stones, epitaphs, ledgers, letters, decrees, annals, censuses, temple records, coins, travelogues, scriptures, council acts, polemics, newspapers, telegrams, debates, exchange reports, yearbooks, pamphlets, patents, excavation reports, scholarly papers, plus fragments of lost works. Each has a local date (regnal years, foundation eras, religious eras), a catalogue number, survival odds, an excavator and a translator. |
-| **Flagships** | For each of ~240 turning points, a dossier of facts *cut at the document's date*, a real author who was alive then, and a whitelist of links. AI writers turn each dossier into a literary source or a modern essay. Ingestion validates every link and date, and the checker audits the result like any other document. |
-| **Checker** | 14 invariants verified from the SQLite database alone: causes precede effects, the logs replay exactly to the final map, every ceded district changes hands at the treaty date, no document mentions anything that did not yet exist, authors were alive and of age, ledger prices match the market series, and every link resolves both ways. |
-| **Atlas** | Vite and Preact static site: map with time slider and political, peoples and faiths layers; a WebGL graph of every entity and event; a reader with period styling; a "record vs. accounts" view for rival chronicles; browse by genre; downloads. |
+| **Archive** | 35 genres: treaties, rival chronicles, stelae, dedications, boundary stones, epitaphs, ledgers, letters, decrees, annals, censuses, muster rolls, wills, lawsuits, graffiti, school exercises, omen collections, itineraries, customs tariffs, ship manifests, almanacs, temple records, coins, travelogues, scriptures, council acts, polemics, newspapers, telegrams, debates, exchange reports, yearbooks, pamphlets, patents, excavation reports, scholarly papers, plus fragments of lost works. Each has a local date (regnal years, foundation eras, religious eras), a catalogue number, survival odds, an excavator and a translator. |
+| **Flagships** | For each turning point, life or period, a dossier of facts *cut at the document's date*, a real author who was alive then (or an anonymous ordinary person), and a whitelist of links. AI writers turn each dossier into a literary source, a voice from below, a Life or a chapter of the History; fact-checker agents then compare every file with the database. Ingestion validates every link and date, and the checker audits the result like any other document. |
+| **Checker** | 15 invariants verified from the SQLite database alone: causes precede effects, the logs replay exactly to the final map, every ceded district changes hands at the treaty date, no document mentions anything that did not yet exist, authors were alive and of age, ledger prices match the market series, every catalogue number a document cites exists and is older than the citing document, and every link resolves both ways. |
+| **Atlas** | Vite and Preact static site: map with time slider and political, peoples, faiths and languages layers; a year view for any year; the Story, the Histomap, the Tree of Tongues and the Word Machine; prices across five millennia; collections and dynasty trees; a WebGL graph of every entity and event; a reader with period styling, citations and a "record vs. accounts" view for rival chronicles; downloads (EPUB, Obsidian vault, SQLite). Accessible (axe-clean, keyboard map) and fast (~450 KB to first map). |
 
 ## Run it
 
@@ -67,7 +69,7 @@ npm run check              # audit build/world.sqlite (exits non-zero on any vio
 npm test                   # determinism, invariants, archive and checker tests
 ```
 
-`npm run build:data` also writes `build/vault/` (an Obsidian vault with a "Start here" note) and the downloads offered on the site. The database schema is described in [docs/data-dictionary.md](docs/data-dictionary.md).
+`npm run build:data` also writes `build/vault/` (an Obsidian vault with a "Start here" note), the EPUB Reader, share pages with Open Graph cards (`s/art-N.html`), and the downloads offered on the site. The database schema is described in [docs/data-dictionary.md](docs/data-dictionary.md).
 
 ## How it fits together
 
@@ -79,7 +81,7 @@ seed → worldgen → simulate (50 centuries × 10 decades, yearly politics) →
             checker (reads the DB only)   vault (Obsidian)   atlas data → static site
 ```
 
-Design documents live in `docs/`:
+For the method in plain words, with examples, read [docs/how-it-works.md](docs/how-it-works.md). Design documents live in `docs/`:
 
 - [`prfaq.md`](docs/prfaq.md): why the project exists.
 - [`hld.md`](docs/hld.md): architecture.
