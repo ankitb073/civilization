@@ -45,6 +45,7 @@ From that record we generate thousands of interlinked primary-source documents: 
 - `npm run typecheck`
 - `npm run stats -- <seed>`
 - Debug tools: `node engine/src/debug/stats.ts <seed>`, `node engine/src/debug/world-cli.ts <seed> out.png`, `node engine/src/debug/peek.ts <seed> <sub> <n>`, and `node engine/src/debug/scan.ts <from> <to>` (seed scoring).
+- Realism audit of built databases (battle losses, army sizes, fixed-bug recurrence): `node engine/src/debug/realism.ts a.sqlite [b.sqlite …]`. Flagships left stale by a record change: `node engine/src/debug/flagship-drift.ts before.sqlite after.sqlite --list` (decision 0015).
 - Isolated build (avoids clobbering other builds): `node engine/src/cli/build.ts --no-downloads --db=/tmp/x.sqlite --out=/tmp/data`.
 - The EPUB alone: `node engine/src/cli/reader.ts [out.epub]`.
 - Atlas: `npm --prefix atlas run shoot`, `npm --prefix atlas run frames` (borders animation), `npm --prefix atlas run mock`.
