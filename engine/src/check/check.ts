@@ -243,6 +243,21 @@ export function runChecks(dbPath: string): CheckReport {
       else c.ok();
     }
   }
+  {
+    const c = inv('citations-resolve', 'Every catalogue number a document cites exists and was written no later than the citing document');
+    const cat = new Map<string, number>();
+    for (const r of all('SELECT catalog, year FROM artifacts')) cat.set(String(r.catalog), Number(r.year));
+    for (const r of all("SELECT id, year, body FROM artifacts WHERE body LIKE '%PAL·%'")) {
+      const year = Number(r.year);
+      const text = String(r.body).split('\n---\n')[0]; // the editorial apparatus may look ahead
+      for (const m of text.matchAll(/PAL·[A-Z]{2,3}·\d+/g)) {
+        const y = cat.get(m[0]);
+        if (y === undefined) c.bad(`art:${r.id} cites ${m[0]}, which is not in the archive`);
+        else if (y > year) c.bad(`art:${r.id} (AY ${year}) cites ${m[0]}, written in AY ${y}`);
+        else c.ok();
+      }
+    }
+  }
   db.close();
   return { passed: out.every((r) => r.violations === 0), invariants: out, ms: Math.round(performance.now() - t0) };
 }
