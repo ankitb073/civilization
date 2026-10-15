@@ -1,0 +1,34 @@
+{
+  "name": "palimpsest-atlas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "mock": "node --disable-warning=ExperimentalWarning scripts/mock-data.ts",
+    "shoot": "node --disable-warning=ExperimentalWarning scripts/shoot.ts"
+  },
+  "dependencies": {
+    "@fontsource/eb-garamond": "5.3.0",
+    "@fontsource/inter": "5.3.0",
+    "@preact/signals": "2.11.3",
+    "d3-delaunay": "6.0.4",
+    "d3-force": "3.0.0",
+    "graphology": "0.26.0",
+    "graphology-layout-forceatlas2": "0.10.1",
+    "preact": "10.29.8",
+    "sigma": "3.0.3"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "2.10.6",
+    "@types/d3-delaunay": "6.0.4",
+    "@types/d3-force": "3.0.10",
+    "@types/node": "24.19.2",
+    "playwright": "1.64.1",
+    "typescript": "7.0.2",
+    "vite": "7.3.7"
+  }
+}
