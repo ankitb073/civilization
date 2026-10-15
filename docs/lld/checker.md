@@ -23,6 +23,7 @@ The checker reads **only** `world.sqlite`. It shares no code or memory with the 
 | `ledger-prices` | Every ledger price is within 20% of the simulated market price for that place, good and decade | `artifacts.data.entries` vs `prices` |
 | `links-resolve` | Every link resolves to a page, and every page's backlink count equals the links that point at it | `links` ⋈ `pages` |
 | `citations-resolve` | Every catalogue number a document cites (`PAL·XX·NNNNN`) exists, and was written no later than the citing document | text part of `artifacts.body` vs `artifacts.catalog`, `year` |
+| `quotations-verbatim` | Every quotation set directly before a catalogue citation (`"…" (PAL·XX·N`) appears word for word in the cited document, or is its title; ellipses allowed | normalized `artifacts.body` and `title` |
 
 ## What it does not (yet) check
 

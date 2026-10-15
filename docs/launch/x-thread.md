@@ -47,7 +47,7 @@ Each side's historian writes up the same war, and each lies in its own way: blam
 
 > "The market is full of goats and nobody is buying, so a goat brings half what it brought and barley costs twice. You can do that sum in your head."
 
-**8/** The checker reads only the database. It verifies 15 invariants across ~1.9M facts:
+**8/** The checker reads only the database. It verifies 16 invariants across ~1.9M facts:
 - no document mentions anything that didn't exist yet
 - every ceded district changes hands on the treaty date
 - every author was alive and of age

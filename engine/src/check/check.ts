@@ -260,6 +260,22 @@ export function runChecks(dbPath: string): CheckReport {
       }
     }
   }
+  {
+    const c = inv('quotations-verbatim', 'Every quotation set directly before a catalogue citation appears word for word in the cited document (or is its title)');
+    const norm = (t: string) => t.replace(/\[\[[^\]|]+\|([^\]]*)\]\]/g, '$1').replace(/[*_>`]/g, '').replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim().toLowerCase();
+    const hay = new Map<string, string>();
+    for (const r of all('SELECT catalog, title, body FROM artifacts')) hay.set(String(r.catalog), `${norm(String(r.body))} ${norm(String(r.title))}`.replace(/ \/ /g, ' '));
+    for (const r of all("SELECT id, body FROM artifacts WHERE body LIKE '%PAL·%'")) {
+      const text = String(r.body).split('\n---\n')[0];
+      for (const m of text.matchAll(/["“]([^"”\n]{12,400})["”][.,;:!?]?\s*\((PAL·[A-Z]{2,3}·\d+)/g)) {
+        const parts = norm(m[1]).replace(/ \/ /g, ' ').split(/…|\.\.\.|\[…\]/).map((x) => x.trim().replace(/^[ .,;:]+|[ .,;:]+$/g, '')).filter((x) => x.length >= 8);
+        if (!parts.length) continue;
+        const h = hay.get(m[2]) ?? '';
+        if (parts.every((x) => h.includes(x))) c.ok();
+        else c.bad(`art:${r.id} quotes "${m[1].slice(0, 60)}" as ${m[2]}, which does not contain it`);
+      }
+    }
+  }
   db.close();
   return { passed: out.every((r) => r.violations === 0), invariants: out, ms: Math.round(performance.now() - t0) };
 }
