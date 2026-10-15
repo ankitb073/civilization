@@ -26,7 +26,8 @@ From that record we generate thousands of interlinked primary-source documents: 
 - The canonical world is seed 5 (decision 0009).
 - `flagships/*.md` are agent-written sources tied to simulation ids. Each carries a `world:` fingerprint of the simulation's events.
 - Any change under `engine/src/sim/**` changes ids. Ingestion then rejects every flagship as written for another world. Afterwards, regenerate the dossiers (`node engine/src/cli/dossiers.ts 5 240 [--wave=2|3|4|5]`) and rewrite or revalidate the flagships (docs/lld/flagships.md, decision 0010).
-- Archive-level changes are safe.
+- The language engine (`engine/src/lang/**`) is canon too. Flagships quote names and words as plain text, and the world fingerprint covers simulation events only, so a language change silently renames the world. Even renaming a sound law's label does this, because rule selection counts labels. `engine/test/canon.test.ts` pins seed 5's languages; if it fails, revert.
+- Archive-level changes are safe only if they keep catalogue numbering: flagships cite documents by catalogue number, and the `citations-resolve` invariant fails the build if a citation breaks. Don't change which documents a generator emits, or the order of RNG draws, without checking it.
 - Modern essays quote existing procedural documents and their catalogue numbers. Don't reword existing generators except to fix bugs. Add new genres in new files with new catalogue codes.
 
 ## Exports (atlas/public/data, see engine/src/export/contract.ts)
