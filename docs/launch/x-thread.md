@@ -35,6 +35,8 @@ The Word Machine traces 114 words through all 126 languages.
 
 Each side's historian writes up the same war, and each lies in its own way: blame flipped, defeats left out, losses shrunk, territory "returned". You can put them side by side with what actually happened.
 
+The worst offender, the Tlayiyan account of the Third Nis Trade War, admits 15 of its 5,772 dead. The archive ranks them: ankitb073.github.io/civilization/#/collections/spin
+
 [image: docs/img/compare.png]
 
 **6/** Then the world's own scholars write its history: *A History of Yüvinzhi*, 21 chapters, ~60,000 words, citing ~300 surviving documents by catalogue number.

@@ -293,10 +293,37 @@ function collectionsJson(r: SimResult, a: Archive): CollectionsJson {
   add('volcanic', 'Volcanic winters', 'The great eruptions and the cold, hungry years after them.', s.anomalies.filter((x) => x.kind === 'eruption').sort((x, y) => y.severity - x.severity || x.start - y.start).map((x) => ({ id: `cli:${x.id}`, note: `VEI ${x.severity}, AY ${x.start}`, year: x.start })));
   add('collapses', 'Collapses of great powers', 'States that broke apart, and why.', evs.filter((e) => e.sub === 'collapse').sort((x, y) => y.sig - x.sig).map((e) => ({ id: `evt:${e.id}`, note: `AY ${e.year}`, year: e.year })));
   add('rival', 'Wars told twice', 'Wars for which both sides’ chronicles survive: compare them with the record.', [...a.pages.values()].filter((p) => p.accounts && p.accounts.sources.length >= 2).sort((x, y) => x.t0 - y.t0).map((p) => ({ id: p.id, note: `${p.accounts!.sources.length} accounts`, year: p.t0 })));
+  // the liars' gallery: monuments and chronicles measured against the record
+  const num = (v: string | undefined) => Number(String(v ?? '').replace(/[^\d.]/g, '')) || 0;
+  const boasts: { id: string; year: number; claimed: number; truth: number }[] = [];
+  for (const x of a.artifacts) {
+    if (x.status !== 'extant' || x.flagship || x.sub !== 'inscription') continue;
+    const m = x.body.match(/It claims ([\d,]+) enemy dead\. The ground-truth record of the battle gives ([\d,]+) losses/);
+    if (m) boasts.push({ id: `art:${x.id}`, year: x.year, claimed: num(m[1]), truth: num(m[2]) });
+  }
+  add('boasts', 'The biggest boasts', 'Victory steles that invent the most enemy dead, checked against the battle record.', boasts.sort((x, y) => (y.claimed - y.truth) - (x.claimed - x.truth)).map((b) => ({ id: b.id, note: `claims ${b.claimed.toLocaleString('en-US')} enemy dead; the record has ${b.truth.toLocaleString('en-US')} (×${(b.claimed / Math.max(1, b.truth)).toFixed(1)})`, year: b.year })));
+  const spin: { id: string; year: number; factor: number; note: string }[] = [];
+  for (const p of a.pages.values()) {
+    if (!p.accounts) continue;
+    const truth = new Map(p.accounts.truth);
+    const [aName, dName] = [...truth.keys()].filter((k) => k.startsWith('Losses of ')).map((k) => k.slice(10));
+    if (!aName || !dName) continue;
+    for (const src of p.accounts.sources) {
+      const claim = new Map(src.claims);
+      const [own, enemy] = src.side === 'attacker' ? [aName, dName] : [dName, aName];
+      const ot = num(truth.get(`Losses of ${own}`)), et = num(truth.get(`Losses of ${enemy}`));
+      const oc = num(claim.get(`Losses of ${own}`)), ec = num(claim.get(`Losses of ${enemy}`));
+      if (ot < 20 || et < 20 || oc <= 0 || ec <= 0) continue;
+      const factor = (ec / oc) / (et / ot);
+      const extra = [claim.get('Who began the war') !== truth.get('Who began the war') ? 'blames the enemy' : '', claim.get('Outcome') !== truth.get('Outcome') ? `claims “${claim.get('Outcome')}”` : ''].filter(Boolean);
+      spin.push({ id: src.artifactId, year: p.t1 ?? p.t0, factor, note: `admits ${oc.toLocaleString('en-US')} of its ${ot.toLocaleString('en-US')} dead and gives the enemy ${ec.toLocaleString('en-US')} for ${et.toLocaleString('en-US')}${extra.length ? `; ${extra.join('; ')}` : ''}` });
+    }
+  }
+  add('spin', 'The most partisan chronicles', 'Palace chronicles that bend the war’s arithmetic furthest in their own favour: the ratio of enemy dead to their own, against the record’s.', spin.sort((x, y) => y.factor - x.factor).map((x) => ({ id: x.id, note: `${x.note}: the exchange ×${x.factor.toFixed(0)} in its favour`, year: x.year })));
   add('contact', 'The age of contact', 'First contacts, colonies and colonial wars.', evs.filter((e) => e.sub === 'first-contact' || e.sub === 'colonization' || (e.sub === 'war' && e.data.goal === 'colonial')).sort((x, y) => x.year - y.year).map((e) => ({ id: `evt:${e.id}`, note: `AY ${e.year}`, year: e.year })));
   add('revolutions', 'Revolutions', 'When the old order fell.', evs.filter((e) => e.sub === 'revolution').sort((x, y) => x.year - y.year).map((e) => ({ id: `evt:${e.id}`, note: `AY ${e.year}`, year: e.year })));
   add('founders', 'Founders of faiths and schools', 'Prophets and philosophers whose teachings outlived them.', s.movements.filter((m) => m.founder !== null && (m.kind === 'religion' || m.kind === 'philosophy' || m.kind === 'ideology')).sort((x, y) => y.peak - x.peak).map((m) => ({ id: `per:${m.founder}`, note: `${T.short.get(`mov:${m.id}`)} (${m.kind}), AY ${m.born}`, year: m.born })));
-  add('debased', 'The most debased coins', 'Currencies whose silver vanished, issue by issue.', s.currencies.filter((c) => c.kind === 'coin' && c.history.length > 2).sort((x, y) => x.history[x.history.length - 1][1] / x.history[0][1] - y.history[y.history.length - 1][1] / y.history[0][1]).map((c) => ({ id: `cur:${c.id}`, note: `${Math.round((1 - c.history[c.history.length - 1][1] / c.history[0][1]) * 100)}% of its silver lost`, year: c.born })));
+  add('debased', 'The most debased coins', 'Currencies whose silver vanished, issue by issue.', s.currencies.filter((c) => c.kind === 'coin' && c.history.length > 1).sort((x, y) => x.history[x.history.length - 1][1] / x.history[0][1] - y.history[y.history.length - 1][1] / y.history[0][1]).map((c) => ({ id: `cur:${c.id}`, note: `${Math.round((1 - c.history[c.history.length - 1][1] / c.history[0][1]) * 100)}% of its silver lost`, year: c.born })));
   add('fragments', 'Lost works', 'Works known only from quotations in later books.', a.artifacts.filter((x) => x.condition.startsWith('Lost;')).sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
   const flag = a.artifacts.filter((x) => x.flagship);
   add('poems', 'Poems and songs', 'Epics, laments, hymns and satires from the flagship sources.', flag.filter((x) => x.sub === 'poem').sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
