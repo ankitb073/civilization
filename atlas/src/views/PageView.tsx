@@ -84,6 +84,8 @@ function Page({ page }: { page: PageJson }) {
     let md = page.body;
     // the structured language panel below replaces the plain sound-change list
     if (page.language) md = md.replace(/^##\s+(Sound changes|Daughter languages)\s*\n[\s\S]*?(?=^##\s|(?![\s\S]))/gm, '');
+    // a glossed inscription shows its translation in the gloss panel above: don't repeat it in the body
+    if (a?.interlinear) md = md.replace(/^##\s+Translation\s*\n[\s\S]*?(?=^---\s*$|^##\s|(?![\s\S]))/m, '');
     const html = render(md, label, { breaks: style === 'verse' });
     return sections(GENRE_HTML[style]?.(html) ?? html);
   }, [page]);
@@ -146,7 +148,7 @@ function Page({ page }: { page: PageJson }) {
 
         {bodyHtml.trim() && (
           <section class={`doc${style ? ` doc--${style}` : ''}${style === 'periplus' && /^(Periplus|Sailing)/.test(page.title) ? ' doc--sea' : ''}`} aria-label={page.kind === 'artifact' ? 'Text' : 'Article'}>
-            {page.kind === 'artifact' && a?.interlinear && <div class="doc__label">Commentary</div>}
+            {page.kind === 'artifact' && a?.interlinear && <div class="doc__label">Description</div>}
             {page.kind === 'artifact' && !a?.interlinear && <div class="doc__label">{DOC_LABEL[style] ?? (style === 'stone' ? 'Text' : 'Translation')}</div>}
             <Html class="doc__body prose" html={bodyHtml} />
           </section>
