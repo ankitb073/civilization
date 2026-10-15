@@ -314,6 +314,7 @@ export function eventTitle(ctx: Ctx, T: Titles, e: SimEvent): string {
       if (goal === 'invasion') return `${a} Invasion of ${d}`;
       if (goal === 'holy') return `Holy War of ${a} against ${d}`;
       if (goal === 'trade' && reg) return `${reg} Trade War`;
+      if (goal === 'colonial') return `${a} Colonial War${reg ? ` in ${reg}` : ''}`;
       return `${a}–${d} War`;
     }
     case 'battle': {
@@ -380,6 +381,9 @@ export function eventTitle(ctx: Ctx, T: Titles, e: SimEvent): string {
     case 'default': return `${P('debtor')} Default of AY ${e.year}`;
     case 'panic': return `Panic of AY ${e.year}`;
     case 'trade-collapse': return `The Great Contraction of AY ${e.year}`;
+    case 'first-contact': return `First Contact at ${setShort(T, ctx.partsOf(e, 'port')[1])}`;
+    case 'colonization': return `Founding of the Colony of ${setShort(T, first('colony'))}`;
+    case 'colonial-claim': return `${P('claimant')} Claim against ${P('target')}`;
     default: return `${cap(e.sub.replace(/-/g, ' '))} of AY ${e.year}`;
   }
 }

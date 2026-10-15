@@ -47,7 +47,7 @@ export function applySurvival(g: Gen): void {
       a.provenance = `State archive of ${refName(g, a.polity)}; catalogued AY ${Math.min(4999, a.year + r.int(1, 40))}.`;
       a.foundYear = null;
     } else if (durableMedium && a.year < 3800) {
-      const site = a.settlement ?? nearestSite(g, a.cell);
+      const site = a.settlement ?? nearestSite(g, a.cell, a.year);
       let ex = site !== null ? excavations.get(site) : undefined;
       if (site !== null && !ex) {
         const by = g.scholarFor(a.lang, 4900, 'archaeologist');
@@ -88,10 +88,11 @@ function refName(g: Gen, polity: number | null): string {
   return polity === null ? 'unknown provenance' : g.T.short.get(`pol:${polity}`) ?? '';
 }
 
-function nearestSite(g: Gen, cell: number): number | null {
+function nearestSite(g: Gen, cell: number, year: number): number | null {
   const s = g.ctx.s;
   let best: number | null = null, bd = Infinity;
   for (const t of s.settlements) {
+    if (t.founded > year) continue;
     const d = Math.hypot(s.world.x[t.cell] - s.world.x[cell], s.world.y[t.cell] - s.world.y[cell]);
     if (d < bd) { bd = d; best = t.id; }
   }

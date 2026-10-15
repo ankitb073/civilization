@@ -31,7 +31,7 @@ const ROLE_LABEL: Record<string, string> = {
   establishment: 'Established faith', dissenters: 'Dissenters', spouse: 'Spouse', house: 'House', currency: 'Currency',
   issuer: 'Issuer', replaces: 'Replaces', seat: 'Seat', debtor: 'Debtor', creditor: 'Creditor', failed: 'Failed', affected: 'Affected',
   annexed: 'Annexed', overlord: 'Overlord', vassal: 'Vassal', from: 'From', to: 'To', leader: 'Leader', claimant: 'Claimant',
-  against: 'Against', deposed: 'Deposed', site: 'Site', excavator: 'Excavator',
+  against: 'Against', deposed: 'Deposed', site: 'Site', excavator: 'Excavator', colonizer: 'Colonizer', colony: 'Colony', port: 'Port',
 };
 
 export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: string; infobox: [string, string][]; body: string } {
@@ -133,6 +133,12 @@ export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: stri
       break;
     case 'trade-collapse':
       summary = `In ${yr(e.year)} long-distance trade collapsed by about ${Math.round(Number(e.data.drop) * 100)}%.`;
+      break;
+    case 'first-contact':
+      summary = `In ${yr(e.year)} a trade route first joined two continents, at ${byRole.get('port')?.map((r) => L(T, r)).join(' and ')}. ${byRole.get('party')?.length ? `The states involved were ${byRole.get('party')!.map((r) => L(T, r)).join(' and ')}.` : ''}`;
+      break;
+    case 'colonization':
+      summary = `${P('colonizer')} planted a colony at ${P('colony')} in ${P('region')} in ${yr(e.year)}${e.data.overseas ? ', across the sea' : ''}.`;
       break;
     case 'excavation':
       summary = `Excavation at ${P('site')} in ${yr(e.year)} by ${P('excavator')}${e.data.finds ? `, yielding ${e.data.finds} catalogued documents` : ''}.`;

@@ -298,7 +298,7 @@ export function stabilityStep(s: State, agg: PolityAgg, y0: number): void {
     let pressure = 0, n = 0;
     for (const c of agg.cells.get(p.id) ?? []) { if (s.cap[c] > 0) { pressure += s.pop[c] / s.cap[c]; n++; } }
     pressure = n ? pressure / n : 0;
-    const target = 0.7 - 0.22 * Math.min(1, age / 450) - 0.35 * Math.max(0, pressure - 0.88);
+    const target = 0.7 - 0.22 * Math.min(1, age / 450) - 0.12 * Math.min(1, Math.max(0, age - 450) / 1500) - 0.35 * Math.max(0, pressure - 0.88);
     st += 0.2 * (target - st);
     st -= 0.14 * Math.max(0, over - 1);
     st -= 0.08 * (agg.foreignShare.get(p.id) ?? 0);
@@ -334,7 +334,7 @@ export function politicsYear(s: State, geo: Geo, agg: PolityAgg, year: number, r
       continue;
     }
     capitalCheck(s, p, cells, year);
-    if (p.crisis >= 2 && p.stability < 0.1 && cells.length > 20 && rng.chance(0.05)) { collapse(s, geo, p, cells, year, rng); continue; }
+    if (p.crisis >= 2 && p.stability < 0.1 && cells.length >= 3 && rng.chance(cells.length > 20 ? 0.05 : 0.03)) { collapse(s, geo, p, cells, year, rng); continue; }
     if (p.stability < 0.12 && cells.length > 30 && rng.chance(0.025)) { civilWar(s, p, cells, year, rng); continue; }
     if (p.stability < 0.25 && rng.chance((0.25 - p.stability) * 0.06)) revolt(s, geo, p, cells, year, rng);
   }
@@ -390,9 +390,11 @@ function revolt(s: State, geo: Geo, p: Polity, cells: number[], year: number, rn
   for (const [r, cs] of byRegion) {
     if (cs.length < 4) continue;
     let sc = 0;
+    const capLm = w.landmass[s.settlements[p.capital].cell];
     for (const c of cs) {
       if (s.culture[c] !== p.culture) sc += 1;
       if (s.religion[c] !== p.religion) sc += 0.6;
+      if (w.landmass[c] !== capLm) sc += 1.2;
     }
     sc = sc / cs.length + rng.next() * 0.3;
     if (sc > bestScore) { bestScore = sc; best = r; }
@@ -456,7 +458,8 @@ export function collapse(s: State, geo: Geo, p: Polity, cells: number[], year: n
   const towns = s.settlements
     .filter((t) => t.abandoned === null && t.founded <= year && owned.has(t.cell))
     .sort((a, b) => b.pop - a.pop || a.id - b.id);
-  const k = Math.max(2, Math.min(6, Math.round(cells.length / 45)));
+  // small states dissolve into anarchy; larger ones break into successor states
+  const k = cells.length < 20 ? 0 : Math.max(2, Math.min(6, Math.round(cells.length / 45)));
   const seats: Settlement[] = [];
   for (const t of towns) {
     if (seats.length >= k) break;

@@ -3,7 +3,7 @@ import { simulate } from '../sim/run.ts';
 import { WorldDb } from '../db/writer.ts';
 
 const args = process.argv.slice(2);
-const seed = Number(args.find((a) => /^\d+$/.test(a)) ?? process.env.SEED ?? 1);
+const seed = Number(args.find((a) => /^\d+$/.test(a)) ?? process.env.SEED ?? 5);
 const yearEnd = Number(args.find((a) => a.startsWith('--end='))?.slice(6) ?? 5000);
 const out = args.find((a) => a.startsWith('--db='))?.slice(5) ?? 'build/world.sqlite';
 const quiet = args.includes('--quiet');

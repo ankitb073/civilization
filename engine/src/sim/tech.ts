@@ -29,17 +29,17 @@ const DEFS = [
   T('printing', 'Movable-type printing', 4450, 4, ['paper']),
   T('jointstock', 'Joint-stock companies', 4600, 4, ['banking', 'navigation']),
   T('science', 'Experimental science', 4620, 4, ['printing']),
-  T('steam', 'The steam engine', 4760, 5, ['science']),
-  T('railway', 'Railways', 4830, 5, ['steam']),
-  T('telegraph', 'The electric telegraph', 4840, 5, ['science']),
+  T('steam', 'The steam engine', 4745, 5, ['science']),
+  T('railway', 'Railways', 4810, 5, ['steam']),
+  T('telegraph', 'The electric telegraph', 4815, 5, ['science']),
   T('rifles', 'Rifled firearms', 4820, 5, ['gunpowder', 'steam']),
-  T('electricity', 'Electrification', 4880, 5, ['telegraph']),
-  T('fertilizer', 'Synthetic fertilizer', 4890, 5, ['science']),
-  T('combustion', 'The combustion engine', 4895, 5, ['steam']),
-  T('radio', 'Radio', 4915, 5, ['electricity']),
-  T('aviation', 'Powered flight', 4925, 5, ['combustion']),
-  T('computing', 'Electronic computing', 4955, 6, ['electricity']),
-  T('network', 'Computer networks', 4980, 6, ['computing']),
+  T('electricity', 'Electrification', 4855, 5, ['telegraph']),
+  T('fertilizer', 'Synthetic fertilizer', 4870, 5, ['science']),
+  T('combustion', 'The combustion engine', 4870, 5, ['steam']),
+  T('radio', 'Radio', 4890, 5, ['electricity']),
+  T('aviation', 'Powered flight', 4900, 5, ['combustion']),
+  T('computing', 'Electronic computing', 4925, 6, ['electricity']),
+  T('network', 'Computer networks', 4960, 6, ['computing']),
 ];
 
 export const TECHS: Tech[] = DEFS.map((d, id) => ({ id, key: d.key, name: d.name, target: d.target, era: d.era, prereqs: [] }));
@@ -138,9 +138,9 @@ export function adminMult(p: Polity): number {
 export function seaRange(p: Polity): number {
   if (has(p, 'steam')) return 5000;
   if (has(p, 'navigation')) return 2600;
-  if (has(p, 'paper')) return 260;
-  if (has(p, 'iron')) return 200;
-  return 130;
+  if (has(p, 'paper')) return 150;
+  if (has(p, 'iron')) return 115;
+  return 85;
 }
 
 /** Fragile techs that can be lost in a collapse. */
@@ -191,7 +191,8 @@ export function techStep(s: State, y0: number, contacts: Map<number, Set<number>
   // first inventions
   for (const tech of TECHS) {
     if (known.has(tech.id)) continue;
-    const hazard = Math.min(0.9, 0.065 * Math.exp((y0 - tech.target) / 100));
+    // industrial-era inventions cascade quickly once their prerequisites exist
+    const hazard = tech.era >= 5 ? Math.min(0.9, 0.16 * Math.exp((y0 - tech.target) / 45)) : Math.min(0.9, 0.065 * Math.exp((y0 - tech.target) / 100));
     if (!rng.chance(hazard)) continue;
     const able = alive.filter((p) => tech.prereqs.every((q) => p.techs.has(q) && p.techs.get(q)! <= y0));
     if (able.length === 0) continue;

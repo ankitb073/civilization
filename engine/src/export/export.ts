@@ -322,8 +322,10 @@ function featured(r: SimResult, a: Archive): MetaJson['featured'] {
   if (rivals[0]) add(rivals[0].id, 'Two chronicles, two wars: compare each side’s account with what really happened.');
   const deadliest = s.events.filter((e) => e.sub === 'war').sort((x, y) => (Number(y.data.lossesA ?? 0) + Number(y.data.lossesD ?? 0)) - (Number(x.data.lossesA ?? 0) + Number(x.data.lossesD ?? 0)))[0];
   if (deadliest) add(`evt:${deadliest.id}`, 'The deadliest war in five thousand years.');
-  const longest = s.polities.slice().sort((x, y) => ((y.died ?? 5000) - y.born) - ((x.died ?? 5000) - x.born))[0];
-  if (longest) add(`pol:${longest.id}`, `The longest-lived state: ${((longest.died ?? 5000) - longest.born)} years.`);
+  const peakOf = new Map<number, number>();
+  for (const row of s.polityYears) peakOf.set(row[0] as number, Math.max(peakOf.get(row[0] as number) ?? 0, row[2] as number));
+  const longest = s.polities.filter((p) => (peakOf.get(p.id) ?? 0) >= 60).sort((x, y) => ((y.died ?? 5000) - y.born) - ((x.died ?? 5000) - x.born))[0];
+  if (longest) add(`pol:${longest.id}`, `The longest-lived great power: ${((longest.died ?? 5000) - longest.born)} years.`);
   const biggest = s.polityYears.slice().sort((x, y) => (y[2] as number) - (x[2] as number))[0];
   if (biggest) add(`pol:${biggest[0]}`, `The greatest extent ever reached: ${biggest[2]} districts in AY ${biggest[1]}.`);
   const eruption = s.anomalies.filter((x) => x.kind === 'eruption').sort((x, y) => y.severity - x.severity || x.start - y.start)[0];

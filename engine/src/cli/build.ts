@@ -12,7 +12,7 @@ import { createGzip } from 'node:zlib';
 import { pipeline } from 'node:stream/promises';
 
 const args = process.argv.slice(2);
-const seed = Number(args.find((a) => /^\d+$/.test(a)) ?? process.env.SEED ?? 1);
+const seed = Number(args.find((a) => /^\d+$/.test(a)) ?? process.env.SEED ?? 5);
 const out = args.find((a) => a.startsWith('--out='))?.slice(6) ?? 'atlas/public/data';
 const t = performance.now();
 const log = (m: string) => console.log(`[${((performance.now() - t) / 1000).toFixed(1)}s] ${m}`);

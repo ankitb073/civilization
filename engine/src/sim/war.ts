@@ -3,7 +3,7 @@ import type { State, Polity, War } from './state.ts';
 import { event, ref, rel, alivePolity, addStress, setOwner, topStress } from './state.ts';
 import { Rng } from '../core/rng.ts';
 import { commander, kill, newPerson, ensureFamily, livingChildren } from './people.ts';
-import { eraOf, has } from './tech.ts';
+import { eraOf, has, TK } from './tech.ts';
 import { endPolity, ownedCells } from './polities.ts';
 import type { PolityAgg } from './polities.ts';
 import type { PopMemory } from './population.ts';
@@ -59,14 +59,19 @@ function sigmoid(x: number): number {
 }
 
 /** Declarations (yearly, low probability). */
-export function declareYear(s: State, agg: PolityAgg, year: number, rng: Rng): void {
+export function declareYear(s: State, agg: PolityAgg, year: number, rng: Rng, contacts?: Map<number, Set<number>>): void {
   for (const a of s.polities) {
     if (!alivePolity(a, year) || a.kind === 'rebel') continue;
     if (atWar(s, a.id).length > 0) continue;
     if (year - a.lastWarEnd < 6) continue;
-    const nb = agg.borders.get(a.id);
-    if (!nb) continue;
-    for (const [bid, borderLen] of nb) {
+    const nb = new Map(agg.borders.get(a.id) ?? []);
+    // across the sea: trading partners within naval reach, at a fraction of the land-border appetite
+    const nav = a.techs.get(TK.navigation);
+    if (contacts && nav !== undefined && nav <= year) for (const o of contacts.get(a.id) ?? []) if (!nb.has(o)) nb.set(o, -1);
+    if (nb.size === 0) continue;
+    for (const [bid, borderLen0] of nb) {
+      const naval = borderLen0 < 0;
+      const borderLen = naval ? 0 : borderLen0;
       const b = s.polities[bid];
       if (!alivePolity(b, year)) continue;
       if (a.overlord === bid || b.overlord === a.id) continue;
@@ -78,7 +83,7 @@ export function declareYear(s: State, agg: PolityAgg, year: number, rng: Rng): v
       if (a.religion !== b.religion && s.movements[a.religion]?.tenets[5] > 0.4) desire += 0.12;
       if (pr < 0.8) desire -= 0.4;
       if (desire <= 0) continue;
-      const p = 0.016 * desire * (a.gov === 'horde' ? 2.5 : 1) * (eraOf(a) >= 5 ? 0.6 : 1);
+      const p = 0.016 * desire * (a.gov === 'horde' ? 2.5 : 1) * (eraOf(a) >= 5 ? 0.6 : 1) * (naval ? 0.25 : 1);
       if (!rng.chance(p)) continue;
       // causes
       const causes: number[] = [];

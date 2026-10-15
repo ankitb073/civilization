@@ -16,6 +16,7 @@ import type { ThoughtPresence } from './religion.ts';
 import { techStep, eraOf } from './tech.ts';
 import { routesStep, currencyStep, priceStep, housesStep, initEcon } from './economy.ts';
 import type { EconMemory } from './economy.ts';
+import { initContact, contactStep, colonizeYear } from './colonial.ts';
 
 export interface SimResult {
   state: State;
@@ -38,6 +39,7 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
   const pm = initPopMemory(s);
   const econ = initEcon();
   const thought: ThoughtPresence = { settlements: new Map() };
+  const contactMem = initContact();
   const initial = { owner: new Int32Array(s.world.n).fill(-1), culture: s.culture.slice(), religion: s.religion.slice() };
   const result: SimResult = { state: s, econ, thought, initial };
   let centuryExpansion = new Map<number, number>();
@@ -54,6 +56,7 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
     formationStep(s, geo, y0);
     let agg = aggregate(s, geo, y0);
     const contacts = routesStep(s, agg, y0);
+    contactStep(s, contactMem, y0);
     techStep(s, y0, contacts);
     currencyStep(s, y0);
     priceStep(s, econ, y0);
@@ -66,7 +69,8 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
       governmentStep(s, agg, y);
       diplomacyStep(s, agg, y);
       politicsYear(s, geo, agg, y, rng);
-      declareYear(s, agg, y, rng);
+      declareYear(s, agg, y, rng, contacts);
+      colonizeYear(s, y, rng);
       warYear(s, agg, pm, y, rng);
       expansionYear(s, agg, y, rng, centuryExpansion);
       if (y % 5 === 4) agg = aggregate(s, geo, y);
