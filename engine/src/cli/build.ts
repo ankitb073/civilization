@@ -14,9 +14,10 @@ import { pipeline } from 'node:stream/promises';
 const args = process.argv.slice(2);
 const seed = Number(args.find((a) => /^\d+$/.test(a)) ?? process.env.SEED ?? 5);
 const out = args.find((a) => a.startsWith('--out='))?.slice(6) ?? 'atlas/public/data';
+const dbPath = args.find((a) => a.startsWith('--db='))?.slice(5) ?? 'build/world.sqlite';
 const t = performance.now();
 const log = (m: string) => console.log(`[${((performance.now() - t) / 1000).toFixed(1)}s] ${m}`);
-const db = new WorldDb('build/world.sqlite');
+const db = new WorldDb(dbPath);
 const r = simulate(seed, 5000, {
   onStart: (res) => db.writeWorld(res),
   onCentury: (res, year) => db.flushCentury(res, year),
@@ -26,8 +27,8 @@ const archive = buildArchive(r, log);
 db.finalize(r);
 db.writeArchive(archive);
 db.close();
-log('database written: build/world.sqlite');
-const check = runChecks('build/world.sqlite');
+log(`database written: ${dbPath}`);
+const check = runChecks(dbPath);
 writeFileSync('build/check.json', JSON.stringify(check, null, 2));
 log(`checker: ${check.passed ? 'PASSED' : 'FAILED'} (${check.invariants.reduce((a, x) => a + x.checked, 0).toLocaleString('en-US')} facts)`);
 const skipDownloads = args.includes('--no-downloads');

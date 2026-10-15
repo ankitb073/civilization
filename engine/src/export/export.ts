@@ -7,12 +7,13 @@ import type { SimResult } from '../sim/run.ts';
 import type { Archive } from '../archive/build.ts';
 import type { CheckReport } from '../check/check.ts';
 import type {
-  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson,
+  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson, StoryJson,
 } from './contract.ts';
 import { SHARD_COUNT, shardOf, shardFile } from './contract.ts';
 import { BIOMES } from '../world/biomes.ts';
 import { TK } from '../sim/tech.ts';
 import { Rng } from '../core/rng.ts';
+import type { SimEvent } from '../sim/state.ts';
 
 export const ENGINE_VERSION = '1.0.0';
 
@@ -204,6 +205,9 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
   for (let i = 0; i < SHARD_COUNT; i++) raw += write(shardFile(i), { pages: shards[i] });
   log(`pages: ${a.pages.size} in ${SHARD_COUNT} shards, ${(raw / 1e6).toFixed(0)} MB raw`);
 
+  // ---------------------------------------------------------------- story
+  writeSized('story.json', story(r, a));
+
   // ---------------------------------------------------------------- histomap
   writeSized('histomap.json', histomap(r, a));
 
@@ -244,6 +248,46 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
 
 function trim(x: string, n: number): string {
   return x.length <= n ? x : x.slice(0, n - 1) + '…';
+}
+
+function story(r: SimResult, a: Archive): StoryJson {
+  const s = r.state;
+  const T = a.T;
+  const eras = computeEras(r, a);
+  const docsAbout = new Map<number, { id: string; title: string; flagship: boolean; score: number }[]>();
+  for (const x of a.artifacts) {
+    const score = (x.flagship ? 10 : 0) + (x.sub === 'chronicle' ? 3 : x.sub === 'treaty' ? 2 : x.sub === 'inscription' ? 2 : 1);
+    for (const e of x.about) {
+      if (!docsAbout.has(e)) docsAbout.set(e, []);
+      docsAbout.get(e)!.push({ id: `art:${x.id}`, title: x.title, flagship: x.flagship, score });
+    }
+  }
+  const SUBS = new Set(['war', 'collapse', 'plague', 'eruption', 'first-contact', 'trade-collapse', 'movement-founding', 'schism', 'revolution', 'invention', 'script-invention', 'conquest', 'colonization', 'famine', 'migration', 'treaty']);
+  const chapters: StoryJson['chapters'] = [];
+  for (const er of eras) {
+    const evs = s.events.filter((e) => e.year >= er.start && e.year < er.end && SUBS.has(e.sub) && T.pageRefs.has(`evt:${e.id}`) && e.cell >= 0);
+    // favour events with documents, diversity of kinds, spread through the era
+    const scored = evs.map((e) => ({ e, score: e.sig + Math.min(0.4, (docsAbout.get(e.id)?.reduce((m, d) => Math.max(m, d.score), 0) ?? 0) / 25) }));
+    scored.sort((x, y) => y.score - x.score || x.e.id - y.e.id);
+    const picked: SimEvent[] = [];
+    const perSub = new Map<string, number>();
+    for (const { e } of scored) {
+      if (picked.length >= 7) break;
+      if ((perSub.get(e.sub) ?? 0) >= 2) continue;
+      if (picked.some((p) => Math.abs(p.year - e.year) < (er.end - er.start) / 14)) continue;
+      picked.push(e);
+      perSub.set(e.sub, (perSub.get(e.sub) ?? 0) + 1);
+    }
+    picked.sort((x, y) => x.year - y.year);
+    chapters.push({
+      eraId: er.id, title: er.name, start: er.start, end: er.end, intro: er.blurb,
+      beats: picked.map((e) => ({
+        year: e.year, eventId: `evt:${e.id}`, title: T.title.get(`evt:${e.id}`) ?? '', text: a.pages.get(`evt:${e.id}`)?.summary ?? '', cell: e.cell,
+        docs: (docsAbout.get(e.id) ?? []).sort((x, y) => y.score - x.score).slice(0, 3).map(({ id, title, flagship }) => ({ id, title, flagship })),
+      })),
+    });
+  }
+  return { chapters };
 }
 
 function histomap(r: SimResult, a: Archive): HistomapJson {
@@ -301,9 +345,10 @@ export function worldFingerprint(r: SimResult): string {
   let h = 0x811c9dc5;
   const mix = (x: number) => { h = Math.imul(h ^ (x | 0), 0x01000193) >>> 0; };
   mix(r.state.seed);
-  mix(r.state.events.length);
+  const n = r.simEvents ?? r.state.events.length;
+  mix(n);
   mix(r.simPersons ?? r.state.persons.length);
-  for (const e of r.state.events) { mix(e.year); mix(e.sub.length); mix(e.parts.length); mix(e.cell); }
+  for (let i = 0; i < n; i++) { const e = r.state.events[i]; mix(e.year); mix(e.sub.length); mix(e.cell); }
   return h.toString(16).padStart(8, '0');
 }
 

@@ -202,6 +202,27 @@ export interface PageJson {
 
 export interface ShardJson { pages: PageJson[] }
 
+// ---------------------------------------------------------------- story.json
+/** A guided reading of the five millennia: one chapter per era, each a handful of beats
+ *  (turning points) with the best documents to read about them. */
+export interface StoryJson {
+  chapters: {
+    eraId: string;
+    title: string;
+    start: number;
+    end: number;
+    intro: string;                         // Markdown with [[id|text]] links
+    beats: {
+      year: number;
+      eventId: string;
+      title: string;
+      text: string;                        // Markdown with links
+      cell: number;                        // map focus
+      docs: { id: string; title: string; flagship: boolean }[];
+    }[];
+  }[];
+}
+
 // ---------------------------------------------------------------- histomap.json
 /** A "Histomap": every state as a stream whose width is its share of the world's population.
  *  Streams are ordered west → east by capital, so neighbours flow side by side. */

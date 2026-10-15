@@ -26,6 +26,8 @@ export interface SimResult {
   initial: { owner: Int32Array; culture: Int32Array; religion: Int32Array };
   /** Number of persons created by the simulation (archive-created persons follow). */
   simPersons?: number;
+  /** Number of events created by the simulation (archive-level events follow). */
+  simEvents?: number;
 }
 
 export interface SimHooks {
@@ -101,5 +103,6 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
     }
   }
   result.simPersons = s.persons.length;
+  result.simEvents = s.events.length;
   return result;
 }
