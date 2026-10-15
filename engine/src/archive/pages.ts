@@ -539,6 +539,7 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     pg.body = body.join('\n');
     pages.set(ref, pg);
   }
+  enrichPages(ctx, T, pages, artifacts);
   return pages;
 }
 
@@ -564,6 +565,197 @@ function plural(n: number, w: string): string {
 function joinList(xs: string[]): string {
   if (xs.length <= 1) return xs[0] ?? '';
   return `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
+}
+
+// ---------------------------------------------------------------- cross-references from the documents
+const GENRE_PLURAL: Record<string, string> = {
+  inscription: 'inscriptions', chronicle: 'chronicles', treaty: 'treaties', ledger: 'ledgers', letter: 'letters', decree: 'decrees',
+  annals: 'annals', census: 'censuses', record: 'records', coin: 'coins', travelogue: 'travelogues', scripture: 'scriptures',
+  treatise: 'treatises', newspaper: 'newspapers', telegram: 'telegrams', debate: 'debates', market: 'exchange reports',
+  yearbook: 'yearbooks', pamphlet: 'pamphlets', patent: 'patents', excavation: 'excavation reports', paper: 'papers',
+  poem: 'poems', diary: 'diaries', lawsuit: 'lawsuits', will: 'wills', muster: 'muster rolls', manifest: 'port registers',
+  glossary: 'glossaries', exercise: 'school exercises', almanac: 'almanacs', graffito: 'graffiti',
+};
+const GENRE_ONE: Record<string, string> = { annals: 'annals', graffito: 'graffito', diary: 'diary', treaty: 'treaty', census: 'census', glossary: 'glossary', market: 'exchange report', excavation: 'excavation report', muster: 'muster roll', manifest: 'port register', exercise: 'school exercise' };
+
+function genreName(sub: string, n: number): string {
+  if (n === 1) return GENRE_ONE[sub] ?? sub;
+  return GENRE_PLURAL[sub] ?? `${sub}s`;
+}
+
+/** A document link, with its date unless the title already carries it. */
+function artLink(T: Titles, a: Artifact, genre: boolean): string {
+  const dated = a.title.includes(`(AY ${a.year})`);
+  const note = [dated ? '' : yr(a.year), genre ? genreName(a.sub, 1) : ''].filter(Boolean).join(', ');
+  return `${a.flagship ? '★ ' : ''}${L(T, `art:${a.id}`, a.title)}${note ? ` (${note})` : ''}`;
+}
+
+/** "**37 documents**: 20 inscriptions · 9 chronicles …" */
+function genreHead(arts: Artifact[], note = ''): string {
+  const counts = new Map<string, number>();
+  for (const a of arts) counts.set(a.sub, (counts.get(a.sub) ?? 0) + 1);
+  const ranked = [...counts].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]));
+  return counts.size === 1
+    ? `**${arts.length} ${genreName(ranked[0][0], arts.length)}**${note}.`
+    : `**${plural(arts.length, 'document')}**${note}: ${ranked.map(([k, n]) => `${n} ${genreName(k, n)}`).join(' · ')}.`;
+}
+
+/** The most notable few documents: flagships first, then the oldest. */
+function genreList(T: Titles, arts: Artifact[], cap: number): string[] {
+  const mixed = new Set(arts.map((a) => a.sub)).size > 1;
+  const notable = arts.slice().sort((x, y) => Number(y.flagship) - Number(x.flagship) || x.year - y.year || x.id - y.id).slice(0, cap);
+  const lines = notable.map((a) => `- ${artLink(T, a, mixed)}`);
+  if (arts.length > cap) lines.push(`- *…and ${arts.length - cap} more.*`);
+  return lines;
+}
+
+function genreBlock(T: Titles, arts: Artifact[], cap: number): string {
+  return arts.length ? [genreHead(arts), '', ...genreList(T, arts, cap)].join('\n') : '';
+}
+
+const LINK_ANY = /\[\[([a-z]{3}:\d+)\|/g;
+
+function enrichPages(ctx: Ctx, T: Titles, pages: Map<string, PageJson>, artifacts: Artifact[]): void {
+  const s = ctx.s;
+  const push = <K, V>(m: Map<K, V[]>, k: K, a: V) => {
+    let x = m.get(k);
+    if (!x) m.set(k, (x = []));
+    x.push(a);
+  };
+  const mentioned = new Map<string, Artifact[]>();
+  const byLang = new Map<number, Artifact[]>();
+  const byScript = new Map<number, Artifact[]>();
+  const writtenAt = new Map<number, Artifact[]>();
+  const foundAt = new Map<number, Artifact[]>();
+  const extant = artifacts.filter((a) => a.status === 'extant');
+  for (const a of extant) {
+    const seen = new Set<string>();
+    for (const m of a.body.matchAll(LINK_ANY)) {
+      if (seen.has(m[1])) continue;
+      seen.add(m[1]);
+      push(mentioned, m[1], a);
+    }
+    push(byLang, a.lang, a);
+    if (a.script >= 0) push(byScript, a.script, a);
+    if (a.settlement !== null) push(writtenAt, a.settlement, a);
+    if (a.foundAt !== undefined && a.foundAt !== null) push(foundAt, a.foundAt, a);
+  }
+  const append = (ref: string, sections: [string, string][]) => {
+    const pg = pages.get(ref);
+    if (!pg) return;
+    const out = sections.filter(([, body]) => body.trim().length > 0).map(([h, body]) => `## ${h}\n\n${body}`);
+    if (out.length) pg.body = `${pg.body}\n\n${out.join('\n\n')}`;
+  };
+
+  // languages: what was written in them, and in which scripts
+  for (const info of s.lang.languages()) {
+    const arts = byLang.get(info.id) ?? [];
+    if (!arts.length) continue;
+    const scripts = new Map<number, number>();
+    for (const a of arts) if (a.script >= 0) scripts.set(a.script, (scripts.get(a.script) ?? 0) + 1);
+    const scr = [...scripts].sort((x, y) => y[1] - x[1]).map(([id, n]) => `${L(T, `scr:${id}`)} (${n})`).join(', ');
+    append(`lan:${info.id}`, [['Texts in this language', `${genreBlock(T, arts, 20)}${scr ? `\n\nWritten in: ${scr}.` : ''}`]]);
+  }
+  // scripts: texts, first and last attestation
+  for (const sc of s.scripts) {
+    const arts = byScript.get(sc.id) ?? [];
+    if (!arts.length) continue;
+    const years = arts.map((a) => a.year);
+    append(`scr:${sc.id}`, [['Texts in this script', `First attested ${yr(Math.min(...years))}; last attested ${yr(Math.max(...years))}.\n\n${genreBlock(T, arts, 20)}`]]);
+  }
+  // settlements: written here, found here, excavations
+  const excavations = new Map<number, SimEvent[]>();
+  for (const e of s.events) if (e.sub === 'excavation') {
+    const site = e.parts.find(([, r]) => r === 'site')?.[0];
+    if (site) push(excavations, ctx.idNum(site), e);
+  }
+  const reports = new Map<number, Artifact[]>();
+  for (const a of extant) if (a.sub === 'excavation' && a.settlement !== null) push(reports, a.settlement, a);
+  for (const t of s.settlements) {
+    const found = foundAt.get(t.id) ?? [];
+    const how = new Map<string, number>();
+    for (const a of found) how.set(a.foundHow ?? 'chance', (how.get(a.foundHow ?? 'chance') ?? 0) + 1);
+    const HOW: Record<string, string> = { excavated: 'excavated', 'in situ': 'still in place', library: 'kept in its libraries and archives', chance: 'found by chance' };
+    const elsewhere = found.filter((a) => a.settlement !== t.id).length;
+    const howNote = ` (${[...how].map(([k, n]) => `${n} ${HOW[k]}`).join(', ')}${elsewhere ? `; ${elsewhere} made elsewhere` : ''})`;
+    const digs = excavations.get(t.id) ?? [];
+    const reps = reports.get(t.id) ?? [];
+    const digLines = [
+      ...digs.map((e) => `- ${LT(T, `evt:${e.id}`)}${e.data.finds ? `: ${plural(Number(e.data.finds), 'catalogued document')}` : ''}`),
+      ...reps.map((a) => `- Report: ${artLink(T, a, false)}`),
+    ].join('\n');
+    append(`set:${t.id}`, [
+      ['Written here', genreBlock(T, writtenAt.get(t.id) ?? [], 15)],
+      // objects made here are already listed under "Written here"; list only those brought from elsewhere
+      ['Found here', found.length ? [genreHead(found, howNote), ...(elsewhere ? ['', 'Made elsewhere:', '', ...genreList(T, found.filter((a) => a.settlement !== t.id), 15)] : [])].join('\n') : ''],
+      ['Excavations', digLines],
+    ]);
+  }
+  // persons: mentioned in (beyond their own writings); a ruler's reign at a glance
+  for (const ref of T.pageRefs) {
+    if (!ref.startsWith('per:')) continue;
+    const pid = ctx.idNum(ref);
+    const p = s.persons[pid];
+    const arts = (mentioned.get(ref) ?? []).filter((a) => a.author !== pid);
+    const reigns = p.roles.filter((r) => r.role === 'ruler' && r.polity !== null);
+    const rows: string[] = [];
+    for (const r of reigns.slice(0, 6)) {
+      const end = r.end ?? Math.min(p.died, 5000);
+      const pref = `pol:${r.polity}`;
+      const evs = (ctx.eventsByRef.get(pref) ?? []).map((i) => s.events[i]).filter((e) => e.year >= r.start && e.year <= end);
+      const has = (e: SimEvent, rl: string) => e.parts.some(([x, y]) => x === pref && y === rl);
+      const count = (sub: string, rl?: string) => evs.filter((e) => e.sub === sub && (rl === undefined || has(e, rl))).length;
+      // a war is won or lost by the peace or conquest that ended it, if that came within the reign
+      let won = 0;
+      let lost = 0;
+      for (const e of evs) if (e.sub === 'treaty' || e.sub === 'conquest') {
+        if (!e.causes.some((c) => s.events[c].sub === 'war')) continue;
+        if (has(e, 'victor')) won++;
+        else if (has(e, 'vanquished')) lost++;
+      }
+      const battles = count('battle');
+      rows.push(`| ${L(T, pref)} | ${r.start}–${end} | ${count('war')} | ${won}–${lost} | ${battles ? `${count('battle', 'victor')}–${battles - count('battle', 'victor')}` : '0'} | ${count('treaty')} | ${count('founding-city')} | ${count('conversion')} |`);
+    }
+    append(ref, [
+      ['Reign at a glance', rows.length ? ['| Realm | Reign | New wars | Wars won–lost | Battles won–lost | Treaties | Cities founded | Conversions |', '|---|---|---|---|---|---|---|---|', ...rows].join('\n') : ''],
+      ['Mentioned in', genreBlock(T, arts, 15)],
+    ]);
+  }
+  // polities: sources about the state; wars told from both sides
+  const rivalWars = new Map<number, Artifact[]>(); // war -> its surviving chronicles
+  for (const a of extant) if (a.rival) push(rivalWars, a.rival.eventId, a);
+  for (const pol of s.polities) {
+    const ref = `pol:${pol.id}`;
+    const arts = (mentioned.get(ref) ?? []).filter((a) => a.polity !== pol.id);
+    const wars = [...rivalWars].filter(([w, as]) => as.length >= 2 && s.events[w].parts.some(([x]) => x === ref)).map(([w]) => w).sort((x, y) => s.events[x].year - s.events[y].year);
+    const rows = wars.slice(0, 20).map((w) => {
+      const t = T.title.get(`evt:${w}`) ?? '';
+      const accounts = rivalWars.get(w)!.map((a) => L(T, `art:${a.id}`, `${a.polity !== null ? T.short.get(`pol:${a.polity}`) : 'Another'} account`)).join(' · ');
+      return `- ${LT(T, `evt:${w}`)}${t.includes(`AY ${s.events[w].year}`) ? '' : ` (${yr(s.events[w].year)})`}: ${accounts}`;
+    });
+    if (wars.length > 20) rows.push(`- *…and ${wars.length - 20} more.*`);
+    append(ref, [
+      ['Sources about the state', genreBlock(T, arts, 15)],
+      ['Rival accounts', rows.join('\n')],
+    ]);
+  }
+  // deities: where they are invoked
+  for (const dd of s.deities) append(`dei:${dd.id}`, [['Invoked in', genreBlock(T, mentioned.get(`dei:${dd.id}`) ?? [], 15)]]);
+  // currencies: where they are seen, and their value over time
+  for (const c of s.currencies) {
+    const hist = thin(c.history.map(([y, v]) => [y, v] as [number, number]), 14);
+    const table = hist.length > 1
+      ? ['| Year | Silver per unit | Change |', '|---|---|---|', ...hist.map(([y, v], i) => `| ${y} | ${sig3(v)} g | ${i === 0 ? '—' : `${v < hist[i - 1][1] ? '▼ −' : v > hist[i - 1][1] ? '▲ +' : ''}${Math.abs(Math.round((v / hist[i - 1][1] - 1) * 100))}%`} |`)].join('\n')
+      : '';
+    append(`cur:${c.id}`, [['Value over time', table], ['Seen in', genreBlock(T, mentioned.get(`cur:${c.id}`) ?? [], 15)]]);
+  }
+  // events: remembered in later documents (beyond the contemporary sources already listed)
+  for (const e of s.events) {
+    const ref = `evt:${e.id}`;
+    if (!pages.has(ref)) continue;
+    const later = (mentioned.get(ref) ?? []).filter((a) => a.year > e.end && !a.about.includes(e.id));
+    append(ref, [['Remembered in', genreBlock(T, later, 12)]]);
+  }
 }
 
 function compressOwners(hist: [number, number][], from: number): [number, number, number][] {

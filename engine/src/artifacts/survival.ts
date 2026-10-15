@@ -48,6 +48,8 @@ export function applySurvival(g: Gen): void {
     if (a.year >= 4500 && a.sub !== 'graffito') {
       a.provenance = `State archive of ${refName(g, a.polity)}; catalogued AY ${Math.min(4999, a.year + r.int(1, 40))}.`;
       a.foundYear = null;
+      a.foundAt = a.seat;
+      a.foundHow = 'library';
     } else if ((durableMedium || a.sub === 'graffito') && (a.year < 3800 || a.sub === 'inscription' || a.sub === 'coin' || a.sub === 'graffito')) {
       const site = a.settlement ?? nearestSite(g, a.cell, a.year);
       let ex = site !== null ? excavations.get(site) : undefined;
@@ -64,9 +66,13 @@ export function applySurvival(g: Gen): void {
         // the dig came before (or hard on) the object's own date: it stands where it was made
         const seen = Math.min(4999, a.year + r.int(0, 20));
         a.foundYear = null;
+        a.foundAt = site;
+        a.foundHow = 'in situ';
         a.provenance = `${a.sub === 'graffito' ? 'Recorded' : 'Catalogued'} in situ at ${g.T.short.get(`set:${site}`)}, AY ${seen}.`;
       } else if (ex && site !== null) {
         a.foundYear = ex.year;
+        a.foundAt = site;
+        a.foundHow = 'excavated';
         a.provenance = `Excavated at ${g.T.short.get(`set:${site}`)} in AY ${ex.year} by ${g.T.short.get(`per:${ex.by}`)}.`;
         a.mentions.add(`evt:${ex.event}`);
         a.mentions.add(`per:${ex.by}`);
@@ -74,6 +80,7 @@ export function applySurvival(g: Gen): void {
         s.events[ex.event].data.finds = ((s.events[ex.event].data.finds as number) ?? 0) + 1;
       } else {
         a.foundYear = Math.min(4999, Math.max(a.year + 5, r.int(4790, 4985)));
+        a.foundHow = 'chance';
         a.provenance = `Chance find, AY ${a.foundYear}.`;
       }
     } else {
@@ -81,7 +88,11 @@ export function applySurvival(g: Gen): void {
       a.provenance = lib !== null
         ? `${r.pick(['Temple library', 'Monastery library', 'Palace archive', 'Cathedral archive', 'University library'])} at ${g.T.short.get(`set:${lib}`)}; ${a.year < 3000 ? 'medieval copy' : 'original'}.`
         : 'Private collection; origin uncertain.';
-      if (lib !== null) a.mentions.add(`set:${lib}`);
+      if (lib !== null) {
+        a.mentions.add(`set:${lib}`);
+        a.foundAt = lib;
+        a.foundHow = 'library';
+      }
     }
     // translator: everything not in the editorial language
     if (a.lang !== ctx.editorialLang || a.year < 4600) {

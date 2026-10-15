@@ -41,6 +41,9 @@ export interface Artifact {
   seat: number | null; // settlement where it was kept
   status: 'extant' | 'lost';
   data?: Record<string, unknown>;
+  /** Where the surviving object was found or kept (set by the survival pass). */
+  foundAt?: number | null;
+  foundHow?: 'excavated' | 'in situ' | 'library' | 'chance';
 }
 
 export const CATALOG_CODE: Record<string, string> = {
