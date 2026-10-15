@@ -209,8 +209,9 @@ export function buildHistory(a: Archive): Dossier[] {
     // money and trade
     const money = evs.filter((e) => ['debasement', 'currency-reform', 'paper-money', 'hyperinflation', 'default', 'bankruptcy', 'repudiation'].includes(e.sub)).sort((x, y) => y.sig - x.sig).slice(0, 5);
     for (const e of money) { facts.push(`Money, AY ${e.year}: ${titleOf(`evt:${e.id}`)}. ${summ(`evt:${e.id}`)}`); links.push(`evt:${e.id}`); }
-    const houses = evs.filter((e) => e.sub === 'house-founding').length;
-    facts.push(`Merchant houses founded in the period: ${houses}; coinages and weight standards introduced: ${evs.filter((e) => e.sub === 'coinage' || e.sub === 'weight-standard').length}.`);
+    // counts use every simulated event, not only those important enough to have a page
+    const all = s.events.filter((e) => e.id < simEvents && e.year >= y0 && e.year < y1);
+    facts.push(`Merchant houses founded in the period: ${all.filter((e) => e.sub === 'house-founding').length}; coinages and weight standards introduced: ${all.filter((e) => e.sub === 'coinage' || e.sub === 'weight-standard').length}; state collapses in all: ${all.filter((e) => e.sub === 'collapse').length}; wars in all: ${all.filter((e) => e.sub === 'war').length}.`);
 
     // contact and colonies
     for (const e of evs.filter((e) => ['first-contact', 'colonization', 'colonial-claim'].includes(e.sub)).sort((x, y) => y.sig - x.sig).slice(0, 5)) { facts.push(`Across the sea, AY ${e.year}: ${titleOf(`evt:${e.id}`)}. ${summ(`evt:${e.id}`)}`); links.push(`evt:${e.id}`, ...e.parts.slice(0, 2).map(([r]) => r)); }
