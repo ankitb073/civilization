@@ -40,7 +40,10 @@ export function writeSharePages(r: SimResult, a: Archive, dir: string, publicDir
     const fl = Number(String(x.data?.flagshipId ?? '').slice(3)) || 0;
     const target = `${SITE}#/p/${id}`;
     const desc = lede(x.body);
-    const title = `${x.title} — ${x.dateText && x.dateText !== `AY ${x.year}` ? `${x.dateText}, ` : ''}AY ${x.year}`;
+    // a History chapter names its book; a modern essay needs no date; a period source gives both calendars
+    const title = fl >= 900 && fl <= 920 ? `${x.title} · A History of ${world}`
+      : x.year >= 4800 && x.dateText === `AY ${x.year}` ? x.title
+      : `${x.title} — ${x.dateText && x.dateText !== `AY ${x.year}` ? `${x.dateText}, ` : ''}AY ${x.year}`;
     writeFileSync(join(dir, `art-${x.id}.html`), `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>${esc(title)} · Palimpsest</title>
