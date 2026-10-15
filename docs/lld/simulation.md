@@ -9,12 +9,16 @@ for century in 0..49:
     population.step    → capacity × yield, growth, famine, plague, migration
     settlements.step   → found, grow, abandon
     tech.step          → inventions (hazard model around target dates), diffusion, losses on collapse
-    economy.step       → production, trade routes, prices, currencies, houses, panics
-    politics.step      → aggregates, stability, succession, revolts, civil war, collapse, gov change
-    diplomacy.step     → opinion drift, alliances, marriages, pacts
-    war.step           → declarations, yearly campaigns and battles, peace treaties
-    culture.step       → assimilation, contact registration
-    religion.step      → founding, spread, conversion, schism, councils, persecution
+    economy.step       → production, trade routes, prices, houses, panics
+    politics.step      → aggregates, stability, levies
+    yearly × 10:
+      succession       → heads of state who died (or whose term ran out) are replaced first
+      recruitment      → the ranks move a quarter of the way to the levy
+      government, diplomacy (alliances, marriages, pacts), revolts, civil war, collapse
+      war.step         → declarations, campaigns and battles, peace treaties
+    currency.step      → issues, debasement, inflation, redenomination  } after the year loop: only states
+    religion.step      → founding, spread, conversion, schism, persecution } still standing act, never
+    culture.step       → assimilation, contact registration                } before they were born
   century end: language splits, sound changes (lang.advanceTo), keyframes, DB flush + checkpoint
 ```
 
@@ -65,9 +69,11 @@ Techs use a hazard model: `p(invent per decade) = clamp(0.002 · exp((year − t
   - Spending: army upkeep (×3 at war), administration, tribute.
   - A deficit creates debt (when banking is known) or a debasement (when coinage is known).
 - **Army:** two quantities (decision 0015).
-  - *Headcount* (`soldiers`, men under arms): `max(pop · mobilization(era), min(pop · 5%, 500)) · treasuryFactor`. Every state can muster a few hundred men; a rebellion raises 2% of its province and takes that province's share of the crown's men with it. Losses are made good at a quarter of the gap a year. Battle sizes, casualties and the `polity_years.army` series count men.
-  - *Strength* (`army`): `pop · mobilization(era) · techMil · treasuryFactor`. It sets the odds and the appetite for war.
-- **Battles:** win probability is `σ(1.4·ln(Sa/Sd) + general skill + terrain)`. Each side engages 35–85% of its men (allies send 40%). The beaten side loses 6–36% of the men it engaged, more in a rout. The victor loses that divided by a ratio of about 1.5 in a close fight to 5 in a rout (log-normal scatter, so a costly victory stays possible), capped at a quarter of its own men.
+  - *Headcount* (`soldiers`, men under arms): `max(pop · mobilization(era), min(pop · 5%, 500)) · treasuryFactor`. Every state can muster a few hundred men; a rebellion raises 2% of its province and takes that province's share of the crown's men with it. Battle sizes, casualties and the `polity_years.army` series count men.
+  - *Strength* (`strengthOf`): `soldiers · techMil`, × 0.6 for a rebellion's untrained levies. It sets the odds, the appetite for war and vassalage terms. Casualties wear it down, and recruitment restores it.
+  - Ranks move a quarter of the way to the levy each year, both up (recruits, the returning wounded) and down (men the state can no longer pay go home). A new state musters at once, so no state is ever defenceless at birth.
+- **Battles:** win probability is `σ(1.4·ln(Sa/Sd) + general skill + terrain)`. Each side engages 35–85% of its men (allies send 40%). The beaten side loses 6–36% of the men it engaged, more in a rout. The victor loses that divided by a ratio of about 1.5 in a close fight to 5 in a rout (log-normal scatter, so a costly victory stays possible), capped at a quarter of its own men. A ruler who falls in battle is succeeded at once.
+- **War weariness:** `+0.06` a year, plus `0.25 ×` the share of its levy a side has lost (at most 2).
 - **Stability:** recovers toward 0.7 over time and moves with these terms:
 
   | Effect | Driver |

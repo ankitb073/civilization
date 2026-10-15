@@ -8,7 +8,9 @@ import assert from 'node:assert/strict';
 import { simulate } from '../src/sim/run.ts';
 import { CONCEPTS } from '../src/lang/concepts.ts';
 
-const PINNED = 'c5234467';
+// Simulation v2 (decision 0015) renames the world: its histories split and coin languages differently.
+// Main's simulation v1 pins 'c5234467'; this branch pins v2's languages. The language engine is unchanged.
+const PINNED = 'a7b499ca';
 
 test('the canonical languages are unchanged (names, words and sound laws of seed 5)', () => {
   const r = simulate(5, 1500);

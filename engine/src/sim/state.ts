@@ -44,11 +44,10 @@ export interface Polity {
   treasury: number; // silver kg
   debt: number;
   stability: number;
-  /** Military strength (headcount × arms quality): drives odds, appetite for war and terms. */
-  army: number;
-  /** Men under arms now (headcount): battle sizes, casualties and the army series are counted in these. */
+  /** Men under arms now (headcount). Strength (strengthOf) is derived from it; battle sizes, casualties and
+   *  the army series count it. */
   soldiers: number;
-  /** Men under arms the polity can keep (its muster target this decade); losses are made good toward it. */
+  /** Men under arms the polity can keep (its muster target this decade); the ranks move toward it each year. */
   levy: number;
   techs: Map<number, number>; // tech id -> year acquired
   overlord: number | null;
@@ -240,9 +239,7 @@ export interface War {
   occupied: Set<number>;
   exhaustA: number;
   exhaustD: number;
-  lossesA: number; // strength lost (war exhaustion)
-  lossesD: number;
-  menLostA: number; // casualties in men (the record)
+  menLostA: number; // casualties in men
   menLostD: number;
   commanderA: number | null;
   commanderD: number | null;

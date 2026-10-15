@@ -64,9 +64,12 @@ export function religionStep(s: State, geo: Geo, agg: PolityAgg, tp: ThoughtPres
   }
   for (const m of s.movements) if (m.adherents > m.peak) m.peak = m.adherents;
 
-  // founding new movements
+  // founding new movements (this step runs after the decade's year loop: only states still standing act,
+  // and not before they were born)
+  const standing = (p: Polity) => p.died === null && p.born <= y0 + 9 && p.kind !== 'rebel';
+  const within = (p: Polity) => y0 + rng.int(Math.max(0, p.born - y0), 9);
   for (const p of s.polities) {
-    if (!alivePolity(p, y0) || p.kind === 'rebel') continue;
+    if (!standing(p)) continue;
     const era = eraOf(p);
     const urban = p.pop > 0 ? p.urbanPop / p.pop : 0;
     if (!has(p, 'writing') && era > 0) continue;
@@ -80,7 +83,7 @@ export function religionStep(s: State, geo: Geo, agg: PolityAgg, tp: ThoughtPres
     else if (era === 3) kind = rng.chance(0.6) ? 'sect' : rng.chance(0.5) ? 'religion' : 'philosophy';
     else if (era === 4) kind = rng.chance(0.5) ? 'reform' : 'philosophy';
     else kind = rng.chance(0.75) ? 'ideology' : 'philosophy';
-    foundMovement(s, tp, p, kind, y0 + rng.int(0, 9), rng, crisis > 0.5 ? topStress(p, y0 + 9, 40, 1) : []);
+    foundMovement(s, tp, p, kind, within(p), rng, crisis > 0.5 ? topStress(p, y0 + 9, 40, 1) : []);
   }
 
   // spread of religious movements in the cell layer
@@ -132,7 +135,7 @@ export function religionStep(s: State, geo: Geo, agg: PolityAgg, tp: ThoughtPres
 
   // state conversion
   for (const p of s.polities) {
-    if (!alivePolity(p, y0) || p.kind === 'rebel') continue;
+    if (!standing(p)) continue;
     const cells = agg.cells.get(p.id) ?? [];
     if (cells.length === 0) continue;
     const share = new Map<number, number>();
@@ -146,11 +149,11 @@ export function religionStep(s: State, geo: Geo, agg: PolityAgg, tp: ThoughtPres
     if (tot <= 0) continue;
     let top = -1, tw = 0;
     for (const [r, v] of share) if (v > tw || (v === tw && r < top)) { tw = v; top = r; }
-    if (top >= 0 && top !== p.religion && tw / tot > 0.42 && rng.chance(0.35)) convert(s, p, top, y0 + rng.int(0, 9), 'majority', rng);
+    if (top >= 0 && top !== p.religion && tw / tot > 0.42 && rng.chance(0.35)) convert(s, p, top, within(p), 'majority', rng);
     else if (rng.chance(0.004)) {
       // a ruler converts to a prestigious neighbour's universal faith
       const cand = s.movements.filter((m) => m.kind === 'religion' && m.died === null && m.adherents > 2_000_000 && m.id !== p.religion);
-      if (cand.length) convert(s, p, rng.pick(cand).id, y0 + rng.int(0, 9), 'ruler', rng);
+      if (cand.length) convert(s, p, rng.pick(cand).id, within(p), 'ruler', rng);
     }
     // persecution of a large minority by an intolerant establishment
     const est = s.movements[p.religion];
@@ -159,7 +162,7 @@ export function religionStep(s: State, geo: Geo, agg: PolityAgg, tp: ThoughtPres
         if (r === p.religion) continue;
         const frac = v / tot;
         if (frac > 0.1 && frac < 0.45 && rng.chance(0.06)) {
-          const year = y0 + rng.int(0, 9);
+          const year = within(p);
           const ev = event(s, 'persecution', year, { cell: s.settlements[p.capital].cell, parts: [[ref('pol', p.id), 'persecutor'], [ref('mov', r), 'persecuted'], [ref('mov', p.religion), 'establishment']], sig: 0.3 });
           addStress(p, year, ev.id, 0.7);
           p.stability = Math.max(0, p.stability - 0.06);
@@ -252,7 +255,7 @@ function convert(s: State, p: Polity, movement: number, year: number, reason: st
 function schism(s: State, geo: Geo, m: Movement, polities: number[], y0: number, rng: Rng): void {
   // the polity farthest from the movement's origin breaks away
   const ox = s.world.x[m.originCell], oy = s.world.y[m.originCell];
-  const cand = polities.map((pid) => s.polities[pid]).filter((p) => alivePolity(p, y0) && p.kind !== 'rebel');
+  const cand = polities.map((pid) => s.polities[pid]).filter((p) => p.died === null && p.born <= y0 && p.kind !== 'rebel');
   if (cand.length === 0) return;
   const far = cand.sort((a, b) => {
     const ca = s.settlements[a.capital].cell, cb = s.settlements[b.capital].cell;

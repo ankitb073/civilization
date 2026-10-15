@@ -4,7 +4,7 @@ import type { State, Polity, Currency, House } from './state.ts';
 import { event, ref, alivePolity, addStress, topStress } from './state.ts';
 import { has, eraOf, seaRange, TK } from './tech.ts';
 import { RES } from '../world/biomes.ts';
-import { newPerson, yearEra, livingRuler } from './people.ts';
+import { newPerson, yearEra, rulerAt } from './people.ts';
 import { atWar } from './war.ts';
 import type { PolityAgg } from './polities.ts';
 import { Rng } from '../core/rng.ts';
@@ -134,7 +134,7 @@ export function newCurrency(s: State, p: Polity, kind: Currency['kind'], year: n
   const nameId = s.lang.coinName(lang, year, 'currency', `cur:${id}`);
   const parts: [string, string][] = [[ref('cur', id), 'currency'], [ref('pol', p.id), 'issuer']];
   if (parent) parts.push([ref('cur', parent.id), 'replaces']);
-  const ruler = livingRuler(s, p, year);
+  const ruler = rulerAt(s, p, year);
   if (ruler !== null) parts.push([ref('per', ruler), 'ruler']);
   const fixed = causes.filter((c) => s.events[c].year <= year);
   const ev = event(s, sub, year, { cell: s.settlements[p.capital].cell, parts, causes: fixed, data: { kind, content, metal }, sig: sub === 'coinage' ? 0.3 : sub === 'currency-reform' ? 0.3 : 0.06 });
@@ -148,11 +148,13 @@ export function newCurrency(s: State, p: Polity, kind: Currency['kind'], year: n
 /** Decadal: currencies, debasement, inflation. */
 export function currencyStep(s: State, y0: number): void {
   const rng = s.rng.fork('currency', y0);
+  // runs after the decade's political year loop: states that ended during it issue nothing, and one born
+  // during it issues nothing before its birth
   for (const p of s.polities) {
-    if (!alivePolity(p, y0) || p.kind === 'rebel') continue;
+    if (p.died !== null || p.born > y0 + 9 || p.kind === 'rebel') continue;
     const era = eraOf(p);
     const cur = p.currency >= 0 ? s.currencies[p.currency] : null;
-    const year = y0 + rng.int(0, 9);
+    const year = y0 + rng.int(Math.max(0, p.born - y0), 9);
     if (!cur) {
       if (!has(p, 'writing')) continue;
       // adopt predecessor's currency if it still circulates, else a weight standard
@@ -204,9 +206,16 @@ export function currencyStep(s: State, y0: number): void {
         addStress(p, year, ev.id, 1.5);
         p.stability = Math.max(0, p.stability - 0.1);
         p.treasury = Math.max(p.treasury, 0);
+        // a money worth less than a hundredth of a gram is replaced by a new one, a thousand (or a million) old units to one
+        if (cur.content < 0.01) {
+          let k = 1;
+          while (cur.content * k < 0.5) k *= 1000;
+          newCurrency(s, p, 'fiat', year, round3(cur.content * k), 'none', 'currency-reform', [ev.id], cur);
+        }
       } else {
         cur.content = cur.content * Math.pow(1 - infl, 10);
         cur.history.push([y0 + 9, round6(cur.content)]);
+        if (cur.content < 0.01) newCurrency(s, p, 'fiat', y0 + 9, round3(cur.content * 1000), 'none', 'currency-reform', [], cur);
       }
     }
   }

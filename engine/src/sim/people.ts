@@ -287,6 +287,14 @@ export function successionCheck(s: State, polity: Polity, year: number, rng: Rng
   return ev.id;
 }
 
+/** Start of each year: a head of state who died (or whose term ran out) is replaced before anyone
+ *  treats, marries or fights in the polity's name. */
+export function successionYear(s: State, year: number, rng: Rng): void {
+  for (const p of s.polities) {
+    if (p.born <= year && (p.died === null || p.died > year)) successionCheck(s, p, year, rng);
+  }
+}
+
 /** Pick or create a commander for a polity at war. */
 export function commander(s: State, polity: Polity, year: number, rng: Rng): Person {
   const ruler = polity.ruler !== null ? s.persons[polity.ruler] : null;

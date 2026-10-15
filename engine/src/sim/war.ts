@@ -2,9 +2,9 @@
 import type { State, Polity, War } from './state.ts';
 import { event, ref, rel, alivePolity, addStress, setOwner, topStress } from './state.ts';
 import { Rng } from '../core/rng.ts';
-import { commander, kill, newPerson, ensureFamily, livingChildren, livingRuler } from './people.ts';
+import { commander, kill, newPerson, ensureFamily, livingChildren, livingRuler, successionCheck } from './people.ts';
 import { eraOf, has, TK } from './tech.ts';
-import { endPolity, ownedCells } from './polities.ts';
+import { endPolity, ownedCells, strengthOf } from './polities.ts';
 import type { PolityAgg } from './polities.ts';
 import type { PopMemory } from './population.ts';
 
@@ -21,7 +21,7 @@ export function startWar(s: State, year: number, attackers: number[], defenders:
   const ev = event(s, 'war', year, { cell: targetRegion >= 0 ? s.world.regionLabelCell[targetRegion] : -1, parts, causes: fixed, data: { goal }, sig: 0.4 });
   const w: War = {
     event: ev.id, attackers: [...attackers], defenders: [...defenders], goal, targetRegion, start: year, score: 0, battles: [],
-    occupied: new Set(), exhaustA: 0, exhaustD: 0, lossesA: 0, lossesD: 0, menLostA: 0, menLostD: 0, commanderA: null, commanderD: null, ended: null,
+    occupied: new Set(), exhaustA: 0, exhaustD: 0, menLostA: 0, menLostD: 0, commanderA: null, commanderD: null, ended: null,
   };
   s.wars.push(w);
   for (const a of attackers) for (const d of defenders) rel(s, a, d).wars.push(ev.id);
@@ -45,13 +45,14 @@ export function startWar(s: State, year: number, attackers: number[], defenders:
   return w;
 }
 
+/** Strength a side brings to the field: most of the leader's and some of each ally's. */
 function sideArmy(s: State, side: number[], year: number): number {
   let t = 0;
   side.forEach((p, i) => {
     const q = s.polities[p];
-    if (alivePolity(q, year)) t += q.army * (i === 0 ? 0.8 : 0.4);
+    if (alivePolity(q, year)) t += strengthOf(q) * (i === 0 ? 0.8 : 0.4);
   });
-  return Math.max(50, t);
+  return Math.max(1, t);
 }
 
 /** Men a side brings to the field: most of the leader's soldiers and some of each ally's. */
@@ -76,11 +77,12 @@ export function casualties(r: Rng, menA: number, menD: number, attackerWins: boo
   return attackerWins ? [lostW, lostL] : [lostL, lostW];
 }
 
-/** Yearly: losses are made good toward the muster (recruits, the returning wounded), a quarter of the gap a year. */
+/** Yearly: the ranks move a quarter of the way to the muster the polity can keep: losses are made good
+ *  (recruits, the returning wounded), and men it can no longer pay or feed go home. */
 export function recruitYear(s: State, year: number): void {
   for (const p of s.polities) {
-    if (!alivePolity(p, year) || p.soldiers >= p.levy) continue;
-    p.soldiers += Math.ceil((p.levy - p.soldiers) * 0.25);
+    if (!alivePolity(p, year) || p.soldiers === p.levy) continue;
+    p.soldiers += Math.round((p.levy - p.soldiers) * 0.25);
   }
 }
 
@@ -107,7 +109,7 @@ export function declareYear(s: State, agg: PolityAgg, year: number, rng: Rng, co
       if (a.overlord === bid || b.overlord === a.id) continue;
       const r = rel(s, a.id, bid);
       if (r.truceUntil > year || r.alliance !== null) continue;
-      const pr = a.army / Math.max(1, b.army);
+      const pr = strengthOf(a) / Math.max(1, strengthOf(b));
       let desire = 0.12 - r.opinion * 0.9 + (pr - 1) * 0.3 + Math.min(0.2, borderLen / 120);
       if (b.stability < 0.3) desire += 0.15;
       if (a.religion !== b.religion && s.movements[a.religion]?.tenets[5] > 0.4) desire += 0.12;
@@ -156,8 +158,9 @@ export function warYear(s: State, agg: PolityAgg, pm: PopMemory, year: number, r
     const A = s.polities[w.attackers[0]];
     const D = s.polities[w.defenders[0]];
     if (year > w.start && rng.chance(0.78)) battle(s, agg, pm, w, A, D, year, rng);
-    w.exhaustA += 0.06 + (A.pop > 0 ? (w.lossesA / A.pop) * 8 : 0) * 0.1;
-    w.exhaustD += 0.06 + (D.pop > 0 ? (w.lossesD / D.pop) * 8 : 0) * 0.1;
+    // weariness grows each year of war, faster the more of its army a side has lost
+    w.exhaustA += 0.06 + 0.25 * Math.min(2, w.menLostA / Math.max(1, A.levy));
+    w.exhaustD += 0.06 + 0.25 * Math.min(2, w.menLostD / Math.max(1, D.levy));
     const dur = year - w.start;
     const maxDur = eraOf(A) <= 1 ? 9 : eraOf(A) <= 3 ? 18 : 12;
     let end = false;
@@ -214,16 +217,7 @@ function battle(s: State, agg: PolityAgg, pm: PopMemory, w: War, A: Polity, D: P
   const engagedA = Math.round(SA * shareA);
   const engagedD = Math.round(SD * shareD);
   const decisive = rng.next();
-  // strength worn down (war exhaustion and the balance of later battles)
-  const lossW = 0.04 + 0.14 * rng.next();
-  const lossL = 0.14 + 0.3 * decisive;
-  const lossA = Math.round(engagedA * (attackerWins ? lossW : lossL));
-  const lossD = Math.round(engagedD * (attackerWins ? lossL : lossW));
-  w.lossesA += lossA;
-  w.lossesD += lossD;
-  A.army = Math.max(0, A.army - lossA);
-  D.army = Math.max(0, D.army - lossD);
-  // the men in the field and what the day cost each side (the record)
+  // the men in the field and what the day cost each side; the losses wear down strength for later battles
   const menA = Math.max(1, Math.round(sideMen(s, w.attackers, year) * freshA * shareA));
   const menD = Math.max(1, Math.round(sideMen(s, w.defenders, year) * freshD * shareD));
   const [lostA, lostD] = casualties(s.rng.fork('casualties', w.event, year), menA, menD, attackerWins, decisive);
@@ -258,8 +252,15 @@ function battle(s: State, agg: PolityAgg, pm: PopMemory, w: War, A: Polity, D: P
   // commander deaths
   const cLoser = attackerWins ? cD : cA;
   const cWinner = attackerWins ? cA : cD;
-  if (rng.chance(0.07 + 0.08 * decisive)) { kill(s, cLoser, year, 'battle', ev.id); ev.data.commanderKilled = cLoser.id; }
-  else if (rng.chance(0.015)) { kill(s, cWinner, year, 'battle', ev.id); ev.data.commanderKilled = cWinner.id; }
+  let fallen: typeof cLoser | null = null;
+  if (rng.chance(0.07 + 0.08 * decisive)) fallen = cLoser;
+  else if (rng.chance(0.015)) fallen = cWinner;
+  if (fallen) {
+    kill(s, fallen, year, 'battle', ev.id);
+    ev.data.commanderKilled = fallen.id;
+    // a ruler who falls in battle is succeeded at once, before any peace is made in the polity's name
+    for (const P of [A, D]) if (P.ruler === fallen.id) successionCheck(s, P, year, rng);
+  }
   // occupation / liberation
   if (attackerWins) {
     const n = 1 + Math.floor(decisive * 4);
@@ -409,7 +410,7 @@ function makePeace(s: State, agg: PolityAgg, w: War, A: Polity, D: Polity, year:
         const amount = Math.round(Math.max(5, Math.min(Math.max(loser.treasury, 0) * 0.5 + loser.pop * 0.002, loser.pop * 0.01)));
         terms.push({ kind: 'indemnity', from: loser.id, to: winner.id, amount });
       }
-      if (winner.army > loser.army * 3.5 && loser.cells < winner.cells / 4 && rng.chance(0.4) && loser.overlord === null) {
+      if (strengthOf(winner) > strengthOf(loser) * 3.5 && loser.cells < winner.cells / 4 && rng.chance(0.4) && loser.overlord === null) {
         terms.push({ kind: 'vassal', from: loser.id, to: winner.id });
       }
       if (w.goal === 'holy' && winner === A && loser.religion !== winner.religion && rng.chance(0.5)) {
@@ -537,6 +538,7 @@ export function marriageBetween(s: State, A: Polity, B: Polity, year: number, rn
   }
   // a ruler without a living spouse marries a princess
   for (const [ruler, kids] of [[ra, kb], [rb, ka]] as const) {
+    if (ruler.died <= year) continue;
     const living = ruler.spouses.some((sp) => s.persons[sp].died > year);
     if (living) continue;
     const k = kids.find((c) => c.sex !== ruler.sex);

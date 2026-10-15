@@ -1,7 +1,6 @@
 // The main loop: 50 centuries, decade sub-steps, and a yearly loop for politics and war so that
 // every territorial change is logged in chronological order.
 import type { State } from './state.ts';
-import { alivePolity } from './state.ts';
 import { initState } from './init.ts';
 import { buildGeo } from './geo.ts';
 import { initClimate, climateStep } from './climate.ts';
@@ -14,6 +13,7 @@ import { cultureStep } from './culture.ts';
 import { religionStep } from './religion.ts';
 import type { ThoughtPresence } from './religion.ts';
 import { techStep, eraOf } from './tech.ts';
+import { successionYear } from './people.ts';
 import { routesStep, currencyStep, priceStep, housesStep, initEcon } from './economy.ts';
 import type { EconMemory } from './economy.ts';
 import { initContact, contactStep, colonizeYear } from './colonial.ts';
@@ -47,6 +47,7 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
   const initial = { owner: new Int32Array(s.world.n).fill(-1), culture: s.culture.slice(), religion: s.religion.slice() };
   const result: SimResult = { state: s, econ, thought, initial };
   let centuryExpansion = new Map<number, number>();
+  const surveyed = new Set<number>(); // polities with a decadal stats row
   hooks.onStart?.(result);
   const t0 = performance.now();
 
@@ -62,7 +63,6 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
     const contacts = routesStep(s, agg, y0);
     contactStep(s, contactMem, y0);
     techStep(s, y0, contacts);
-    currencyStep(s, y0);
     priceStep(s, econ, y0);
     housesStep(s, agg, econ, y0);
     stabilityStep(s, agg, y0);
@@ -70,6 +70,7 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
     for (let y = y0; y < y0 + 10; y++) {
       const rng = s.rng.fork('year', y);
       applyPendingAnnex(s, y);
+      successionYear(s, y, rng);
       recruitYear(s, y);
       governmentStep(s, agg, y);
       diplomacyStep(s, agg, y);
@@ -80,13 +81,19 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
       expansionYear(s, agg, y, rng, centuryExpansion);
       if (y % 5 === 4) agg = aggregate(s, geo, y);
     }
-    // cultural and religious change is logged at the end of the decade, after the political year loop
+    // currency, cultural and religious change is decided at the end of the decade, after the political year
+    // loop, so that only states still standing issue coins, convert or found movements (dated within the decade)
+    currencyStep(s, y0);
     religionStep(s, geo, agg, thought, y0);
     cultureStep(s, geo, agg, y0, centuryEnd);
-    // decadal statistics (army: men under arms)
+    // decadal statistics (army: men under arms); a state that came and went between two surveys (or was born
+    // after the last one) gets one row, dated at its birth
     for (const p of s.polities) {
-      if (!alivePolity(p, y0)) continue;
-      s.polityYears.push([p.id, y0, p.cells, Math.round(p.pop), Math.round(p.urbanPop), Math.round(p.treasury), p.soldiers, Math.round(p.stability * 1000) / 1000, p.gov, p.ruler, p.capital, p.religion, p.currency, eraOf(p)]);
+      const alive = p.born <= y0 && (p.died === null || p.died > y0);
+      const brief = !alive && (p.died !== null || y0 + 10 >= yearEnd) && p.born < y0 + 10 && !surveyed.has(p.id);
+      if (!alive && !brief) continue;
+      surveyed.add(p.id);
+      s.polityYears.push([p.id, brief ? p.born : y0, p.cells, Math.round(p.pop), Math.round(p.urbanPop), Math.round(p.treasury), p.soldiers, Math.round(p.stability * 1000) / 1000, p.gov, p.ruler, p.capital, p.religion, p.currency, eraOf(p)]);
     }
     s.lang.advanceTo(y0 + 9);
     if (centuryEnd) {

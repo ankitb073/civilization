@@ -3,7 +3,7 @@ import type { State, Polity, GovType, Settlement } from './state.ts';
 import { event, ref, setOwner, alivePolity, addStress, topStress, rel, PALETTE } from './state.ts';
 import { Rng } from '../core/rng.ts';
 import { TK, has, eraOf, adminMult, milMult, MOBILIZATION, TAX_PER_CAPITA, inheritTechs, TECHS } from './tech.ts';
-import { foundingRuler, successionCheck, setRuler, newPerson, newDynasty, isRepublican, headRole } from './people.ts';
+import { foundingRuler, setRuler, newPerson, newDynasty, isRepublican, headRole } from './people.ts';
 import { foundSettlement, siteScore } from './settlements.ts';
 import type { Geo } from './geo.ts';
 import { majority, components, dist } from './geo.ts';
@@ -59,7 +59,7 @@ export function createPolity(
   const p: Polity = {
     id, nameId, nameBasis: basis, culture: o.culture, cultures: [[year, o.culture]], born: year, died: null, foundEvent: ev.id, endEvent: null,
     capital: o.capital, capitals: [[year, o.capital]], gov: o.gov, govs: [[year, o.gov]], ruler: null, rulers: [], dynasty: null,
-    religion: -1, currency: -1, treasury: 0, debt: 0, stability: 0.65, army: 0, soldiers: 0, levy: 0, techs: new Map(), overlord: null,
+    religion: -1, currency: -1, treasury: 0, debt: 0, stability: 0.65, soldiers: 0, levy: 0, techs: new Map(), overlord: null,
     tributes: [], color: pickColor(s, o.cells, id), predecessor: o.predecessor ?? null, successors: [], kind: o.kind ?? 'state',
     landmassHome: s.world.landmass[capital.cell], generals: [], cells: o.cells.length, pop: 0, urbanPop: 0,
     warWeariness: 0, lastWarEnd: -1000, crisis: 0, stress: [], successionLaw: law,
@@ -120,6 +120,14 @@ export const LEVY_FLOOR_SHARE = 0.05;
 export function levyOf(p: Polity, treasuryFactor = 1): number {
   const share = Math.max(MOBILIZATION[eraOf(p)], p.kind === 'rebel' ? REBEL_LEVY : 0);
   return Math.round(Math.max(p.pop * share, Math.min(p.pop * LEVY_FLOOR_SHARE, LEVY_FLOOR)) * treasuryFactor);
+}
+
+/** A rising's levies are untrained: each rebel counts for this much of a regular in the field. */
+export const REBEL_QUALITY = 0.6;
+
+/** Military strength: men under arms × the arms of the age (bronze to aircraft); rebels fight as militia. */
+export function strengthOf(p: Polity): number {
+  return p.soldiers * milMult(p) * (p.kind === 'rebel' ? REBEL_QUALITY : 1);
 }
 
 function pickColor(s: State, cells: number[], id: number): string {
@@ -298,16 +306,14 @@ export function stabilityStep(s: State, agg: PolityAgg, y0: number): void {
     const atWar = s.wars.some((w) => w.ended === null && (w.attackers.includes(p.id) || w.defenders.includes(p.id)));
     // treasury (silver kg over the decade)
     const revenue = p.pop * TAX_PER_CAPITA[era] * (0.5 + p.stability * 0.6) * 10;
-    const soldiers = p.pop * MOBILIZATION[era];
+    const soldiers = levyOf(p);
     const upkeep = soldiers * 0.09 * (atWar ? 2.6 : 1) * 10 * (TAX_PER_CAPITA[era] / 0.004) * 0.6;
     let tribute = 0;
     for (const t of p.tributes) if (t.until >= y0) tribute += t.amount * 10;
     p.treasury = p.treasury * 0.7 + revenue - upkeep - revenue * 0.25 - tribute;
     for (const q of s.polities) for (const t of q.tributes) if (t.to === p.id && t.until >= y0) p.treasury += t.amount * 10;
     const treasuryFactor = p.treasury > 0 ? 1 : Math.max(0.55, 1 + p.treasury / Math.max(1, revenue * 3));
-    p.army = Math.round(soldiers * milMult(p) * treasuryFactor);
     p.levy = levyOf(p, treasuryFactor);
-    p.soldiers = p.levy;
     // stability
     const over = agg.overext.get(p.id) ?? 1;
     let st = p.stability;
@@ -343,7 +349,6 @@ export function politicsYear(s: State, geo: Geo, agg: PolityAgg, year: number, r
   }
   for (const p of s.polities.slice()) {
     if (!alivePolity(p, year)) continue;
-    successionCheck(s, p, year, rng);
     const cells = (live.get(p.id) ?? []).filter((c) => s.owner[c] === p.id);
     if (cells.length === 0) {
       const lastChange = lastTerritoryEvent(s, p.id);
