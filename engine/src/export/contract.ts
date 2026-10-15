@@ -201,3 +201,20 @@ export interface PageJson {
 }
 
 export interface ShardJson { pages: PageJson[] }
+
+// ---------------------------------------------------------------- histomap.json
+/** A "Histomap": every state as a stream whose width is its share of the world's population.
+ *  Streams are ordered west → east by capital, so neighbours flow side by side. */
+export interface HistomapJson {
+  years: number[];                       // sample years (every 25)
+  worldPop: number[];                    // total population per sample
+  series: {
+    id: string;                          // polity id, or 'other' / 'stateless'
+    name: string;
+    color: string;
+    order: number;                       // vertical order (0 = west)
+    start: number;
+    end: number;
+    share: number[];                     // 0..1 share of world population per sample year
+  }[];
+}

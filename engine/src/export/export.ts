@@ -7,7 +7,7 @@ import type { SimResult } from '../sim/run.ts';
 import type { Archive } from '../archive/build.ts';
 import type { CheckReport } from '../check/check.ts';
 import type {
-  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind,
+  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson,
 } from './contract.ts';
 import { SHARD_COUNT, shardOf, shardFile } from './contract.ts';
 import { BIOMES } from '../world/biomes.ts';
@@ -204,6 +204,9 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
   for (let i = 0; i < SHARD_COUNT; i++) raw += write(shardFile(i), { pages: shards[i] });
   log(`pages: ${a.pages.size} in ${SHARD_COUNT} shards, ${(raw / 1e6).toFixed(0)} MB raw`);
 
+  // ---------------------------------------------------------------- histomap
+  writeSized('histomap.json', histomap(r, a));
+
   // ---------------------------------------------------------------- meta
   const eras = computeEras(r, a);
   const counts: Record<string, number> = {};
@@ -241,6 +244,51 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
 
 function trim(x: string, n: number): string {
   return x.length <= n ? x : x.slice(0, n - 1) + '…';
+}
+
+function histomap(r: SimResult, a: Archive): HistomapJson {
+  const s = r.state;
+  const STEP = 25;
+  const years: number[] = [];
+  for (let y = 0; y <= 4990; y += STEP) years.push(y);
+  const idx = new Map(years.map((y, i) => [y, i]));
+  // decadal stats → population per polity per sample
+  const pop = new Map<number, Float64Array>();
+  const world = new Float64Array(years.length);
+  for (const row of s.polityYears) {
+    const y = row[1] as number;
+    if (y % STEP !== 0 || !idx.has(y)) continue;
+    const i = idx.get(y)!;
+    const pid = row[0] as number;
+    let a1 = pop.get(pid);
+    if (!a1) pop.set(pid, (a1 = new Float64Array(years.length)));
+    a1[i] = row[3] as number;
+  }
+  // world population: states plus the stateless, from settlement-scale proxy (states' share grows over time)
+  for (let i = 0; i < years.length; i++) {
+    let st = 0;
+    for (const a1 of pop.values()) st += a1[i];
+    world[i] = st;
+  }
+  // keep the biggest streams, fold the rest into 'other'
+  const peak = [...pop.entries()].map(([pid, a1]) => [pid, Math.max(...a1)] as const).sort((x, y) => y[1] - x[1]);
+  const keep = new Set(peak.slice(0, 140).map(([pid]) => pid));
+  const other = new Float64Array(years.length);
+  for (const [pid, a1] of pop) if (!keep.has(pid)) for (let i = 0; i < years.length; i++) other[i] += a1[i];
+  const series: HistomapJson['series'] = [];
+  for (const pid of keep) {
+    const p = s.polities[pid];
+    const a1 = pop.get(pid)!;
+    const cap = s.settlements[p.capitals[0][1]].cell;
+    series.push({
+      id: `pol:${pid}`, name: a.T.short.get(`pol:${pid}`) ?? '', color: p.color, order: s.world.x[cap],
+      start: p.born, end: p.died ?? 5000, share: Array.from(a1, (v, i) => (world[i] > 0 ? Math.round((v / world[i]) * 10000) / 10000 : 0)),
+    });
+  }
+  series.sort((x, y) => x.order - y.order);
+  series.forEach((x, i) => { x.order = i; });
+  series.push({ id: 'other', name: 'Lesser states', color: '#b8ab92', order: series.length, start: 0, end: 5000, share: Array.from(other, (v, i) => (world[i] > 0 ? Math.round((v / world[i]) * 10000) / 10000 : 0)) });
+  return { years, worldPop: Array.from(world, (v) => Math.round(v)), series };
 }
 
 function rankRef(ref: string): number {

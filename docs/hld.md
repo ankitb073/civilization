@@ -32,7 +32,8 @@ Everything runs from one command (`npm run build`). The engine is TypeScript, ru
 | Checker | `engine/src/check/` | Causal and consistency invariants; report |
 | Export | `engine/src/export/` | Atlas data shards, graph layout (ForceAtlas2, precomputed) |
 | Atlas | `atlas/` | Map + time slider, graph, reader, search, about/consistency |
-| Flagships | `flagships/` | Agent-written Markdown, validated by the checker |
+| Flagships | `flagships/`, `engine/src/flagships/` | Dossiers → agent-written Markdown → validated ingestion (world fingerprint) → checker |
+| Colonial | `engine/src/sim/colonial.ts` | First contact across the sea, virgin-soil epidemics, colonization, colonial wars |
 
 ## Core model
 
@@ -63,6 +64,8 @@ These are static JSON files under `atlas/public/data/`, and the atlas loads them
 - `graph.json`: nodes (id, type, label, x, y, t0, t1, degree) and edges (s, t, kind), laid out at build time by ForceAtlas2.
 - `search.json`: a compact search index (titles, aliases, name variants).
 - `pages/NNN.json`: sharded entity and artifact bodies (Markdown and metadata).
+- `layer-culture.json`, `layer-religion.json`: lazily loaded map layers.
+- `histomap.json`: five millennia of states as population-share streams.
 
 A full LLD exists for each component in `docs/lld/`.
 
