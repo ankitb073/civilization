@@ -95,7 +95,16 @@ export function months(ctx: Ctx, culture: number): NameId[] {
   if (!m) {
     const cu = ctx.s.cultures[culture];
     const born = Math.max(cu.born, ctx.s.lang.info(cu.lang).born);
-    m = Array.from({ length: 12 }, (_, i) => ctx.s.lang.coinName(cu.lang, born, 'month', `month:${culture}:${i}`));
+    m = [];
+    const seen = new Set<string>();
+    for (let i = 0, tries = 0; m.length < 12 && tries < 80; i++, tries++) {
+      const nm = ctx.s.lang.coinName(cu.lang, born, 'month', `month:${culture}:${i}`);
+      const form = ctx.s.lang.realize(nm, cu.lang, born).conventional.toLowerCase();
+      if (seen.has(form) || form.length < 3) continue;
+      seen.add(form);
+      m.push(nm);
+    }
+    while (m.length < 12) m.push(m[m.length % Math.max(1, m.length)]);
     monthCache.set(key, m);
   }
   return m;

@@ -255,6 +255,8 @@ export class LanguageEngine {
     });
     let segs = coined.segs.filter((s) => s.length > 0);
     if (!segs.length || segs.some((s) => !s.some(isV))) segs = [this.freshRoot(L, year, 2, rng.fork('fallback'))];
+    // proper names need some body: very short coinages are replaced by a two-syllable root
+    if (kind !== 'month' && segs.reduce((n, s) => n + s.length, 0) < 4) segs = [this.freshRoot(L, year, 2, rng.fork('short'))];
     const id = this.names.length;
     this.names.push({ id, kind, lang: L.id, year, segs, joiner: segs.length > 1 ? coined.joiner : '', meaning: coined.meaning, chain: [{ lang: L.id, year }] });
     return id;

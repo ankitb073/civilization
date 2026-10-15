@@ -29,7 +29,7 @@ function LT(T: Titles, ref: string): string {
 function blank(ref: string, T: Titles, sub: string, t0: number, t1: number, cell: number): PageJson {
   return {
     id: ref, kind: kindOfRef(ref) as EntityKind, sub, title: T.title.get(ref) ?? ref, t0, t1, summary: '', infobox: [], body: '',
-    links: [], backlinks: [], cell,
+    links: [], backlinks: [], labels: {}, cell,
   };
 }
 

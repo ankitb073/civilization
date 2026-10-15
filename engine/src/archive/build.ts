@@ -104,7 +104,7 @@ function artifactPage(ctx: Ctx, T: Titles, a: Artifact): PageJson {
   return {
     id: ref, kind: 'artifact', sub: a.sub, title: a.title, t0: a.year, t1: a.year,
     summary: `${a.title}. ${cap1(a.medium)}, ${langName}, AY ${a.year}.`,
-    infobox, body: a.body, links: [], backlinks: [], cell: a.cell,
+    infobox, body: a.body, links: [], backlinks: [], labels: {}, cell: a.cell,
     artifact: {
       catalog: a.catalog, date: a.dateText.replace(/\[\[[^|\]]+\|([^\]]+)\]\]/g, '$1'), language: langName, script: scriptName, medium: a.medium,
       authorId: a.author !== null ? `per:${a.author}` : undefined, condition: a.condition, provenance: a.provenance,

@@ -80,13 +80,20 @@ export interface Layer {
   /** keyframes[k] = state at year k*keyframeEvery. base64 of little-endian Int16Array, one value
    *  per cell = legend idx or -1. */
   keyframes: string[];
-  /** base64 of little-endian Int32Array triplets [year, cell, idx], sorted by year. Apply the
-   *  deltas with keyframe year < year <= target to the nearest keyframe at or before target. */
+  /** Every change, in order, column-wise for compression: base64 of three little-endian arrays
+   *  back to back, each `deltaCount` long: Uint16 year steps (the first relative to `deltaBase`,
+   *  each later one relative to the previous year), Uint16 cell, Int16 idx (-1 = none).
+   *  To get year Y: take keyframe ⌊Y/keyframeEvery⌋ and apply the changes with
+   *  keyframeYear < year <= Y in order. */
   deltas: string;
+  deltaCount: number;
+  deltaBase: number;
 }
 
 export interface TimelineJson {
-  layers: { political: Layer; culture: Layer; religion: Layer };
+  /** The political layer is inline; the others are fetched on demand from `layerFiles`. */
+  layers: { political: Layer; culture?: Layer; religion?: Layer };
+  layerFiles: { culture: string; religion: string };
   polities: {
     idx: number;               // == political legend idx
     id: string;
@@ -97,6 +104,7 @@ export interface TimelineJson {
     idx: number; id: string; name: string; cell: number; start: number; end: number;
     pop: [year: number, pop: number][];      // per century
   }[];
+  /** The most significant located events (a few hundred per century at most). */
   events: {
     id: string; year: number; end: number; sub: string; title: string;
     cell: number;              // -1 if not located
@@ -124,8 +132,8 @@ export interface GraphJson {
 }
 
 // ---------------------------------------------------------------- search.json
-/** [id, title, kind, t0, aliases joined by "|"] */
-export type SearchEntry = [string, string, EntityKind, number, string];
+/** [id, title, kind, t0, aliases joined by "|", sub] — sub is the page's sub-type (e.g. 'treaty', 'war'). */
+export type SearchEntry = [string, string, EntityKind, number, string, string];
 export interface SearchJson { entries: SearchEntry[] }
 
 // ---------------------------------------------------------------- pages/NNN.json
@@ -150,6 +158,10 @@ export interface PageJson {
   body: string;
   links: string[];
   backlinks: string[];
+  /** Display titles for every id in links/backlinks (so pages render without the search index). */
+  labels: Record<string, string>;
+  /** Total backlinks when the list was truncated for size (hub pages). */
+  backlinkCount?: number;
   cell: number;                // map focus cell, -1 if none
   /** Name of this entity through time and across languages. */
   names?: { year: number; lang: string; form: string; scholarly: string }[];

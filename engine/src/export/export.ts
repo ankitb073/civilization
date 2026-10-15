@@ -1,0 +1,345 @@
+// Atlas export: static JSON files under atlas/public/data, per engine/src/export/contract.ts.
+import { mkdirSync, writeFileSync, rmSync, existsSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
+import { createRequire } from 'node:module';
+import type { SimResult } from '../sim/run.ts';
+import type { Archive } from '../archive/build.ts';
+import type { CheckReport } from '../check/check.ts';
+import type {
+  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind,
+} from './contract.ts';
+import { SHARD_COUNT, shardOf, shardFile } from './contract.ts';
+import { BIOMES } from '../world/biomes.ts';
+import { TK } from '../sim/tech.ts';
+import { Rng } from '../core/rng.ts';
+
+export const ENGINE_VERSION = '1.0.0';
+
+// graphology ships CommonJS; load it through require with the small surface we use.
+interface GraphLike {
+  addNode(id: string, attrs: { x: number; y: number }): void;
+  addEdge(a: string, b: string): void;
+  getNodeAttribute(id: string, k: 'x' | 'y'): number;
+  degree(id: string): number;
+}
+const require = createRequire(import.meta.url);
+const { UndirectedGraph } = require('graphology') as { UndirectedGraph: new () => GraphLike };
+const forceAtlas2 = require('graphology-layout-forceatlas2') as {
+  assign(g: GraphLike, o: { iterations: number; settings: Record<string, unknown> }): void;
+  inferSettings(g: GraphLike): Record<string, unknown>;
+};
+
+export interface ExportOptions {
+  outDir: string;
+  downloads?: { label: string; href: string; bytes: number }[];
+  log?: (m: string) => void;
+  layoutIterations?: number;
+}
+
+export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null, o: ExportOptions): MetaJson {
+  const log = o.log ?? (() => {});
+  const s = r.state;
+  const T = a.T;
+  const dir = o.outDir;
+  if (existsSync(dir)) rmSync(dir, { recursive: true });
+  mkdirSync(join(dir, 'pages'), { recursive: true });
+  const write = (file: string, data: unknown) => {
+    const txt = JSON.stringify(data);
+    writeFileSync(join(dir, file), txt);
+    return txt.length;
+  };
+  const sizes: Record<string, [number, number]> = {};
+  const writeSized = (file: string, data: unknown) => {
+    const txt = JSON.stringify(data);
+    writeFileSync(join(dir, file), txt);
+    sizes[file] = [txt.length, gzipSync(txt).length];
+  };
+
+  // ---------------------------------------------------------------- world
+  const w = s.world;
+  const points: number[] = [];
+  for (let i = 0; i < w.n; i++) points.push(w.x[i], w.y[i]);
+  const world: WorldJson = {
+    width: w.width, height: w.height, points,
+    elevation: Array.from(w.elev, (e, i) => (w.land[i] ? Math.max(128, Math.min(255, Math.round(128 + e * 127))) : Math.max(0, Math.min(127, Math.round(127 + e * 127))))),
+    seaLevel: 128,
+    biome: Array.from(w.biome),
+    biomes: BIOMES.map((b) => ({ id: b.id, name: b.name, color: b.color })),
+    rivers: w.rivers.map((rv, i) => ({ id: `riv:${i}`, name: T.short.get(`riv:${i}`) ?? '', cells: rv.cells, width: rv.cells.map((c) => Math.round((1 + 5 * Math.sqrt(w.flux[c] / rv.flux)) * 10) / 10) })),
+    regions: Array.from({ length: w.regionCount }, (_, i) => ({ id: `reg:${i}`, name: T.short.get(`reg:${i}`) ?? '', labelCell: w.regionLabelCell[i] })),
+    regionOf: Array.from(w.region),
+  };
+  writeSized('world.json', world);
+
+  // ---------------------------------------------------------------- timeline
+  const layer = (initial: Int32Array, logFlat: number[], legend: Layer['legend']): Layer => {
+    const cur = Int16Array.from(initial);
+    const keyframes: string[] = [];
+    let li = 0;
+    for (let k = 0; k <= 50; k++) {
+      const K = k * 100;
+      while (li < logFlat.length && logFlat[li] <= K) {
+        cur[logFlat[li + 1]] = logFlat[li + 2];
+        li += 4;
+      }
+      keyframes.push(Buffer.from(cur.buffer.slice(0)).toString('base64'));
+    }
+    const n = logFlat.length / 4;
+    const base = n ? logFlat[0] : 0;
+    const steps = new Uint16Array(n), cells = new Uint16Array(n), vals = new Int16Array(n);
+    let prev = base;
+    for (let i = 0; i < n; i++) {
+      steps[i] = logFlat[4 * i] - prev;
+      prev = logFlat[4 * i];
+      cells[i] = logFlat[4 * i + 1];
+      vals[i] = logFlat[4 * i + 2];
+    }
+    const buf = Buffer.concat([Buffer.from(steps.buffer), Buffer.from(cells.buffer), Buffer.from(vals.buffer)]);
+    return { legend, keyframeEvery: 100, keyframes, deltas: buf.toString('base64'), deltaCount: n, deltaBase: base };
+  };
+  const political = layer(r.initial.owner, s.territoryLog, s.polities.map((p) => ({ idx: p.id, id: `pol:${p.id}`, name: T.short.get(`pol:${p.id}`) ?? '', color: p.color, start: p.born, end: p.died ?? 5000 })));
+  const culture = layer(r.initial.culture, s.cultureLog, s.cultures.map((c) => ({ idx: c.id, id: `cul:${c.id}`, name: T.short.get(`cul:${c.id}`) ?? '', color: c.color, start: c.born, end: c.died ?? 5000 })));
+  const relColors = new Rng(s.seed).fork('religion-colors');
+  const religion = layer(r.initial.religion, s.religionLog, s.movements.map((m) => ({ idx: m.id, id: `mov:${m.id}`, name: T.short.get(`mov:${m.id}`) ?? '', color: hsl(relColors.next() * 360, 38 + relColors.next() * 20, 45 + relColors.next() * 15), start: m.born, end: m.died ?? 5000 })));
+  writeSized('layer-culture.json', culture);
+  writeSized('layer-religion.json', religion);
+  // event markers: the most significant few per century
+  const markers: TimelineJson['events'] = [];
+  const byCentury = new Map<number, typeof s.events>();
+  for (const e of s.events) {
+    if (!T.pageRefs.has(`evt:${e.id}`) || e.cell < 0 || e.sig < 0.2) continue;
+    const c = Math.floor(e.year / 100);
+    if (!byCentury.has(c)) byCentury.set(c, []);
+    byCentury.get(c)!.push(e);
+  }
+  for (const [, evs] of [...byCentury].sort((x, y) => x[0] - y[0])) {
+    for (const e of evs.sort((x, y) => y.sig - x.sig || x.id - y.id).slice(0, 110).sort((x, y) => x.year - y.year || x.id - y.id)) {
+      markers.push({ id: `evt:${e.id}`, year: e.year, end: e.end, sub: e.sub, title: T.title.get(`evt:${e.id}`) ?? '', cell: e.cell, sig: Math.round(e.sig * 100) / 100 });
+    }
+  }
+  const timeline: TimelineJson = {
+    layers: { political },
+    layerFiles: { culture: 'layer-culture.json', religion: 'layer-religion.json' },
+    polities: s.polities.map((p) => ({ idx: p.id, id: `pol:${p.id}`, names: [[p.born, T.short.get(`pol:${p.id}`) ?? '']], capitals: p.capitals.map(([y, c]) => [y, c] as [number, number]) })),
+    settlements: s.settlements.map((t) => ({ idx: t.id, id: `set:${t.id}`, name: T.short.get(`set:${t.id}`) ?? '', cell: t.cell, start: t.founded, end: t.abandoned ?? 5000, pop: t.popHistory.map(([y, v]) => [y, v] as [number, number]) })),
+    events: markers,
+    climate: s.climate.map((c) => ({ year: c.year, temp: c.temp, precip: c.precip })),
+    routes: s.routes.map((rt) => ({ year: rt.year, edges: rt.edges.map(([x, y, v]) => [x, y, Math.round(v * 100) / 100] as [number, number, number]) })),
+  };
+  writeSized('timeline.json', timeline);
+  log(`timeline: ${(sizes['timeline.json'][1] / 1024).toFixed(0)} KB gz`);
+
+  // ---------------------------------------------------------------- graph (structural edges + ForceAtlas2)
+  const ids = [...a.pages.keys()];
+  const index = new Map(ids.map((id, i) => [id, i]));
+  const edgeSet = new Set<number>();
+  const edges: number[] = [];
+  const addEdge = (x: string, y: string) => {
+    const i = index.get(x), j = index.get(y);
+    if (i === undefined || j === undefined || i === j) return;
+    const key = i < j ? i * 1_000_000 + j : j * 1_000_000 + i;
+    if (edgeSet.has(key)) return;
+    edgeSet.add(key);
+    edges.push(i, j);
+  };
+  const LINK = /\[\[([a-z]{3}:\d+)\|/g;
+  for (const pg of a.pages.values()) {
+    for (const [, v] of pg.infobox) for (const m of v.matchAll(LINK)) addEdge(pg.id, m[1]);
+    if (pg.kind === 'artifact') for (const l of pg.links.slice(0, 12)) addEdge(pg.id, l);
+  }
+  const t0 = performance.now();
+  const g = new UndirectedGraph();
+  const hash = new Rng(s.seed).fork('layout');
+  ids.forEach((id) => {
+    const pg = a.pages.get(id)!;
+    const t = Math.max(0, Math.min(5000, pg.t0));
+    g.addNode(id, { x: (t / 5000) * 2000 - 1000 + hash.normal(0, 60), y: hash.normal(0, 400) });
+  });
+  for (let k = 0; k < edges.length; k += 2) g.addEdge(ids[edges[k]], ids[edges[k + 1]]);
+  const settings = forceAtlas2.inferSettings(g);
+  forceAtlas2.assign(g, { iterations: o.layoutIterations ?? 40, settings: { ...settings, barnesHutOptimize: true, barnesHutTheta: 1.2, gravity: 0.6, scalingRatio: 8, adjustSizes: false, linLogMode: false } });
+  log(`layout: ${ids.length} nodes, ${edges.length / 2} edges in ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+  const graph: GraphJson = {
+    ids, labels: ids.map((id) => trim(T.short.get(id) ?? a.pages.get(id)!.title, 48)),
+    kinds: ids.map((id) => a.pages.get(id)!.kind),
+    x: ids.map((id) => Math.round(g.getNodeAttribute(id, 'x'))),
+    y: ids.map((id) => Math.round(g.getNodeAttribute(id, 'y'))),
+    size: ids.map((id) => Math.round((1 + Math.log2(1 + g.degree(id))) * 10) / 10),
+    t0: ids.map((id) => a.pages.get(id)!.t0),
+    t1: ids.map((id) => a.pages.get(id)!.t1),
+    edges,
+  };
+  writeSized('graph.json', graph);
+
+  // ---------------------------------------------------------------- search
+  const entries: SearchEntry[] = [];
+  for (const pg of a.pages.values()) {
+    const aliases = new Set<string>();
+    const short = T.short.get(pg.id);
+    if (short && short !== pg.title) aliases.add(short);
+    for (const n of pg.names ?? []) aliases.add(n.form);
+    if (pg.artifact) aliases.add(pg.artifact.catalog);
+    entries.push([pg.id, pg.title, pg.kind as EntityKind, pg.t0, [...aliases].join('|'), pg.sub]);
+  }
+  writeSized('search.json', { entries } as SearchJson);
+
+  // ---------------------------------------------------------------- page shards
+  const titleOf = (id: string) => a.pages.get(id)?.title ?? id;
+  const shards: PageJson[][] = Array.from({ length: SHARD_COUNT }, () => []);
+  let raw = 0;
+  for (const pg of a.pages.values()) {
+    const out: PageJson = { ...pg };
+    if (out.backlinks.length > 300) {
+      out.backlinkCount = out.backlinks.length;
+      // keep the most significant: documents and events first, then most recent
+      out.backlinks = out.backlinks.slice().sort((x, y) => rankRef(x) - rankRef(y)).slice(0, 300);
+    }
+    const labels: Record<string, string> = {};
+    for (const l of out.links) labels[l] = titleOf(l);
+    for (const l of out.backlinks) labels[l] = titleOf(l);
+    out.labels = labels;
+    shards[shardOf(pg.id)].push(out);
+  }
+  for (let i = 0; i < SHARD_COUNT; i++) raw += write(shardFile(i), { pages: shards[i] });
+  log(`pages: ${a.pages.size} in ${SHARD_COUNT} shards, ${(raw / 1e6).toFixed(0)} MB raw`);
+
+  // ---------------------------------------------------------------- meta
+  const eras = computeEras(r, a);
+  const counts: Record<string, number> = {};
+  for (const pg of a.pages.values()) counts[pg.kind] = (counts[pg.kind] ?? 0) + 1;
+  counts.documents = a.artifacts.length;
+  counts.links = a.links;
+  counts.years = 5000;
+  counts.events = s.events.length;
+  const worldName = capFirst(s.lang.word(a.ctx.editorialLang, 'earth', 5000).conventional);
+  const meta: MetaJson = {
+    title: 'Palimpsest',
+    subtitle: `A 5,000-year archive of ${worldName}, a world that never existed`,
+    worldName,
+    seed: s.seed,
+    engineVersion: ENGINE_VERSION,
+    yearStart: 0,
+    yearEnd: 5000,
+    yearLabel: 'AY',
+    counts,
+    eras,
+    check: check
+      ? { passed: check.passed, invariants: check.invariants.map((x) => ({ id: x.id, title: x.title, checked: x.checked, violations: x.violations })) }
+      : { passed: false, invariants: [] },
+    editorialLanguage: T.short.get(`lan:${a.ctx.editorialLang}`) ?? '',
+    downloads: o.downloads ?? [],
+    featured: featured(r, a),
+  };
+  writeSized('meta.json', meta);
+  for (const [f, [rawB, gz]] of Object.entries(sizes)) log(`  ${f}: ${(rawB / 1024).toFixed(0)} KB raw, ${(gz / 1024).toFixed(0)} KB gz`);
+  void statSync;
+  return meta;
+}
+
+function trim(x: string, n: number): string {
+  return x.length <= n ? x : x.slice(0, n - 1) + '…';
+}
+
+function rankRef(ref: string): number {
+  const p = ref.slice(0, 3);
+  return p === 'art' ? 0 : p === 'evt' ? 1 : p === 'pol' ? 2 : 3;
+}
+
+function capFirst(x: string): string {
+  return x ? x[0].toUpperCase() + x.slice(1) : x;
+}
+
+function hsl(h: number, sat: number, l: number): string {
+  const s1 = sat / 100, l1 = l / 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s1 * Math.min(l1, 1 - l1);
+  const f = (n: number) => l1 - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const hex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+  return `#${hex(f(0))}${hex(f(8))}${hex(f(4))}`;
+}
+
+export function computeEras(r: SimResult, a: Archive): Era[] {
+  const s = r.state;
+  const first = (key: string) => {
+    let best = 5000;
+    for (const p of s.polities) {
+      const y = p.techs.get(TK[key]);
+      if (y !== undefined && y < best) best = y;
+    }
+    return best;
+  };
+  const marks: [string, string, number][] = [
+    ['bronze', 'Age of Bronze', 0],
+    ['iron', 'Age of Iron', first('iron')],
+    ['coin', 'Age of Coin and Creed', first('coinage')],
+    ['parchment', 'Age of Parchment and Plough', first('paper')],
+    ['print', 'Age of Sail and Print', first('printing')],
+    ['engines', 'Age of Engines', first('steam')],
+    ['networks', 'Age of Networks', first('computing')],
+  ].filter(([, , y]) => (y as number) < 5000) as [string, string, number][];
+  marks.sort((x, y) => x[2] - y[2]);
+  const eras: Era[] = [];
+  for (let i = 0; i < marks.length; i++) {
+    const [id, name, start] = marks[i];
+    const end = i + 1 < marks.length ? marks[i + 1][2] : 5000;
+    if (end <= start) continue;
+    eras.push({ id, name, start, end, blurb: eraBlurb(r, a, start, end) });
+  }
+  return eras;
+}
+
+function eraBlurb(r: SimResult, a: Archive, start: number, end: number): string {
+  const s = r.state;
+  const T = a.T;
+  const evs = s.events.filter((e) => e.year >= start && e.year < end);
+  const wars = evs.filter((e) => e.sub === 'war').length;
+  const collapses = evs.filter((e) => e.sub === 'collapse').length;
+  const top = evs.filter((e) => T.pageRefs.has(`evt:${e.id}`) && ['collapse', 'plague', 'eruption', 'trade-collapse', 'invention', 'schism', 'movement-founding', 'revolution'].includes(e.sub)).sort((x, y) => y.sig - x.sig).slice(0, 2);
+  // largest polity of the era
+  let big: number | null = null, bigCells = 0;
+  for (const row of s.polityYears) {
+    const y = row[1] as number;
+    if (y < start || y >= end) continue;
+    if ((row[2] as number) > bigCells) { bigCells = row[2] as number; big = row[0] as number; }
+  }
+  const parts = [`${wars.toLocaleString('en-US')} wars and ${collapses} collapses.`];
+  if (big !== null) parts.push(`Largest state: ${T.title.get(`pol:${big}`)} (${bigCells} districts).`);
+  if (top.length) parts.push(`Marked by ${top.map((e) => T.short.get(`evt:${e.id}`)).join(' and ')}.`);
+  return parts.join(' ');
+}
+
+function featured(r: SimResult, a: Archive): MetaJson['featured'] {
+  const s = r.state;
+  const T = a.T;
+  const out: MetaJson['featured'] = [];
+  const add = (id: string | undefined, why: string) => {
+    if (!id || !a.pages.has(id) || out.some((x) => x.id === id)) return;
+    out.push({ id, title: a.pages.get(id)!.title, why });
+  };
+  // a war told by both sides
+  const rivals = [...a.pages.values()].filter((p) => p.accounts && p.accounts.sources.length >= 2).sort((x, y) => (y.accounts!.sources.length - x.accounts!.sources.length) || (s.events[Number(y.id.slice(4))].sig - s.events[Number(x.id.slice(4))].sig));
+  if (rivals[0]) add(rivals[0].id, 'Two chronicles, two wars: compare each side’s account with what really happened.');
+  const deadliest = s.events.filter((e) => e.sub === 'war').sort((x, y) => (Number(y.data.lossesA ?? 0) + Number(y.data.lossesD ?? 0)) - (Number(x.data.lossesA ?? 0) + Number(x.data.lossesD ?? 0)))[0];
+  if (deadliest) add(`evt:${deadliest.id}`, 'The deadliest war in five thousand years.');
+  const longest = s.polities.slice().sort((x, y) => ((y.died ?? 5000) - y.born) - ((x.died ?? 5000) - x.born))[0];
+  if (longest) add(`pol:${longest.id}`, `The longest-lived state: ${((longest.died ?? 5000) - longest.born)} years.`);
+  const biggest = s.polityYears.slice().sort((x, y) => (y[2] as number) - (x[2] as number))[0];
+  if (biggest) add(`pol:${biggest[0]}`, `The greatest extent ever reached: ${biggest[2]} districts in AY ${biggest[1]}.`);
+  const eruption = s.anomalies.filter((x) => x.kind === 'eruption').sort((x, y) => y.severity - x.severity || x.start - y.start)[0];
+  if (eruption) add(`cli:${eruption.id}`, 'A volcanic winter, and the famines that followed.');
+  const tc = s.events.find((e) => e.sub === 'trade-collapse');
+  if (tc) add(`evt:${tc.id}`, 'When long-distance trade fell apart, and why.');
+  const plague = s.events.filter((e) => e.sub === 'plague').sort((x, y) => Number(y.data.deaths) - Number(x.data.deaths))[0];
+  if (plague) add(`evt:${plague.id}`, 'The worst pandemic, traced city by city along the trade routes.');
+  const firstScript = s.events.find((e) => e.sub === 'script-invention');
+  if (firstScript) add(`evt:${firstScript.id}`, 'The invention of writing.');
+  const ins = a.artifacts.filter((x) => x.interlinear && x.sub === 'inscription' && x.year < 1500).sort((x, y) => x.year - y.year)[0];
+  if (ins) add(`art:${ins.id}`, 'An inscription in transliteration, interlinear gloss and translation.');
+  const ledger = a.artifacts.find((x) => x.sub === 'ledger' && x.ledger && x.ledger.notes.length >= 2);
+  if (ledger) add(`art:${ledger.id}`, 'A merchant’s day-book, with prices that follow harvests, wars and debased coin.');
+  const fam = s.lang.languages().filter((l) => l.parent !== null).sort((x, y) => s.lang.soundChanges(y.id).length - s.lang.soundChanges(x.id).length)[0];
+  if (fam) add(`lan:${fam.id}`, 'A language whose words you can watch change, sound law by sound law.');
+  void T;
+  return out;
+}

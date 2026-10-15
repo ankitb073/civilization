@@ -191,6 +191,12 @@ export class Ctx {
     let v = this.nameMemo.get(k);
     if (v === undefined) {
       v = this.s.lang.realize(nameId, lang, year).conventional;
+      if (v.replace(/[^\p{L}]/gu, '').length < 3) {
+        // eroded to a stub: keep the earliest full form, as editors do with worn-down names
+        const o = this.s.lang.nameOrigin(nameId);
+        const full = this.s.lang.realize(nameId, o.lang, o.year).conventional;
+        if (full.replace(/[^\p{L}]/gu, '').length > v.replace(/[^\p{L}]/gu, '').length) v = full;
+      }
       this.nameMemo.set(k, v);
     }
     return v;
