@@ -34,14 +34,14 @@ From that record we generate thousands of interlinked primary-source documents: 
 - story, histomap, languages, economy, collections, dynasties.
 
 ## Commands
-- `npm run sim [seed]`: simulate.
-- `npm run archive`: generate documents and pages.
-- `npm run check`: consistency checker.
-- `npm run export`: atlas data.
-- `npm run build`: everything, plus the atlas build.
+- `npm run build:data [-- seed] [--no-downloads]`: simulate, archive, database, audit, atlas data, vault and downloads (about 1 min).
+- `npm run sim [seed]`: simulate only, into build/world.sqlite.
+- `npm run check [db]`: audit a world database (exits non-zero on any violation).
+- `npm run build`: build:data plus the atlas build.
 - `npm run dev`: atlas dev server.
-- `npm test`: unit tests.
+- `npm test`: determinism, world, invariants, archive and checker tests.
 - `npm run typecheck`
+- `npm run stats -- <seed>`
 - Debug tools: `node engine/src/debug/stats.ts <seed>`, `node engine/src/debug/world-cli.ts <seed> out.png`, `node engine/src/debug/peek.ts <seed> <sub> <n>`, and `node engine/src/debug/scan.ts <from> <to>` (seed scoring).
 - Isolated build (avoids clobbering other builds): `node engine/src/cli/build.ts --no-downloads --db=/tmp/x.sqlite --out=/tmp/data`.
 - Atlas: `npm --prefix atlas run shoot`, `npm --prefix atlas run frames` (borders animation), `npm --prefix atlas run mock`.
