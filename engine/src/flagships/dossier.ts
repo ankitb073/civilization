@@ -66,6 +66,8 @@ function era(a: Archive, p: Polity | null, year: number): number {
   return p ? a.ctx.eraAt(p.id, Math.min(year, (p.died ?? 5000) - 1)) : 6;
 }
 
+const PERSONA_FORMS = ['queen mother', 'bride', 'martyr', 'hostage', 'refugee', 'survivor', 'envoy', 'delegate', 'courtier', 'physician', 'settler', 'natives', 'colonized', 'colonial soldier', 'merchant', 'creditor', 'old gods', 'convert', 'priest’s account', 'ruined trader', 'smuggled', 'secretary', 'starving'];
+
 const REGISTER = [
   'Bronze Age: formulaic, paratactic, invocations of gods, repetition, epithets; no abstractions.',
   'Iron Age: formulaic but more narrative; omens, gods, kings, tribute.',
@@ -182,6 +184,9 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
       }
     }
   }
+  // forms that name their own speaker (a bride, a martyr, a hostage, a refugee…) get an anonymous
+  // author of that kind rather than an ill-fitting ruler or general
+  if (PERSONA_FORMS.some((k) => form.includes(k))) author = null;
   if (polity && (polity.born > year)) return null;
   const lang = polity ? ctx.polityLang(polity, Math.min(year, (polity.died ?? 5000) - 1)) : ctx.editorialLang;
   if (s.lang.info(lang).born > year) return null;
@@ -292,7 +297,7 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
     author: author ? {
       id: `per:${author.id}`, name: d.nameOf(`per:${author.id}`), role: `${author.sex === 'f' ? 'woman' : 'man'}; ${author.roles.map((r) => r.role).join(', ') || 'person'}`, polity: author.polity !== null ? T.short.get(`pol:${author.polity}`) ?? null : null,
       born: author.born, died: author.died, stance: stanceOf(a, author, e),
-    } : { id: null, name: 'anonymous', role: form.includes('poem') || form.includes('panegyric') || form.includes('verses') || form.includes('hymn') || form.includes('lament') ? 'poet' : 'unknown', polity: polity ? T.short.get(`pol:${polity.id}`) ?? null : null, born: null, died: null, stance: 'loyal to their own people and gods' },
+    } : { id: null, name: 'anonymous', role: PERSONA_FORMS.some((k) => form.includes(k)) ? `the speaker the form implies (${form})` : form.includes('poem') || form.includes('panegyric') || form.includes('verses') || form.includes('hymn') || form.includes('lament') ? 'poet' : 'unknown', polity: polity ? T.short.get(`pol:${polity.id}`) ?? null : null, born: null, died: null, stance: 'loyal to their own people and gods' },
     subject: subject!,
     context,
     allowedLinks: [...allowed].map(([ref, v]) => ({ id: ref, text: v.text, what: v.what })),
