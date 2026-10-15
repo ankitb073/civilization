@@ -435,8 +435,9 @@ const GENERATORS: Record<string, Gen> = {
     const [a, b] = c.rng.pick(avail);
     if (a === 't' && has(c, 'k')) return null; // only after k has moved
     const pairs: [number, number[]][] = [[P(a), [P(b)]]];
-    // t > k (filling the gap k left) is a backing, not a loss of oral articulation
-    return { label: a === 't' ? 't-backing' : 'debuccalization', notation: pairNotation(pairs, ''), kind: 'sub', subs: subsFromPairs(pairs) };
+    // The label stays 'debuccalization' even for t > k: rule selection keys on labels, so renaming it would
+    // change which laws every language acquires and therefore every name in the archive.
+    return { label: 'debuccalization', notation: pairNotation(pairs, ''), kind: 'sub', subs: subsFromPairs(pairs) };
   },
   'retroflex merger': (c) => {
     const map: [string, string][] = [['ʈ', 't'], ['ɖ', 'd'], ['ɳ', 'n'], ['ɭ', 'l'], ['ʂ', 'ʃ'], ['ɻ', 'r']];
