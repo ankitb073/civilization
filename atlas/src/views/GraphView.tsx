@@ -21,7 +21,7 @@ function parseKinds(s: string | null): Set<EntityKind> {
 }
 
 /** Last measured build/render timings, for the perf probe. */
-export const graphPerf: { loadMs?: number; buildMs?: number; nodes?: number; edges?: number; refreshMs?: number[] } = { refreshMs: [] };
+export const graphPerf: { loadMs?: number; buildMs?: number; mountMs?: number; nodes?: number; edges?: number; refreshMs?: number[] } = { refreshMs: [] };
 (window as unknown as { __palimpsestGraph?: typeof graphPerf }).__palimpsestGraph = graphPerf;
 
 export function GraphView() {
@@ -176,8 +176,14 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
       graphPerf.buildMs = performance.now() - t0;
       graphPerf.nodes = N;
       graphPerf.edges = M;
-      setProgress(null);
-      mount();
+      // the renderer indexes the whole graph in one go (a few hundred ms on the biggest level): say so, and let
+      // that paint before the main thread is busy
+      setProgress(1);
+      requestAnimationFrame(() => setTimeout(() => {
+        if (cancelled) return;
+        mount();
+        setProgress(null);
+      }, 0));
     };
 
     const mount = () => {
@@ -194,6 +200,7 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
         hiSet = f ? new Set([f, ...graph.neighbors(f)]) : null;
       };
       computeHi();
+      const m0 = performance.now();
       renderer = new Sigma(graph, el, {
         renderEdgeLabels: false,
         hideEdgesOnMove: true,
@@ -250,6 +257,7 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
           return { ...data, hidden: true };
         },
       });
+      graphPerf.mountMs = performance.now() - m0;
       sigmaRef.current = renderer;
       graphRef.current = graph;
       const r = renderer;
@@ -355,7 +363,7 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
       {progress !== null && (
         <div class="graphprog" role="status">
           <div class="spinner" />
-          <span>Weaving {stats ? stats.shown.toLocaleString('en-US') : ''} nodes… {Math.round((progress ?? 0) * 100)}%</span>
+          <span>{progress >= 1 ? `Drawing ${stats ? stats.shown.toLocaleString('en-US') : ''} nodes…` : `Weaving ${stats ? stats.shown.toLocaleString('en-US') : ''} nodes… ${Math.round(progress * 100)}%`}</span>
           <span class="graphprog__bar"><span style={{ width: `${Math.round((progress ?? 0) * 100)}%` }} /></span>
         </div>
       )}
