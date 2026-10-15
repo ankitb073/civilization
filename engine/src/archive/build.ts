@@ -14,6 +14,7 @@ import { applySurvival } from '../artifacts/survival.ts';
 import { genMore } from '../artifacts/more.ts';
 import { genExcavationReports } from '../artifacts/modern.ts';
 import { ingestFlagships } from '../flagships/ingest.ts';
+import { applyFragments } from '../artifacts/fragments.ts';
 import { worldFingerprint } from '../export/export.ts';
 
 /** Persons created by the simulation itself (archive-created authors come after). */
@@ -52,6 +53,8 @@ export function buildArchive(r: SimResult, log: (m: string) => void = () => {}):
   void simPersons;
   log(`generated ${gen.artifacts.length} candidate documents (${((performance.now() - t0) / 1000).toFixed(1)}s)`);
   applySurvival(gen);
+  const frags = applyFragments(gen);
+  log(`fragments: ${frags} lost works survive as quotations`);
   for (const a of gen.artifacts) if (a.status === 'extant') T.pageRefs.add(`art:${a.id}`);
   const before = gen.artifacts.length;
   genExcavationReports(gen);
