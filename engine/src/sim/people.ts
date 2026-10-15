@@ -178,8 +178,24 @@ export function setRuler(s: State, polity: Polity, person: Person, year: number,
     if (r) r.end = year;
   }
   polity.ruler = person.id;
+  polity.rulers.push([year, person.id]);
   person.polity = polity.id;
   person.roles.push({ role, polity: polity.id, start: year, end: null, event: ev });
+}
+
+/** The head of state of a polity at a year, from its reign history; null if the holder was already dead. */
+export function rulerAt(s: State, polity: Polity, year: number): number | null {
+  let r: number | null = null;
+  for (const [y, id] of polity.rulers) {
+    if (y > year) break;
+    r = id;
+  }
+  return r !== null && s.persons[r].died > year ? r : null;
+}
+
+/** A head of state who can still act at `year` (one killed earlier that year cannot sign or be named). */
+export function livingRuler(s: State, polity: Polity, year: number): number | null {
+  return polity.ruler !== null && s.persons[polity.ruler].died > year ? polity.ruler : null;
 }
 
 /** Create a founding ruler for a new polity. */

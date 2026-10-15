@@ -37,13 +37,19 @@ export interface Polity {
   gov: GovType;
   govs: [number, GovType][];
   ruler: number | null;
+  rulers: [number, number][]; // [year, person]: every accession (and retitling) of a head of state
   dynasty: number | null;
   religion: number; // movement id (-1 none)
   currency: number; // currency id (-1 none)
   treasury: number; // silver kg
   debt: number;
   stability: number;
+  /** Military strength (headcount × arms quality): drives odds, appetite for war and terms. */
   army: number;
+  /** Men under arms now (headcount): battle sizes, casualties and the army series are counted in these. */
+  soldiers: number;
+  /** Men under arms the polity can keep (its muster target this decade); losses are made good toward it. */
+  levy: number;
   techs: Map<number, number>; // tech id -> year acquired
   overlord: number | null;
   tributes: { to: number; amount: number; until: number; event: number }[];
@@ -234,8 +240,10 @@ export interface War {
   occupied: Set<number>;
   exhaustA: number;
   exhaustD: number;
-  lossesA: number;
+  lossesA: number; // strength lost (war exhaustion)
   lossesD: number;
+  menLostA: number; // casualties in men (the record)
+  menLostD: number;
   commanderA: number | null;
   commanderD: number | null;
   ended: number | null;
@@ -394,6 +402,13 @@ export function setReligion(s: State, cell: number, movement: number, year: numb
 
 export function alivePolity(p: Polity | undefined, year: number): p is Polity {
   return !!p && p.born <= year && (p.died === null || p.died > year);
+}
+
+/** The owner of a cell at a past year, read back from the territory log (-1: no state). */
+export function ownerAtYear(s: State, cell: number, year: number): number {
+  const L = s.territoryLog;
+  for (let i = L.length - 4; i >= 0; i -= 4) if (L[i + 1] === cell && L[i] <= year) return L[i + 2];
+  return -1;
 }
 
 export function personAlive(p: Person, year: number): boolean {

@@ -2,9 +2,9 @@
 // prices per market, merchant houses, loans, defaults, bankruptcies, panics, trade collapses.
 import type { State, Polity, Currency, House } from './state.ts';
 import { event, ref, alivePolity, addStress, topStress } from './state.ts';
-import { has, eraOf, seaRange } from './tech.ts';
+import { has, eraOf, seaRange, TK } from './tech.ts';
 import { RES } from '../world/biomes.ts';
-import { newPerson, yearEra } from './people.ts';
+import { newPerson, yearEra, livingRuler } from './people.ts';
 import { atWar } from './war.ts';
 import type { PolityAgg } from './polities.ts';
 import { Rng } from '../core/rng.ts';
@@ -106,13 +106,36 @@ function terrainPenalty(s: State, a: number, b: number): number {
   return pen;
 }
 
+/** The techs a currency needs by its issue date. */
+const NEEDS: Partial<Record<Currency['kind'], string[]>> = { coin: ['coinage'], paper: ['banking', 'printing'] };
+
+/** A currency cannot be issued before its polity knows how to make it. A tech that spread to the polity in
+ *  the current decade carries only a nominal date inside it, so that date moves back to the issue; an
+ *  invention keeps its recorded date and the issue waits for it. */
+function issueYear(s: State, p: Polity, kind: Currency['kind'], year: number): number {
+  for (const key of NEEDS[kind] ?? []) {
+    const t = p.techs.get(TK[key]);
+    if (t === undefined || t <= year) continue;
+    let invented = false;
+    for (let i = s.events.length - 1; i >= 0 && s.events[i].year >= t - 10; i--) {
+      const e = s.events[i];
+      if (e.sub === 'invention' && e.data.tech === TK[key] && e.parts[0][0] === ref('pol', p.id)) { invented = true; break; }
+    }
+    if (invented) year = t;
+    else p.techs.set(TK[key], year);
+  }
+  return year;
+}
+
 export function newCurrency(s: State, p: Polity, kind: Currency['kind'], year: number, content: number, metal: Currency['metal'], sub: string, causes: number[] = [], parent?: Currency): Currency {
+  year = issueYear(s, p, kind, year);
   const id = s.currencies.length;
   const lang = s.cultures[p.culture].lang;
   const nameId = s.lang.coinName(lang, year, 'currency', `cur:${id}`);
   const parts: [string, string][] = [[ref('cur', id), 'currency'], [ref('pol', p.id), 'issuer']];
   if (parent) parts.push([ref('cur', parent.id), 'replaces']);
-  if (p.ruler !== null) parts.push([ref('per', p.ruler), 'ruler']);
+  const ruler = livingRuler(s, p, year);
+  if (ruler !== null) parts.push([ref('per', ruler), 'ruler']);
   const fixed = causes.filter((c) => s.events[c].year <= year);
   const ev = event(s, sub, year, { cell: s.settlements[p.capital].cell, parts, causes: fixed, data: { kind, content, metal }, sig: sub === 'coinage' ? 0.3 : sub === 'currency-reform' ? 0.3 : 0.06 });
   const c: Currency = { id, nameId, polity: p.id, kind, metal, born: year, died: null, content, history: [[year, content]], event: ev.id };

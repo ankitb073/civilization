@@ -4,6 +4,7 @@ import { event, ref, rel, alivePolity, setOwner } from './state.ts';
 import type { PolityAgg } from './polities.ts';
 import { endPolity } from './polities.ts';
 import { marriageBetween, atWar } from './war.ts';
+import { livingRuler } from './people.ts';
 
 export function diplomacyStep(s: State, agg: PolityAgg, year: number): void {
   const y0 = year;
@@ -65,8 +66,9 @@ export function diplomacyStep(s: State, agg: PolityAgg, year: number): void {
       if (rival < 0) continue;
       if (!rng.chance(0.03)) continue;
       const parts: [string, string][] = [[ref('pol', p.id), 'party'], [ref('pol', q), 'party'], [ref('pol', rival), 'against']];
-      if (p.ruler !== null) parts.push([ref('per', p.ruler), 'signatory']);
-      if (Q.ruler !== null) parts.push([ref('per', Q.ruler), 'signatory']);
+      const signP = livingRuler(s, p, year), signQ = livingRuler(s, Q, year);
+      if (signP !== null) parts.push([ref('per', signP), 'signatory']);
+      if (signQ !== null) parts.push([ref('per', signQ), 'signatory']);
       const ev = event(s, 'treaty', year, {
         cell: s.settlements[p.capital].cell, parts, data: { kind: 'alliance', terms: [{ kind: 'alliance', years: 30 }], against: rival }, sig: 0.22,
       });
