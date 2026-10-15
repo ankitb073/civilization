@@ -2,7 +2,7 @@
 import type { State, Polity, War } from './state.ts';
 import { event, ref, rel, alivePolity, addStress, setOwner, topStress } from './state.ts';
 import { Rng } from '../core/rng.ts';
-import { commander, kill, newPerson, ensureFamily, livingChildren } from './people.ts';
+import { commander, kill, newPerson, ensureFamily, livingChildren, livingRuler } from './people.ts';
 import { eraOf, has, TK } from './tech.ts';
 import { endPolity, ownedCells } from './polities.ts';
 import type { PolityAgg } from './polities.ts';
@@ -21,7 +21,7 @@ export function startWar(s: State, year: number, attackers: number[], defenders:
   const ev = event(s, 'war', year, { cell: targetRegion >= 0 ? s.world.regionLabelCell[targetRegion] : -1, parts, causes: fixed, data: { goal }, sig: 0.4 });
   const w: War = {
     event: ev.id, attackers: [...attackers], defenders: [...defenders], goal, targetRegion, start: year, score: 0, battles: [],
-    occupied: new Set(), exhaustA: 0, exhaustD: 0, lossesA: 0, lossesD: 0, commanderA: null, commanderD: null, ended: null,
+    occupied: new Set(), exhaustA: 0, exhaustD: 0, lossesA: 0, lossesD: 0, menLostA: 0, menLostD: 0, commanderA: null, commanderD: null, ended: null,
   };
   s.wars.push(w);
   for (const a of attackers) for (const d of defenders) rel(s, a, d).wars.push(ev.id);
@@ -52,6 +52,36 @@ function sideArmy(s: State, side: number[], year: number): number {
     if (alivePolity(q, year)) t += q.army * (i === 0 ? 0.8 : 0.4);
   });
   return Math.max(50, t);
+}
+
+/** Men a side brings to the field: most of the leader's soldiers and some of each ally's. */
+function sideMen(s: State, side: number[], year: number): number {
+  let t = 0;
+  side.forEach((p, i) => {
+    const q = s.polities[p];
+    if (alivePolity(q, year)) t += q.soldiers * (i === 0 ? 0.8 : 0.4);
+  });
+  return t;
+}
+
+/** Casualties (killed, wounded and taken) of one battle, in men. The beaten side loses 6–36% of the men it
+ *  engaged, more in a rout; the victor loses a fraction of that (about 1.5× fewer in a close fight, 5× fewer
+ *  in a rout, with scatter, so a costly victory stays possible), and never more than a quarter of its own men. */
+export function casualties(r: Rng, menA: number, menD: number, attackerWins: boolean, decisive: number): [number, number] {
+  const menW = attackerWins ? menA : menD;
+  const menL = attackerWins ? menD : menA;
+  const lostL = Math.round(menL * Math.min(0.6, (0.06 + 0.3 * decisive) * Math.exp(r.normal(0, 0.25))));
+  const ratio = Math.exp(r.normal(Math.log(1.5 + 3.5 * decisive), 0.5));
+  const lostW = Math.round(Math.min(lostL / ratio, menW * 0.25));
+  return attackerWins ? [lostW, lostL] : [lostL, lostW];
+}
+
+/** Yearly: losses are made good toward the muster (recruits, the returning wounded), a quarter of the gap a year. */
+export function recruitYear(s: State, year: number): void {
+  for (const p of s.polities) {
+    if (!alivePolity(p, year) || p.soldiers >= p.levy) continue;
+    p.soldiers += Math.ceil((p.levy - p.soldiers) * 0.25);
+  }
 }
 
 function sigmoid(x: number): number {
@@ -166,8 +196,10 @@ function frontCell(s: State, w: War, A: Polity, D: Polity, attackerAdvancing: bo
 
 function battle(s: State, agg: PolityAgg, pm: PopMemory, w: War, A: Polity, D: Polity, year: number, rng: Rng): void {
   const world = s.world;
-  const SA = sideArmy(s, w.attackers, year) * (1 - Math.min(0.5, w.exhaustA * 0.3));
-  const SD = sideArmy(s, w.defenders, year) * (1 - Math.min(0.5, w.exhaustD * 0.3));
+  const freshA = 1 - Math.min(0.5, w.exhaustA * 0.3);
+  const freshD = 1 - Math.min(0.5, w.exhaustD * 0.3);
+  const SA = sideArmy(s, w.attackers, year) * freshA;
+  const SD = sideArmy(s, w.defenders, year) * freshD;
   const cA = commander(s, A, year, rng);
   const cD = commander(s, D, year, rng);
   w.commanderA = cA.id;
@@ -177,9 +209,12 @@ function battle(s: State, agg: PolityAgg, pm: PopMemory, w: War, A: Polity, D: P
   const terrain = world.elev[cell] > 0.45 ? -0.3 : world.flux[cell] > world.riverThreshold * 3 ? -0.15 : 0;
   const pA = sigmoid(1.4 * Math.log(SA / SD) + 0.35 * (cA.skill - cD.skill) + terrain + rng.normal(0, 0.35));
   const attackerWins = rng.next() < pA;
-  const engagedA = Math.round(SA * (0.35 + rng.next() * 0.5));
-  const engagedD = Math.round(SD * (0.35 + rng.next() * 0.5));
+  const shareA = 0.35 + rng.next() * 0.5;
+  const shareD = 0.35 + rng.next() * 0.5;
+  const engagedA = Math.round(SA * shareA);
+  const engagedD = Math.round(SD * shareD);
   const decisive = rng.next();
+  // strength worn down (war exhaustion and the balance of later battles)
   const lossW = 0.04 + 0.14 * rng.next();
   const lossL = 0.14 + 0.3 * decisive;
   const lossA = Math.round(engagedA * (attackerWins ? lossW : lossL));
@@ -188,6 +223,14 @@ function battle(s: State, agg: PolityAgg, pm: PopMemory, w: War, A: Polity, D: P
   w.lossesD += lossD;
   A.army = Math.max(0, A.army - lossA);
   D.army = Math.max(0, D.army - lossD);
+  // the men in the field and what the day cost each side (the record)
+  const menA = Math.max(1, Math.round(sideMen(s, w.attackers, year) * freshA * shareA));
+  const menD = Math.max(1, Math.round(sideMen(s, w.defenders, year) * freshD * shareD));
+  const [lostA, lostD] = casualties(s.rng.fork('casualties', w.event, year), menA, menD, attackerWins, decisive);
+  A.soldiers = Math.max(0, A.soldiers - lostA);
+  D.soldiers = Math.max(0, D.soldiers - lostD);
+  w.menLostA += lostA;
+  w.menLostD += lostD;
   const delta = 10 + 22 * decisive;
   w.score += attackerWins ? delta : -delta;
   const winner = attackerWins ? A : D;
@@ -203,7 +246,7 @@ function battle(s: State, agg: PolityAgg, pm: PopMemory, w: War, A: Polity, D: P
       ...(nearSettlement >= 0 ? [[ref('set', nearSettlement), 'near'] as [string, string]] : []),
     ],
     causes: [w.event],
-    data: { war: w.event, attackerSize: engagedA, defenderSize: engagedD, attackerLosses: lossA, defenderLosses: lossD, winner: winner.id, decisive: Math.round(decisive * 100) / 100, region: world.region[cell] },
+    data: { war: w.event, attackerSize: menA, defenderSize: menD, attackerLosses: lostA, defenderLosses: lostD, winner: winner.id, decisive: Math.round(decisive * 100) / 100, region: world.region[cell] },
     sig: Math.min(0.6, 0.12 + (engagedA + engagedD) / 200_000 + decisive * 0.15),
   });
   w.battles.push(ev.id);
@@ -301,8 +344,8 @@ function makePeace(s: State, agg: PolityAgg, w: War, A: Polity, D: Polity, year:
   const outcome = w.score > 25 ? 'attacker' : w.score < -25 ? 'defender' : 'stalemate';
   warEv.data.outcome = outcome;
   warEv.data.score = Math.round(w.score);
-  warEv.data.lossesA = w.lossesA;
-  warEv.data.lossesD = w.lossesD;
+  warEv.data.lossesA = w.menLostA;
+  warEv.data.lossesD = w.menLostD;
   const decisive = w.battles.slice().sort((a, b) => (s.events[b].data.decisive as number) - (s.events[a].data.decisive as number)).slice(0, 2);
   const causes = [w.event, ...decisive];
   const terms: Term[] = [];
@@ -387,8 +430,10 @@ function makePeace(s: State, agg: PolityAgg, w: War, A: Polity, D: Polity, year:
   const parts: [string, string][] = [[`evt:${w.event}`, 'war']];
   for (const p of w.attackers) parts.push([ref('pol', p), winner?.id === p ? 'victor' : loser?.id === p ? 'vanquished' : 'party']);
   for (const p of w.defenders) parts.push([ref('pol', p), winner?.id === p ? 'victor' : loser?.id === p ? 'vanquished' : 'party']);
-  if (A.ruler !== null) parts.push([ref('per', A.ruler), 'signatory']);
-  if (D.ruler !== null) parts.push([ref('per', D.ruler), 'signatory']);
+  // a ruler killed earlier this year does not sign
+  const signA = livingRuler(s, A, year), signD = livingRuler(s, D, year);
+  if (signA !== null) parts.push([ref('per', signA), 'signatory']);
+  if (signD !== null) parts.push([ref('per', signD), 'signatory']);
   const site = treatySite(s, w, A, D, year);
   if (site >= 0) parts.push([ref('set', site), 'signed at']);
   const evSub = annex ? (sub === 'suppression' ? 'suppression' : 'conquest') : 'treaty';

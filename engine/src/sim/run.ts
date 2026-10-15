@@ -8,7 +8,7 @@ import { initClimate, climateStep } from './climate.ts';
 import { initPopMemory, populationStep, plagueStep } from './population.ts';
 import { settlementStep, recordSettlementPop } from './settlements.ts';
 import { aggregate, stabilityStep, governmentStep, formationStep, politicsYear, expansionYear } from './polities.ts';
-import { declareYear, warYear } from './war.ts';
+import { declareYear, warYear, recruitYear } from './war.ts';
 import { diplomacyStep, applyPendingAnnex } from './diplomacy.ts';
 import { cultureStep } from './culture.ts';
 import { religionStep } from './religion.ts';
@@ -70,6 +70,7 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
     for (let y = y0; y < y0 + 10; y++) {
       const rng = s.rng.fork('year', y);
       applyPendingAnnex(s, y);
+      recruitYear(s, y);
       governmentStep(s, agg, y);
       diplomacyStep(s, agg, y);
       politicsYear(s, geo, agg, y, rng);
@@ -82,10 +83,10 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
     // cultural and religious change is logged at the end of the decade, after the political year loop
     religionStep(s, geo, agg, thought, y0);
     cultureStep(s, geo, agg, y0, centuryEnd);
-    // decadal statistics
+    // decadal statistics (army: men under arms)
     for (const p of s.polities) {
       if (!alivePolity(p, y0)) continue;
-      s.polityYears.push([p.id, y0, p.cells, Math.round(p.pop), Math.round(p.urbanPop), Math.round(p.treasury), p.army, Math.round(p.stability * 1000) / 1000, p.gov, p.ruler, p.capital, p.religion, p.currency, eraOf(p)]);
+      s.polityYears.push([p.id, y0, p.cells, Math.round(p.pop), Math.round(p.urbanPop), Math.round(p.treasury), p.soldiers, Math.round(p.stability * 1000) / 1000, p.gov, p.ruler, p.capital, p.religion, p.currency, eraOf(p)]);
     }
     s.lang.advanceTo(y0 + 9);
     if (centuryEnd) {

@@ -58,8 +58,8 @@ export function createPolity(
   const law = cultureRng.weighted(['male-primogeniture', 'primogeniture', 'seniority', 'elective'] as const, [0.62, 0.12, 0.16, 0.1]);
   const p: Polity = {
     id, nameId, nameBasis: basis, culture: o.culture, cultures: [[year, o.culture]], born: year, died: null, foundEvent: ev.id, endEvent: null,
-    capital: o.capital, capitals: [[year, o.capital]], gov: o.gov, govs: [[year, o.gov]], ruler: null, dynasty: null,
-    religion: -1, currency: -1, treasury: 0, debt: 0, stability: 0.65, army: 0, techs: new Map(), overlord: null,
+    capital: o.capital, capitals: [[year, o.capital]], gov: o.gov, govs: [[year, o.gov]], ruler: null, rulers: [], dynasty: null,
+    religion: -1, currency: -1, treasury: 0, debt: 0, stability: 0.65, army: 0, soldiers: 0, levy: 0, techs: new Map(), overlord: null,
     tributes: [], color: pickColor(s, o.cells, id), predecessor: o.predecessor ?? null, successors: [], kind: o.kind ?? 'state',
     landmassHome: s.world.landmass[capital.cell], generals: [], cells: o.cells.length, pop: 0, urbanPop: 0,
     warWeariness: 0, lastWarEnd: -1000, crisis: 0, stress: [], successionLaw: law,
@@ -103,7 +103,23 @@ export function createPolity(
   for (const c of o.cells) popSum += s.pop[c];
   p.pop = popSum;
   p.treasury = popSum * 0.002;
+  // a new state musters its men at once (a rebel band from its province, see levyOf)
+  p.levy = levyOf(p);
+  p.soldiers = p.levy;
   return p;
+}
+
+/** Share of the people a rebellion can put under arms while it lasts. */
+export const REBEL_LEVY = 0.02;
+/** Every state can field a few hundred men: up to this many, from up to LEVY_FLOOR_SHARE of its people. */
+export const LEVY_FLOOR = 500;
+export const LEVY_FLOOR_SHARE = 0.05;
+
+/** Men under arms a polity can keep: its era's mobilization share of the people (a rebellion raises more),
+ *  never fewer than a city's muster of a few hundred; an empty treasury thins the ranks. */
+export function levyOf(p: Polity, treasuryFactor = 1): number {
+  const share = Math.max(MOBILIZATION[eraOf(p)], p.kind === 'rebel' ? REBEL_LEVY : 0);
+  return Math.round(Math.max(p.pop * share, Math.min(p.pop * LEVY_FLOOR_SHARE, LEVY_FLOOR)) * treasuryFactor);
 }
 
 function pickColor(s: State, cells: number[], id: number): string {
@@ -290,6 +306,8 @@ export function stabilityStep(s: State, agg: PolityAgg, y0: number): void {
     for (const q of s.polities) for (const t of q.tributes) if (t.to === p.id && t.until >= y0) p.treasury += t.amount * 10;
     const treasuryFactor = p.treasury > 0 ? 1 : Math.max(0.55, 1 + p.treasury / Math.max(1, revenue * 3));
     p.army = Math.round(soldiers * milMult(p) * treasuryFactor);
+    p.levy = levyOf(p, treasuryFactor);
+    p.soldiers = p.levy;
     // stability
     const over = agg.overext.get(p.id) ?? 1;
     let st = p.stability;
@@ -420,8 +438,18 @@ function revolt(s: State, geo: Geo, p: Polity, cells: number[], year: number, rn
     extraParts: [[ref('pol', p.id), 'against'], [ref('per', leader.id), 'leader']],
   });
   rebel.stability = 0.55;
+  defect(p, rebel);
   addStress(p, year, rebel.foundEvent, 1);
   startWar(s, year, [rebel.id], [p.id], 'independence', best, [rebel.foundEvent], rng);
+}
+
+/** A breakaway takes the garrisons and levies of its land with it: the crown loses that share of its men,
+ *  and the rebels field them on top of their own rising. */
+function defect(crown: Polity, rebel: Polity): void {
+  const share = crown.pop > 0 ? Math.min(0.6, rebel.pop / crown.pop) : 0;
+  const men = Math.round(crown.soldiers * share);
+  crown.soldiers -= men;
+  rebel.soldiers = Math.max(rebel.soldiers, men);
 }
 
 function civilWar(s: State, p: Polity, cells: number[], year: number, rng: Rng): void {
@@ -446,6 +474,7 @@ function civilWar(s: State, p: Polity, cells: number[], year: number, rng: Rng):
   rebel.techs = new Map(p.techs);
   rebel.religion = p.religion;
   rebel.stability = 0.5;
+  defect(p, rebel);
   addStress(p, year, rebel.foundEvent, 1.5);
   startWar(s, year, [rebel.id], [p.id], 'civil', w.region[seat.cell], [rebel.foundEvent], rng);
 }

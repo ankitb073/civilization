@@ -64,7 +64,10 @@ Techs use a hazard model: `p(invent per decade) = clamp(0.002 · exp((year − t
   - Revenue: `pop · taxPerCapita(era) · efficiency(stability, admin)`.
   - Spending: army upkeep (×3 at war), administration, tribute.
   - A deficit creates debt (when banking is known) or a debasement (when coinage is known).
-- **Army:** `pop · mobilization(era) · techMil · treasuryFactor`. Battles: win probability is `σ(1.4·ln(Sa/Sd) + general skill + terrain)`. Losses are 5–25% for the winner and 15–45% for the loser.
+- **Army:** two quantities (decision 0015).
+  - *Headcount* (`soldiers`, men under arms): `max(pop · mobilization(era), min(pop · 5%, 500)) · treasuryFactor`. Every state can muster a few hundred men; a rebellion raises 2% of its province and takes that province's share of the crown's men with it. Losses are made good at a quarter of the gap a year. Battle sizes, casualties and the `polity_years.army` series count men.
+  - *Strength* (`army`): `pop · mobilization(era) · techMil · treasuryFactor`. It sets the odds and the appetite for war.
+- **Battles:** win probability is `σ(1.4·ln(Sa/Sd) + general skill + terrain)`. Each side engages 35–85% of its men (allies send 40%). The beaten side loses 6–36% of the men it engaged, more in a rout. The victor loses that divided by a ratio of about 1.5 in a close fight to 5 in a rout (log-normal scatter, so a costly victory stays possible), capped at a quarter of its own men.
 - **Stability:** recovers toward 0.7 over time and moves with these terms:
 
   | Effect | Driver |

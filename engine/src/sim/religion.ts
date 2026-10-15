@@ -1,11 +1,11 @@
 // Religion and thought: ancestral pantheons, new movements (cults, universal religions, philosophies,
 // sects, reform movements, ideologies), spread, state conversion, persecution, councils and schisms.
 import type { State, Movement, Deity, Polity } from './state.ts';
-import { event, ref, setReligion, alivePolity, addStress, topStress } from './state.ts';
+import { event, ref, setReligion, alivePolity, addStress, topStress, ownerAtYear } from './state.ts';
 import type { Geo } from './geo.ts';
 import type { PolityAgg } from './polities.ts';
 import { eraOf, has } from './tech.ts';
-import { newPerson } from './people.ts';
+import { newPerson, rulerAt } from './people.ts';
 import { Rng } from '../core/rng.ts';
 
 export const DOMAINS: { concept: string; sex: 'm' | 'f' | 'x' }[] = [
@@ -200,14 +200,25 @@ export function foundMovement(s: State, tp: ThoughtPresence, p: Polity, kind: Mo
   const cap = s.settlements[p.capital];
   const cities = s.settlements.filter((t) => t.abandoned === null && t.founded <= year && s.owner[t.cell] === p.id);
   const origin = cities.length ? rng.weighted(cities, cities.map((t) => t.pop)) : cap;
+  // the decade's steps run after its political year loop: if the polity had ended by the founding year,
+  // the movement arose under whichever state then held its birthplace (or holds it now, or the nearest
+  // successor of a collapsed realm whose heartland fell into anarchy)
+  let host = p;
+  if (p.died !== null && p.died <= year) {
+    const near = (q: Polity) => Math.hypot(s.world.x[s.settlements[q.capital].cell] - s.world.x[origin.cell], s.world.y[s.settlements[q.capital].cell] - s.world.y[origin.cell]);
+    const heirs = p.successors.map((q) => s.polities[q]).filter((q) => alivePolity(q, year)).sort((a: Polity, b: Polity) => near(a) - near(b) || a.id - b.id);
+    const cands = [ownerAtYear(s, origin.cell, year), s.owner[origin.cell], ...heirs.map((q) => q.id)];
+    const o = cands.find((c) => c >= 0 && alivePolity(s.polities[c], year));
+    if (o !== undefined) host = s.polities[o];
+  }
   const founderRole = kind === 'philosophy' ? 'philosopher' : kind === 'ideology' ? 'philosopher' : 'prophet';
-  const founder = newPerson(s, { sex: rng.chance(kind === 'ideology' ? 0.2 : 0.12) ? 'f' : 'm', born: year - rng.int(28, 50), culture: s.culture[origin.cell] >= 0 ? s.culture[origin.cell] : p.culture, polity: p.id, key: `founder:mov:${id}`, adult: true, minDeath: year + 1 });
+  const founder = newPerson(s, { sex: rng.chance(kind === 'ideology' ? 0.2 : 0.12) ? 'f' : 'm', born: year - rng.int(28, 50), culture: s.culture[origin.cell] >= 0 ? s.culture[origin.cell] : p.culture, polity: host.id, key: `founder:mov:${id}`, adult: true, minDeath: year + 1 });
   const lang = s.cultures[founder.culture].lang;
   const nameId = s.lang.coinName(lang, year, 'movement', `mov:${id}`);
   const fixed = causes.filter((c) => s.events[c].year <= year);
   const ev = event(s, 'movement-founding', year, {
     cell: origin.cell,
-    parts: [[ref('mov', id), 'movement'], [ref('per', founder.id), 'founder'], [ref('pol', p.id), 'polity'], [ref('set', origin.id), 'place'], ...(parent ? [[ref('mov', parent.id), 'parent'] as [string, string]] : [])],
+    parts: [[ref('mov', id), 'movement'], [ref('per', founder.id), 'founder'], [ref('pol', host.id), 'polity'], [ref('set', origin.id), 'place'], ...(parent ? [[ref('mov', parent.id), 'parent'] as [string, string]] : [])],
     causes: fixed, data: { kind }, sig: kind === 'religion' ? 0.6 : kind === 'ideology' ? 0.45 : 0.35,
   });
   const m: Movement = {
@@ -215,7 +226,7 @@ export function foundMovement(s: State, tp: ThoughtPresence, p: Polity, kind: Mo
     tenets: tenetsFor(kind, rng, parent), originCell: origin.cell, foundEvent: ev.id, deities: [], adherents: 0, cells: 0, peak: 0,
   };
   s.movements.push(m);
-  founder.roles.push({ role: founderRole, polity: p.id, start: year, end: null, event: ev.id, ref: ref('mov', id) });
+  founder.roles.push({ role: founderRole, polity: host.id, start: year, end: null, event: ev.id, ref: ref('mov', id) });
   if (RELIGIOUS.has(kind)) {
     const yLog = Math.max(year, s.lastLogYear.religion);
     setReligion(s, origin.cell, id, yLog, ev.id);
@@ -230,7 +241,9 @@ function convert(s: State, p: Polity, movement: number, year: number, reason: st
   const m = s.movements[movement];
   if (m.born > year) return;
   const parts: [string, string][] = [[ref('pol', p.id), 'polity'], [ref('mov', movement), 'adopted'], [ref('mov', p.religion), 'abandoned']];
-  if (p.ruler !== null) parts.push([ref('per', p.ruler), 'ruler']);
+  // dated within the decade, after its political year loop: name the ruler of that year, not of the decade's end
+  const ruler = rulerAt(s, p, year);
+  if (ruler !== null) parts.push([ref('per', ruler), 'ruler']);
   event(s, 'conversion', year, { cell: s.settlements[p.capital].cell, parts, data: { reason }, sig: m.kind === 'religion' ? 0.4 : 0.2 });
   p.religion = movement;
   void rng;
