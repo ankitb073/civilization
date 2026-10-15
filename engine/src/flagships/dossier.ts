@@ -197,8 +197,9 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
     if (!T.pageRefs.has(ref) || !isSim(ref) || allowed.has(ref)) return;
     const st = startOf(a, ref);
     if (st !== null && st > year) return;
-    const who = ref.startsWith('per:') ? ` (${s.persons[ctx.idNum(ref)].sex === 'f' ? 'woman; she/her' : 'man; he/him'})` : '';
-    allowed.set(ref, { text: d.nameOf(ref), what: what + who });
+    const who = ref.startsWith('per:') ? ` (${s.persons[ctx.idNum(ref)].sex === 'f' ? 'woman; she/her' : 'man; he/him'})` : ref.startsWith('dei:') ? ` (${s.deities[ctx.idNum(ref)].sex === 'f' ? 'goddess; she/her' : 'god; he/him'})` : '';
+    // primary sources never write AY: drop the editors' date suffix from titles such as climate anomalies
+    allowed.set(ref, { text: d.nameOf(ref).replace(/,? \(?AY [\d–-]+\)?$/, ''), what: what + who });
   };
   // --- subject
   let subject: Dossier['subject'];
