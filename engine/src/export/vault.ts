@@ -15,7 +15,12 @@ export function fileTitle(title: string): string {
   return title.replace(/[\\/:*?"<>|#^[\]]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 150);
 }
 
-export function writeVault(a: Archive, dir: string, worldName: string): { files: number } {
+export interface VaultExtras {
+  story?: { chapters: { title: string; start: number; end: number; intro: string; beats: { year: number; eventId: string; title: string; docs: { id: string; title: string; flagship: boolean }[] }[] }[] };
+  featured?: { id: string; title: string; why: string }[];
+}
+
+export function writeVault(a: Archive, dir: string, worldName: string, extras: VaultExtras = {}): { files: number } {
   if (existsSync(dir)) rmSync(dir, { recursive: true });
   mkdirSync(dir, { recursive: true });
   const name = new Map<string, string>();
@@ -41,6 +46,28 @@ export function writeVault(a: Archive, dir: string, worldName: string): { files:
     }
     writeFileSync(join(dir, folder, `${name.get(pg.id)}.md`), render(pg, conv, name));
     files++;
+  }
+  const link = (id: string, text?: string) => (name.has(id) ? `[[${name.get(id)}${text ? `|${text}` : ''}]]` : text ?? id);
+  const start: string[] = [`# Start here: the archive of ${worldName}`, ''];
+  if (extras.featured?.length) {
+    start.push('## Entry points', '');
+    for (const f of extras.featured) start.push(`- ${link(f.id, f.title)}: ${f.why}`);
+    start.push('');
+  }
+  if (extras.story) {
+    start.push('## Five thousand years in brief', '');
+    for (const c of extras.story.chapters) {
+      start.push(`### ${c.title} (AY ${c.start}–${c.end})`, '', conv(c.intro), '');
+      for (const b of c.beats) start.push(`- **AY ${b.year}**: ${link(b.eventId, b.title)}${b.docs.length ? `. Read: ${b.docs.map((d) => `${d.flagship ? '★ ' : ''}${link(d.id, d.title)}`).join('; ')}` : ''}`);
+      start.push('');
+    }
+  }
+  writeFileSync(join(dir, '00 Start here.md'), start.join('\n'));
+  // a flat chronology note per millennium
+  for (let m = 0; m < 5; m++) {
+    const evs = [...a.pages.values()].filter((p) => p.kind === 'event' && p.t0 >= m * 1000 && p.t0 < (m + 1) * 1000 && !['battle', 'succession', 'election', 'expansion', 'founding-city', 'house-founding', 'bankruptcy', 'weight-standard'].includes(p.sub)).sort((x, y) => x.t0 - y.t0 || x.id.localeCompare(y.id));
+    const lines = [`# Chronology, AY ${m * 1000}–${(m + 1) * 1000 - 1}`, '', ...evs.map((p) => `- AY ${p.t0}: ${link(p.id)}`)];
+    writeFileSync(join(dir, `01 Chronology ${m * 1000}s.md`), lines.join('\n'));
   }
   writeFileSync(join(dir, 'README.md'), [
     `# Palimpsest: the archive of ${worldName}`,

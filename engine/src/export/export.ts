@@ -250,6 +250,14 @@ function trim(x: string, n: number): string {
   return x.length <= n ? x : x.slice(0, n - 1) + '…';
 }
 
+export function storyOf(r: SimResult, a: Archive): StoryJson {
+  return story(r, a);
+}
+
+export function featuredOf(r: SimResult, a: Archive): MetaJson['featured'] {
+  return featured(r, a);
+}
+
 function story(r: SimResult, a: Archive): StoryJson {
   const s = r.state;
   const T = a.T;
