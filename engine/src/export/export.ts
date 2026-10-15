@@ -7,7 +7,7 @@ import type { SimResult } from '../sim/run.ts';
 import type { Archive } from '../archive/build.ts';
 import type { CheckReport } from '../check/check.ts';
 import type {
-  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson, StoryJson, LanguagesJson, EconomyJson,
+  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson, StoryJson, LanguagesJson, EconomyJson, CollectionsJson, DynastiesJson,
 } from './contract.ts';
 import { SHARD_COUNT, shardOf, shardFile } from './contract.ts';
 import { BIOMES } from '../world/biomes.ts';
@@ -206,6 +206,10 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
   for (let i = 0; i < SHARD_COUNT; i++) raw += write(shardFile(i), { pages: shards[i] });
   log(`pages: ${a.pages.size} in ${SHARD_COUNT} shards, ${(raw / 1e6).toFixed(0)} MB raw`);
 
+  // ---------------------------------------------------------------- collections & dynasties
+  writeSized('collections.json', collectionsJson(r, a));
+  writeSized('dynasties.json', dynastiesJson(r, a));
+
   // ---------------------------------------------------------------- languages & economy
   writeSized('languages.json', languagesJson(r, a));
   writeSized('economy.json', economyJson(r, a));
@@ -253,6 +257,72 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
 
 function trim(x: string, n: number): string {
   return x.length <= n ? x : x.slice(0, n - 1) + '…';
+}
+
+function collectionsJson(r: SimResult, a: Archive): CollectionsJson {
+  const s = r.state;
+  const T = a.T;
+  const ctx = a.ctx;
+  const out: CollectionsJson['collections'] = [];
+  const add = (id: string, title: string, blurb: string, items: { id: string; note: string; year: number }[]) => {
+    const it = items.filter((x) => a.pages.has(x.id)).map((x) => ({ ...x, title: a.pages.get(x.id)!.title }));
+    if (it.length >= 3) out.push({ id, title, blurb, items: it.slice(0, 40) });
+  };
+  const simEvents = r.simEvents ?? s.events.length;
+  const evs = s.events.slice(0, simEvents);
+  // rulers
+  const reigns: { person: number; pid: number; start: number; end: number }[] = [];
+  for (const [pid, rs] of ctx.reigns) for (const x of rs) if (x.role === 'ruler') reigns.push({ person: x.person, pid, start: x.start, end: x.end });
+  add('queens', 'Queens and empresses', 'Women who ruled in their own right, longest reigns first.', reigns.filter((x) => s.persons[x.person].sex === 'f').sort((x, y) => (y.end - y.start) - (x.end - x.start)).map((x) => ({ id: `per:${x.person}`, note: `${T.short.get(`pol:${x.pid}`)}, AY ${x.start}–${x.end}`, year: x.start })));
+  add('long-reigns', 'The longest reigns', 'Rulers who held the throne for half a century or more.', reigns.filter((x) => x.end - x.start >= 45).sort((x, y) => (y.end - y.start) - (x.end - x.start)).map((x) => ({ id: `per:${x.person}`, note: `${x.end - x.start} years in ${T.short.get(`pol:${x.pid}`)}`, year: x.start })));
+  add('usurpers', 'Usurpers', 'Those who seized thrones that were not theirs.', evs.filter((e) => e.sub === 'usurpation').sort((x, y) => y.sig - x.sig).map((e) => ({ id: `evt:${e.id}`, note: `AY ${e.year}`, year: e.year })));
+  add('plagues', 'The great plagues', 'Pandemics traced along the trade routes, worst first.', evs.filter((e) => e.sub === 'plague').sort((x, y) => Number(y.data.deaths) - Number(x.data.deaths)).map((e) => ({ id: `evt:${e.id}`, note: `${Math.round(Number(e.data.deaths) / 1000).toLocaleString('en-US')} thousand dead${e.data.virginSoil ? ' · virgin soil' : ''}`, year: e.year })));
+  add('volcanic', 'Volcanic winters', 'The great eruptions and the cold, hungry years after them.', s.anomalies.filter((x) => x.kind === 'eruption').sort((x, y) => y.severity - x.severity || x.start - y.start).map((x) => ({ id: `cli:${x.id}`, note: `VEI ${x.severity}, AY ${x.start}`, year: x.start })));
+  add('collapses', 'Collapses of great powers', 'States that broke apart, and why.', evs.filter((e) => e.sub === 'collapse').sort((x, y) => y.sig - x.sig).map((e) => ({ id: `evt:${e.id}`, note: `AY ${e.year}`, year: e.year })));
+  add('rival', 'Wars told twice', 'Wars for which both sides’ chronicles survive: compare them with the record.', [...a.pages.values()].filter((p) => p.accounts && p.accounts.sources.length >= 2).sort((x, y) => x.t0 - y.t0).map((p) => ({ id: p.id, note: `${p.accounts!.sources.length} accounts`, year: p.t0 })));
+  add('contact', 'The age of contact', 'First contacts, colonies and colonial wars.', evs.filter((e) => e.sub === 'first-contact' || e.sub === 'colonization' || (e.sub === 'war' && e.data.goal === 'colonial')).sort((x, y) => x.year - y.year).map((e) => ({ id: `evt:${e.id}`, note: `AY ${e.year}`, year: e.year })));
+  add('revolutions', 'Revolutions', 'When the old order fell.', evs.filter((e) => e.sub === 'revolution').sort((x, y) => x.year - y.year).map((e) => ({ id: `evt:${e.id}`, note: `AY ${e.year}`, year: e.year })));
+  add('founders', 'Founders of faiths and schools', 'Prophets and philosophers whose teachings outlived them.', s.movements.filter((m) => m.founder !== null && (m.kind === 'religion' || m.kind === 'philosophy' || m.kind === 'ideology')).sort((x, y) => y.peak - x.peak).map((m) => ({ id: `per:${m.founder}`, note: `${T.short.get(`mov:${m.id}`)} (${m.kind}), AY ${m.born}`, year: m.born })));
+  add('debased', 'The most debased coins', 'Currencies whose silver vanished, issue by issue.', s.currencies.filter((c) => c.kind === 'coin' && c.history.length > 2).sort((x, y) => x.history[x.history.length - 1][1] / x.history[0][1] - y.history[y.history.length - 1][1] / y.history[0][1]).map((c) => ({ id: `cur:${c.id}`, note: `${Math.round((1 - c.history[c.history.length - 1][1] / c.history[0][1]) * 100)}% of its silver lost`, year: c.born })));
+  add('fragments', 'Lost works', 'Works known only from quotations in later books.', a.artifacts.filter((x) => x.condition.startsWith('Lost;')).sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
+  const flag = a.artifacts.filter((x) => x.flagship);
+  add('poems', 'Poems and songs', 'Epics, laments, hymns and satires from the flagship sources.', flag.filter((x) => x.sub === 'poem').sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
+  add('letters', 'Letters', 'Flagship letters: from the front, from hostages, refugees, merchants and kings.', flag.filter((x) => x.sub === 'letter').sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
+  const form = (x: (typeof flag)[number]) => String(x.data?.form ?? '');
+  add('lives', 'Lives', 'Long-form biographies by the archive’s modern scholars.', flag.filter((x) => form(x).startsWith('biographical')).sort((x, y) => x.title.localeCompare(y.title)).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
+  add('essays', 'Essays on the sources', 'Modern scholars weigh the chronicles against the record.', flag.filter((x) => /journal article|survey lecture|philological essay/.test(form(x))).sort((x, y) => x.title.localeCompare(y.title)).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
+  return { collections: out };
+}
+
+function dynastiesJson(r: SimResult, a: Archive): DynastiesJson {
+  const s = r.state;
+  const T = a.T;
+  const ctx = a.ctx;
+  const reignOf = new Map<number, [number, number]>();
+  for (const [, rs] of ctx.reigns) for (const x of rs) if (x.role === 'ruler' && !reignOf.has(x.person)) reignOf.set(x.person, [x.start, x.end]);
+  const scored = s.dynasties.map((d) => {
+    const members = s.persons.filter((p) => p.dynasty === d.id && reignOf.has(p.id));
+    const years = members.reduce((acc, p) => acc + reignOf.get(p.id)![1] - reignOf.get(p.id)![0], 0);
+    return { d, years, rulers: members.length };
+  }).filter((x) => x.rulers >= 4).sort((x, y) => y.years - x.years).slice(0, 50);
+  return {
+    dynasties: scored.map(({ d }) => {
+      const rulers = s.persons.filter((p) => p.dynasty === d.id && reignOf.has(p.id));
+      const ids = new Set<number>(rulers.map((p) => p.id));
+      // include parents that connect rulers (non-ruling links in the line)
+      for (const p of rulers) { let f = p.father; let guard = 0; while (f !== null && !ids.has(f) && guard++ < 3) { ids.add(f); f = s.persons[f].father; } }
+      const members = [...ids].map((id) => s.persons[id]).filter((p) => T.pageRefs.has(`per:${p.id}`) || reignOf.has(p.id)).sort((x, y) => x.born - y.born);
+      const inSet = new Set(members.map((p) => p.id));
+      return {
+        id: `dyn:${d.id}`, name: `House of ${T.short.get(`per:${d.founder}`) ?? ''}`, polity: `pol:${d.polity}`, start: d.start, end: d.end ?? 5000,
+        members: members.map((p) => ({
+          id: `per:${p.id}`, name: T.short.get(`per:${p.id}`) ?? '', sex: p.sex, born: p.born, died: p.died,
+          parent: p.father !== null && inSet.has(p.father) ? `per:${p.father}` : p.mother !== null && inSet.has(p.mother) ? `per:${p.mother}` : null,
+          reign: reignOf.get(p.id) ?? null, epithet: T.epithet.get(p.id) ?? null,
+        })),
+      };
+    }),
+  };
 }
 
 function languagesJson(r: SimResult, a: Archive): LanguagesJson {

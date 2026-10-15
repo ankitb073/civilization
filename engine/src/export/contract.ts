@@ -249,6 +249,21 @@ export interface EconomyJson {
   events: { id: string; year: number; sub: string; title: string }[];   // debasements, panics, hyperinflations, trade collapses
 }
 
+// ---------------------------------------------------------------- collections.json
+/** Curated reading lists generated from the record. */
+export interface CollectionsJson {
+  collections: { id: string; title: string; blurb: string; items: { id: string; title: string; note: string; year: number }[] }[];
+}
+
+// ---------------------------------------------------------------- dynasties.json
+/** Family trees of the greatest ruling houses. */
+export interface DynastiesJson {
+  dynasties: {
+    id: string; name: string; polity: string; start: number; end: number;
+    members: { id: string; name: string; sex: 'm' | 'f'; born: number; died: number; parent: string | null; reign: [number, number] | null; epithet: string | null }[];
+  }[];
+}
+
 // ---------------------------------------------------------------- histomap.json
 /** A "Histomap": every state as a stream whose width is its share of the world's population.
  *  Streams are ordered west → east by capital, so neighbours flow side by side. */

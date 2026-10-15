@@ -6,7 +6,10 @@ import type { Gen } from '../artifacts/gen.ts';
 import { localDate } from '../archive/doc.ts';
 
 const FORM_SUB: [RegExp, string][] = [
-  [/letter|dispatch|report|petition|complaint/, 'letter'],
+  [/poem|lament|panegyric|verses|praise|song|hymn/, 'poem'],
+  [/exercise/, 'treatise'],
+  [/biograph|essay|lecture|preface|article/, 'paper'],
+  [/\bletter\b|dispatch|report|petition|complaint/, 'letter'],
   [/memoir|chronicle|account|record of a disputation/, 'chronicle'],
   [/sermon|hymn|dialogue|confession|prayer|teaching|excommunication|defence/, 'scripture'],
   [/poem|lament|panegyric|verses|praise/, 'poem'],
@@ -77,6 +80,7 @@ export function ingestFlagships(g: Gen, dir: string, simPersons: number, world?:
     g.add({
       sub, year, title, author, polity, lang, script: script >= 0 && s.scripts[script]?.born <= year ? script : -1, medium: fm.get('medium') ?? 'manuscript',
       cell, settlement: seat, about, body: body + editorial, mentions, dateText: dateFor(g, polity, lang, year, f), flagship: true, durable: 1, tau: 1e9, seat,
+      data: { flagshipId: fm.get('id') ?? f.replace(/\.md$/, ''), form },
     });
     rep.added++;
   }
