@@ -63,7 +63,12 @@ const FORMS: Record<string, string[]> = {
 };
 
 function era(a: Archive, p: Polity | null, year: number): number {
-  return p ? a.ctx.eraAt(p.id, Math.min(year, (p.died ?? 5000) - 1)) : 6;
+  if (p) return a.ctx.eraAt(p.id, Math.min(year, (p.died ?? 5000) - 1));
+  // stateless land: the commonest era among the states of that decade
+  const y = Math.floor(year / 10) * 10;
+  const counts = new Map<number, number>();
+  for (const rows of a.ctx.polityStats.values()) for (const row of rows) if (row[1] === y) counts.set(row[13] as number, (counts.get(row[13] as number) ?? 0) + 1);
+  return [...counts].sort((x, z) => z[1] - x[1] || x[0] - z[0])[0]?.[0] ?? 6;
 }
 
 const PERSONA_FORMS = ['queen mother', 'bride', 'martyr', 'hostage', 'refugee', 'survivor', 'envoy', 'delegate', 'courtier', 'physician', 'settler', 'natives', 'colonized', 'colonial soldier', 'merchant', 'creditor', 'old gods', 'convert', 'priest’s account', 'ruined trader', 'smuggled', 'secretary', 'starving'];
@@ -187,6 +192,8 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
   // forms that name their own speaker (a bride, a martyr, a hostage, a refugee…) get an anonymous
   // author of that kind rather than an ill-fitting ruler or general
   if (PERSONA_FORMS.some((k) => form.includes(k))) author = null;
+  // written after the state fell: the author lives under whoever holds the place now
+  if (polity && polity.died !== null && polity.died < year && e && e.cell >= 0 && ctx.ownerAt(e.cell, year) >= 0) polity = s.polities[ctx.ownerAt(e.cell, year)];
   if (polity && (polity.born > year)) return null;
   const lang = polity ? ctx.polityLang(polity, Math.min(year, (polity.died ?? 5000) - 1)) : ctx.editorialLang;
   if (s.lang.info(lang).born > year) return null;

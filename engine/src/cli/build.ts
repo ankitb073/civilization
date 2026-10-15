@@ -7,6 +7,8 @@ import { runChecks } from '../check/check.ts';
 import { exportAtlas, worldNameOf, storyOf, featuredOf } from '../export/export.ts';
 import { writeVault } from '../export/vault.ts';
 import { writeReader } from '../export/book.ts';
+import { writeSharePages } from '../export/share.ts';
+import { join, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, statSync, createReadStream, createWriteStream, rmSync, existsSync } from 'node:fs';
 import { createGzip } from 'node:zlib';
@@ -51,4 +53,5 @@ if (!skipDownloads) {
 }
 exportAtlas(r, archive, check, { outDir: out, log, downloads });
 log('atlas data written');
+log(`share pages: ${writeSharePages(r, archive, join(dirname(out), 's'), dirname(out))}`);
 if (!check.passed) process.exit(1);
