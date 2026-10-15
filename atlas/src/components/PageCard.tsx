@@ -29,7 +29,7 @@ export function Eyebrow({ kind, sub, label }: { kind: string; sub?: string; labe
   );
 }
 
-export function Html({ html, class: cls, tag = 'div' }: { html: string; class?: string; tag?: 'div' | 'span' | 'dd' | 'p' }) {
+export function Html({ html, class: cls, tag = 'div' }: { html: string; class?: string; tag?: 'div' | 'span' | 'dd' | 'p' | 'blockquote' }) {
   const T = tag as 'div';
   return <T class={cls} dangerouslySetInnerHTML={{ __html: html }} />;
 }

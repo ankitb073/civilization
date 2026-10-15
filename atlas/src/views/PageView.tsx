@@ -111,7 +111,7 @@ function Page({ page }: { page: PageJson }) {
           <h1 class="reader__title">{page.title}</h1>
           <div class="reader__meta">
             <span class="reader__span">{page.kind === 'artifact' && a
-              ? <>{a.date && a.date !== `AY ${page.t0}` ? <><Html tag="span" class="reader__local" html={inline(a.date, label)} /> · </> : null}<YearLink y={page.t0} /></>
+              ? <>{a.date && a.date !== `AY ${page.t0}` ? <><Html tag="span" class="reader__local" html={inline(a.date.replace(/\s*\[AY -?\d+\]\s*$/, ''), label)} /> · </> : null}<YearLink y={page.t0} /></>
               : <YearSpan t0={page.t0} t1={page.t1} />}{words >= 600 && <> · <span class="nowrap">{Math.max(1, Math.round(words / 230))} min read</span></>}</span>
             {a?.flagship && (
               <a class="badge badge--flag" href="#/browse?kind=artifact&flag=1" title="A flagship source: written in full from the archive’s dossier and checked against the record like every other document">
@@ -140,7 +140,7 @@ function Page({ page }: { page: PageJson }) {
 
         {a && page.infobox.length === 0 && <CatalogPlate page={page} label={label} />}
 
-        {a?.interlinear && <Interlinear it={a.interlinear} />}
+        {a?.interlinear && <Interlinear it={a.interlinear} label={label} />}
 
         {book && heads.length >= 3 && <Contents heads={heads} />}
 
@@ -321,7 +321,7 @@ function glossHtml(g: string): string {
   return esc.replace(/\b([1-3]?(?:[A-Z]{2,}|SG|PL|DU)(?:\.[A-Z0-9]+)*)\b/g, (m) => `<span class="sc">${m.toLowerCase()}</span>`);
 }
 
-function Interlinear({ it }: { it: NonNullable<NonNullable<PageJson['artifact']>['interlinear']> }) {
+function Interlinear({ it, label }: { it: NonNullable<NonNullable<PageJson['artifact']>['interlinear']>; label: (id: string) => string | undefined }) {
   return (
     <section class="stele" aria-label="Inscription">
       <div class="stele__inner">
@@ -348,7 +348,7 @@ function Interlinear({ it }: { it: NonNullable<NonNullable<PageJson['artifact']>
         )}
         <div class="stele__block">
           <div class="doc__label">Translation</div>
-          <blockquote class="stele__trans">“{it.translation}”</blockquote>
+          <Html tag="blockquote" class="stele__trans" html={`“${inline(it.translation, label)}”`} />
         </div>
       </div>
     </section>
@@ -365,7 +365,7 @@ function Ledger({ ledger, label }: { ledger: NonNullable<NonNullable<PageJson['a
           <thead><tr>{ledger.columns.map((c, i) => <th class={numeric[i] ? 'r' : ''}>{c}</th>)}</tr></thead>
           <tbody>
             {ledger.rows.map((r) => (
-              <tr>{r.map((c, i) => <td class={numeric[i] ? 'r num' : ''}>{c}</td>)}</tr>
+              <tr>{r.map((c, i) => (numeric[i] || !c.includes('[[') ? <td class={numeric[i] ? 'r num' : ''}>{c}</td> : <td dangerouslySetInnerHTML={{ __html: inline(c, label) }} />))}</tr>
             ))}
           </tbody>
         </table>
