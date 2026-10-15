@@ -329,7 +329,7 @@ function Interlinear({ it, label }: { it: NonNullable<NonNullable<PageJson['arti
       <div class="stele__inner">
         <div class="stele__block">
           <div class="doc__label">Transliteration</div>
-          <p class="stele__translit">{it.transliteration}</p>
+          <p class="stele__translit">{it.transliteration.split('·').flatMap((w, i, all) => (i < all.length - 1 ? [w, '·', <wbr />] : [w]))}</p>
         </div>
         <div class="stele__block">
           <div class="doc__label">Normalized</div>

@@ -413,6 +413,10 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+/* scripts written without spaces break at their word dividers (a <wbr> follows each ·) */
+@media (max-width: 480px) {
+  .stele__translit { font-size: 17px; letter-spacing: 0.02em; }
+}
 .stele__norm {
   font-family: var(--font-display);
   font-style: italic;
