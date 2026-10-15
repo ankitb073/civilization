@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Gen } from '../artifacts/gen.ts';
+import { localDate } from '../archive/doc.ts';
 
 const FORM_SUB: [RegExp, string][] = [
   [/letter|dispatch|report|petition|complaint/, 'letter'],
@@ -75,11 +76,20 @@ export function ingestFlagships(g: Gen, dir: string, simPersons: number, world?:
     const editorial = `\n\n---\n\n**Editorial note.** A ${form}${subject.startsWith('evt:') ? ` concerning [[${subject}|${g.T.title.get(subject) ?? ''}]]` : subject.startsWith('per:') ? ` concerning [[${subject}|${g.T.title.get(subject) ?? ''}]]` : ''}. One of the archive’s flagship documents: a literary source, read with the usual caution about its author’s loyalties.`;
     g.add({
       sub, year, title, author, polity, lang, script: script >= 0 && s.scripts[script]?.born <= year ? script : -1, medium: fm.get('medium') ?? 'manuscript',
-      cell, settlement: seat, about, body: body + editorial, mentions, dateText: `AY ${year}`, flagship: true, durable: 1, tau: 1e9, seat,
+      cell, settlement: seat, about, body: body + editorial, mentions, dateText: dateFor(g, polity, lang, year, f), flagship: true, durable: 1, tau: 1e9, seat,
     });
     rep.added++;
   }
   return rep;
+}
+
+/** The document's date as its own culture would write it (modern essays keep AY). */
+function dateFor(g: Gen, polity: number | null, lang: number, year: number, key: string): string {
+  if (polity === null || year >= 4800) return `AY ${year}`;
+  const p = g.ctx.s.polities[polity];
+  if (p.born > year) return `AY ${year}`;
+  const d = g.doc(lang, year, `flagship-date:${key}`);
+  return localDate(g.ctx, d, p, year);
 }
 
 function startOk(g: Gen, ref: string, year: number): boolean {
