@@ -1,7 +1,6 @@
-import { useEffect } from 'preact/hooks';
 import { Eyebrow, usePage } from '../components/PageCard.tsx';
 import { fmtSpan } from '../format.ts';
-import { ensureSearch, titleOf, searchIndex } from '../store.ts';
+import { titleOf } from '../store.ts';
 import { norm } from './PageView.tsx';
 
 type Verdict = 'match' | 'differs' | 'silent' | 'extra';
@@ -21,10 +20,14 @@ function judge(claim: string | undefined, truth: string | undefined): { v: Verdi
   return { v: 'differs', ratio };
 }
 
+function ratioText(r: number): string {
+  if (r === 0) return 'none admitted';
+  if (r > 1) return `×${r.toFixed(r >= 10 ? 0 : 1)} overstated`;
+  return `${Math.max(1, Math.round(r * 100))}% of the record`;
+}
+
 export function CompareView({ id }: { id: string }) {
   const { page, loading, missing } = usePage(id);
-  useEffect(() => { ensureSearch().catch(() => {}); }, []);
-  searchIndex.value;
   if (loading) return <div class="compare"><div class="skel skel--t" /><div class="skel" /></div>;
   if (missing || !page || !page.accounts) {
     return (
@@ -35,6 +38,7 @@ export function CompareView({ id }: { id: string }) {
     );
   }
   const acc = page.accounts;
+  const T = (aid: string) => page.labels?.[aid] ?? titleOf(aid) ?? aid;
   const truth = new Map(acc.truth);
   const fields = [...acc.truth.map(([f]) => f)];
   for (const s of acc.sources) for (const [f] of s.claims) if (!fields.includes(f)) fields.push(f);
@@ -57,7 +61,7 @@ export function CompareView({ id }: { id: string }) {
       <td class={`cmp__c is-${j.v}`}>
         {j.v === 'silent' ? <span class="cmp__silent">— not mentioned</span> : <span>{c}</span>}
         {j.v === 'differs' && j.ratio !== null && Math.abs(j.ratio - 1) >= 0.02 && (
-          <span class={`cmp__ratio ${j.ratio > 1 ? 'up' : 'down'}`}>{j.ratio > 1 ? `×${j.ratio.toFixed(j.ratio >= 10 ? 0 : 1)} overstated` : `×${j.ratio.toFixed(2)} understated`}</span>
+          <span class={`cmp__ratio ${j.ratio > 1 ? 'up' : 'down'}`}>{ratioText(j.ratio)}</span>
         )}
         {j.v === 'differs' && j.ratio === null && <span class="cmp__flag">differs</span>}
       </td>
@@ -80,7 +84,7 @@ export function CompareView({ id }: { id: string }) {
       <div class="cmp-scores">
         {acc.sources.map((s, i) => (
           <a class="cmp-score" href={`#/p/${s.artifactId}`}>
-            <span class="cmp-score__t">{titleOf(s.artifactId) ?? s.artifactId}</span>
+            <span class="cmp-score__t">{T(s.artifactId)}</span>
             <span class="cmp-score__m">{s.author} · for {s.side}</span>
             <span class="cmp-score__bar" aria-hidden="true"><span style={{ width: `${scores[i].total ? (scores[i].agree / scores[i].total) * 100 : 0}%` }} /></span>
             <span class="cmp-score__n">{scores[i].agree} of {scores[i].total} claims match the record{scores[i].silent ? ` · silent on ${scores[i].silent}` : ''}</span>
@@ -94,7 +98,7 @@ export function CompareView({ id }: { id: string }) {
             <tr>
               <th class="cmp__f">Field</th>
               <th class="cmp__truth">Ground truth <span class="muted small">(the simulation)</span></th>
-              {acc.sources.map((s) => <th><a href={`#/p/${s.artifactId}`}>{titleOf(s.artifactId) ?? s.artifactId}</a><div class="muted small">{s.side}</div></th>)}
+              {acc.sources.map((s) => <th><a href={`#/p/${s.artifactId}`}>{T(s.artifactId)}</a><div class="muted small">{s.side}</div></th>)}
             </tr>
           </thead>
           <tbody>
@@ -112,7 +116,7 @@ export function CompareView({ id }: { id: string }) {
       <div class="cmp-cards">
         {acc.sources.map((s, i) => (
           <section class="cmp-card">
-            <h2 class="cmp-card__t"><a href={`#/p/${s.artifactId}`}>{titleOf(s.artifactId) ?? s.artifactId}</a></h2>
+            <h2 class="cmp-card__t"><a href={`#/p/${s.artifactId}`}>{T(s.artifactId)}</a></h2>
             <div class="muted small">{s.author} · for {s.side}</div>
             <dl class="cmp-card__dl">
               {fields.map((f) => {
@@ -124,7 +128,7 @@ export function CompareView({ id }: { id: string }) {
                     <dt>{f}</dt>
                     <dd>
                       {j.v === 'silent' ? <span class="cmp__silent">— not mentioned</span> : c}
-                      {j.v === 'differs' && t && <div class="cmp-card__truth">Record: {t}{j.ratio !== null && Math.abs(j.ratio - 1) >= 0.02 ? ` (×${j.ratio.toFixed(j.ratio >= 10 ? 0 : 1)})` : ''}</div>}
+                      {j.v === 'differs' && t && <div class="cmp-card__truth">Record: {t}{j.ratio !== null && Math.abs(j.ratio - 1) >= 0.02 ? ` · ${ratioText(j.ratio)}` : ''}</div>}
                     </dd>
                   </div>
                 );

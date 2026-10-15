@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { effect } from '@preact/signals';
 import { route, layer, selection, showRoutes, theme, year, type LayerName, isMobile, panelCollapsed, PANEL_W, SHEET_PEEK, sheetSnap } from '../state.ts';
-import { ensureMapData, mapData } from '../store.ts';
+import { ensureLayer, ensureMapData, layersVersion, legendOf, mapData } from '../store.ts';
 import { MapRenderer, type Hit } from './mapRenderer.ts';
 import { MapPanel } from './MapPanel.tsx';
 import { TimeSlider } from './TimeSlider.tsx';
@@ -48,7 +48,10 @@ export function MapView() {
     });
     const dispose = effect(() => {
       r.year = year.value;
-      r.layer = layer.value;
+      layersVersion.value;
+      const want = layer.value;
+      if (d.layers[want]) r.layer = want;
+      else ensureLayer(want).catch(() => {});
       r.selected = selection.value;
       r.showRoutes = showRoutes.value;
       r.setTheme(theme.value);
@@ -143,8 +146,7 @@ export function MapView() {
     if (cell !== r.hoverCell) { r.hoverCell = cell; r.invalidate(); }
     if (cell < 0 || !d || !d.geo.land[cell]) { setTip(null); return; }
     const o = r.ownerAt(cell);
-    const legend = d.timeline.layers[r.layer].legend;
-    const name = o >= 0 ? (r.layer === 'political' ? r.polityName(o) : legend[o]?.name ?? '') : r.layer === 'political' ? 'Unclaimed lands' : '—';
+    const name = o >= 0 ? (r.layer === 'political' ? r.polityName(o) : legendOf(d, r.layer, o)?.name ?? '') : r.layer === 'political' ? 'Unclaimed lands' : '—';
     const reg = d.world.regions[d.world.regionOf[cell]]?.name ?? '';
     setTip({ x, y, text: name, sub: reg });
   }
@@ -155,10 +157,9 @@ export function MapView() {
     const cell = h.cell;
     if (!d.geo.land[cell]) { selection.value = null; return; }
     const o = r.ownerAt(cell);
-    const legend = d.timeline.layers[r.layer].legend;
-    if (o >= 0 && legend[o]) {
-      selection.value = selection.value === legend[o].id ? `cell:${cell}` : legend[o].id;
-    } else selection.value = `cell:${cell}`;
+    const l = legendOf(d, r.layer, o);
+    if (l) selection.value = selection.value === l.id ? `cell:${cell}` : l.id;
+    else selection.value = `cell:${cell}`;
   }
 
   // when selection is set from elsewhere (search, links), focus it
@@ -175,6 +176,7 @@ export function MapView() {
       <div class="mapview__stage" ref={wrapRef}>
         <canvas ref={canvasRef} class="mapview__canvas" aria-label="Map of the world at the selected year" role="img" />
         {!d && <div class="mapview__loading"><div class="spinner" /> Unrolling the map…</div>}
+        {d && !d.layers[layer.value] && (layersVersion.value, true) && <div class="maptoast"><div class="spinner" /> Loading {layer.value === 'culture' ? 'peoples' : 'faiths'}…</div>}
         <div class="mapctl mapctl--layers" role="radiogroup" aria-label="Map layer">
           {LAYERS.map((l) => (
             <button role="radio" aria-checked={layer.value === l.id} class={`seg${layer.value === l.id ? ' is-on' : ''}`} onClick={() => { layer.value = l.id; }}>
@@ -215,7 +217,7 @@ function focusSelection(r: MapRenderer, sel: string | null, animate: boolean) {
   if (sel.startsWith('cell:')) return; // user clicked; don't move
   if (sel.startsWith('set:')) {
     const i = r.settlementIdx(sel);
-    if (i >= 0) cell = d.timeline.settlements[i].cell;
+    if (i >= 0) cell = d.settlementByIdx.get(i)?.cell ?? -1;
   } else if (sel.startsWith('evt:')) {
     const e = d.timeline.events.find((x) => x.id === sel);
     if (e) cell = e.cell;

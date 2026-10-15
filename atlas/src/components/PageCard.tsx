@@ -44,13 +44,13 @@ export function PageCard({ id, compact = false }: { id: string; compact?: boolea
       <Eyebrow kind={page.kind} sub={page.sub} />
       <h2 class="pagecard__title"><a href={`#/p/${page.id}`}>{page.title}</a></h2>
       <div class="pagecard__span">{fmtSpan(page.t0, page.t1)}</div>
-      {page.summary && <p class="pagecard__summary">{page.summary}</p>}
+      {page.summary && <Html tag="p" class="pagecard__summary" html={inline(page.summary, (id) => page.labels?.[id] ?? titleOf(id))} />}
       {rows.length > 0 && (
         <dl class="kv">
           {rows.map(([k, v]) => (
             <>
               <dt>{k}</dt>
-              <Html tag="dd" html={inline(v, titleOf)} />
+              <Html tag="dd" html={inline(v, (id) => page.labels?.[id] ?? titleOf(id))} />
             </>
           ))}
         </dl>

@@ -2,7 +2,7 @@
 // The real export (engine/src/cli/export.ts) overwrites atlas/public/data/.
 // Run: npm --prefix atlas run mock
 
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Delaunay } from 'd3-delaunay';
@@ -15,7 +15,7 @@ import {
   type TimelineJson, type WorldJson,
 } from '../../engine/src/export/contract.ts';
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data');
+const OUT = process.env.PAL_DATA_OUT ?? join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data');
 const rng = new Rng(20261015);
 const W = 2000, H = 1250, YEAR_END = 5000;
 
@@ -467,7 +467,15 @@ const relD = rebuildLayer(relKeys, relDeltas);
 
 const cultures = Array.from({ length: cultureCount }, (_, k) => ({ idx: k, id: `cul:${k + 1}`, name: `${uname(rng, 2)}${rng.pick(['i', 'ans', 'ite', 'ese', ''])}`, color: hsl((k * 47 + 10) % 360, 30, 55), start: 0, end: YEAR_END }));
 
-const layerOf = (legend: Layer['legend'], keys: string[], d: Int32Array): Layer => ({ legend, keyframeEvery: 100, keyframes: keys, deltas: b64(d) });
+// Column-wise deltas as in the contract: Uint16 year steps (first relative to deltaBase), Uint16 cell, Int16 idx.
+const layerOf = (legend: Layer['legend'], keys: string[], d: Int32Array): Layer => {
+  const n = d.length / 3;
+  const buf = new ArrayBuffer(n * 6);
+  const steps = new Uint16Array(buf, 0, n), cells = new Uint16Array(buf, n * 2, n), idx = new Int16Array(buf, n * 4, n);
+  let prev = 0;
+  for (let i = 0; i < n; i++) { steps[i] = d[3 * i] - prev; prev = d[3 * i]; cells[i] = d[3 * i + 1]; idx[i] = d[3 * i + 2]; }
+  return { legend, keyframeEvery: 100, keyframes: keys, deltas: Buffer.from(buf).toString('base64'), deltaCount: n, deltaBase: 0 };
+};
 
 const settlements: TimelineJson['settlements'] = settlementsRaw.map((s) => {
   const pop: [number, number][] = [];
@@ -506,12 +514,13 @@ for (let y = 0; y <= YEAR_END; y += 100) {
   routes.push({ year: y, edges });
 }
 
+const cultureLayer = layerOf(cultures.map(({ idx, id, name, color, start, end }) => ({ idx, id, name, color, start, end })), cultureKeys, cultureD);
+const religionLayer = layerOf(movements.map(({ idx, id, name, color, start, end }) => ({ idx, id, name, color, start, end })), relKeys, relD);
 const timeline: TimelineJson = {
   layers: {
     political: layerOf(polities.map((p) => ({ idx: p.idx, id: p.id, name: p.name, color: p.color, start: p.start, end: p.end })), ownerKeys, ownerD),
-    culture: layerOf(cultures.map(({ idx, id, name, color, start, end }) => ({ idx, id, name, color, start, end })), cultureKeys, cultureD),
-    religion: layerOf(movements.map(({ idx, id, name, color, start, end }) => ({ idx, id, name, color, start, end })), relKeys, relD),
   },
+  layerFiles: { culture: 'layer-culture.json', religion: 'layer-religion.json' },
   polities: polities.map((p) => ({ idx: p.idx, id: p.id, names: p.names, capitals: p.capitals })),
   settlements,
   events: events.map(({ parts: _p, ...e }) => e),
@@ -522,7 +531,7 @@ const timeline: TimelineJson = {
 // ------------------------------------------------------------------ pages + graph
 const pages = new Map<string, PageJson>();
 function page(id: string, kind: EntityKind, sub: string, title: string, t0: number, t1: number, summary: string, body: string, extra: Partial<PageJson> = {}): PageJson {
-  const p: PageJson = { id, kind, sub, title, t0, t1, summary, infobox: [], body, links: [], backlinks: [], cell: -1, ...extra };
+  const p: PageJson = { id, kind, sub, title, t0, t1, summary, infobox: [], body, links: [], backlinks: [], labels: {}, cell: -1, ...extra };
   pages.set(id, p);
   return p;
 }
@@ -763,6 +772,11 @@ for (const p of pages.values()) {
   p.links = [...set];
 }
 for (const p of pages.values()) for (const l of p.links) pages.get(l)!.backlinks.push(p.id);
+for (const p of pages.values()) {
+  // hub pages keep 300 backlinks, as the engine does
+  if (p.backlinks.length > 300) { p.backlinkCount = p.backlinks.length; p.backlinks = p.backlinks.slice(0, 300); }
+  for (const id of [...p.links, ...p.backlinks]) p.labels[id] = pages.get(id)!.title;
+}
 
 // graph
 const g = new Graph({ type: 'undirected' });
@@ -784,7 +798,7 @@ const graph: GraphJson = {
 };
 
 // search
-const search: SearchEntry[] = [...pages.values()].map((p) => [p.id, p.title, p.kind, p.t0, (p.names ?? []).map((x) => x.form).join('|')]);
+const search: SearchEntry[] = [...pages.values()].map((p) => [p.id, p.title, p.kind, p.t0, (p.names ?? []).map((x) => x.form).join('|'), p.sub]);
 
 // meta
 const counts: Record<string, number> = {};
@@ -829,12 +843,22 @@ const meta: MetaJson = {
 };
 
 // ------------------------------------------------------------------ write
+// Never clobber a real engine export by accident.
+try {
+  const existing = JSON.parse(readFileSync(join(OUT, 'meta.json'), 'utf8')) as { engineVersion?: string };
+  if (existing.engineVersion && !existing.engineVersion.startsWith('mock') && !process.argv.includes('--force')) {
+    console.error(`public/data holds a real export (engine ${existing.engineVersion}); pass --force to overwrite it with mock data.`);
+    process.exit(1);
+  }
+} catch { /* no existing data */ }
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(join(OUT, 'pages'), { recursive: true });
 const wj = (f: string, v: unknown) => writeFileSync(join(OUT, f), JSON.stringify(v));
 wj('meta.json', meta);
 wj('world.json', world);
 wj('timeline.json', timeline);
+wj('layer-culture.json', cultureLayer);
+wj('layer-religion.json', religionLayer);
 wj('graph.json', graph);
 wj('search.json', { entries: search });
 const shards: PageJson[][] = Array.from({ length: SHARD_COUNT }, () => []);

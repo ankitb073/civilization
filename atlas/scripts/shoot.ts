@@ -3,11 +3,11 @@
 // Output: atlas/.shots/<name>-<viewport>[-dark].png, plus console errors on stdout.
 
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import type { MetaJson, PageJson, ShardJson } from '../../engine/src/export/contract.ts';
+import type { MetaJson, SearchJson } from '../../engine/src/export/contract.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, '.shots');
@@ -18,38 +18,52 @@ mkdirSync(OUT, { recursive: true });
 
 const only = (process.argv.find((a) => a.startsWith('--only='))?.slice(7) ?? '').split(',').filter(Boolean);
 
-// pick representative pages from the data
+// pick representative pages from the data (search.json carries kind + sub for every page)
 const meta = JSON.parse(readFileSync(join(DATA, 'meta.json'), 'utf8')) as MetaJson;
-const pages: PageJson[] = [];
-for (const f of readdirSync(join(DATA, 'pages'))) pages.push(...(JSON.parse(readFileSync(join(DATA, 'pages', f), 'utf8')) as ShardJson).pages);
-const find = (pred: (p: PageJson) => boolean) => pages.find(pred);
-const bySub = (sub: RegExp) => find((p) => p.kind === 'artifact' && sub.test(p.sub));
-const withAccounts = find((p) => !!p.accounts && p.accounts.sources.length > 1);
-const lang = find((p) => p.kind === 'language' && !!p.language && p.language.soundChanges.length > 3);
-const polity = pages.filter((p) => p.kind === 'polity').sort((a, b) => b.backlinks.length - a.backlinks.length)[0];
-const settlement = pages.filter((p) => p.kind === 'settlement' && (p.names?.length ?? 0) > 1).sort((a, b) => b.backlinks.length - a.backlinks.length)[0];
-const mid = Math.round((meta.yearStart + meta.yearEnd) / 2);
+const search = (JSON.parse(readFileSync(join(DATA, 'search.json'), 'utf8')) as SearchJson).entries;
+const featured = (prefix: string) => meta.featured.find((f) => f.id.startsWith(prefix))?.id;
+const firstOf = (kind: string, sub?: RegExp) => search.find((e) => e[2] === kind && (!sub || sub.test(e[5] ?? '')))?.[0];
+const featuredArt = (sub: RegExp) => meta.featured.map((f) => search.find((e) => e[0] === f.id)).find((e) => e && e[2] === 'artifact' && sub.test(e[5] ?? ''))?.[0];
+const war = meta.featured[0]?.id ?? firstOf('event', /war/);
+const polity = featured('pol:') ?? firstOf('polity');
+const person = search.filter((e) => e[2] === 'person').sort((a, b) => b[1].length - a[1].length)[Math.floor(search.length / 9) % 500]?.[0] ?? firstOf('person');
+const ids = {
+  war, polity, person,
+  treaty: featuredArt(/treaty/) ?? firstOf('artifact', /treaty/),
+  chronicle: featuredArt(/chronicle/) ?? firstOf('artifact', /chronicle/),
+  inscription: featuredArt(/inscription/) ?? firstOf('artifact', /inscription/),
+  ledger: featuredArt(/ledger/) ?? firstOf('artifact', /ledger/),
+  letter: firstOf('artifact', /letter/),
+  language: featured('lan:') ?? firstOf('language'),
+  settlement: firstOf('settlement'),
+  climate: featured('cli:'),
+  movement: firstOf('movement'),
+};
+console.log('pages:', JSON.stringify(ids));
 
 const views: { name: string; hash: string; dark?: boolean; wait?: number }[] = [
-  { name: 'map', hash: `#/map?y=1200&l=political` },
-  { name: 'map-late', hash: `#/map?y=${Math.round(meta.yearEnd * 0.8)}&l=political&routes=1` },
-  { name: 'map-sel', hash: `#/map?y=${polity ? Math.min(polity.t1, polity.t0 + 150) : mid}&l=political&sel=${polity?.id ?? ''}` },
-  { name: 'map-religion', hash: `#/map?y=${mid}&l=religion`, dark: true },
-  { name: 'graph', hash: `#/graph?y=${Math.round(meta.yearEnd * 0.7)}`, wait: 1500 },
-  { name: 'ego', hash: `#/graph?y=${meta.yearEnd}&focus=${withAccounts?.id ?? polity?.id}`, wait: 2500 },
-  { name: 'event', hash: `#/p/${withAccounts?.id}` },
-  { name: 'compare', hash: `#/compare/${withAccounts?.id}` },
-  { name: 'inscription', hash: `#/p/${find((p) => !!p.artifact?.interlinear)?.id}` },
-  { name: 'inscription', hash: `#/p/${find((p) => !!p.artifact?.interlinear)?.id}`, dark: true },
-  { name: 'ledger', hash: `#/p/${find((p) => !!p.artifact?.ledger)?.id}` },
-  { name: 'treaty', hash: `#/p/${bySub(/treaty/)?.id}` },
-  { name: 'chronicle', hash: `#/p/${bySub(/chronicle/)?.id}` },
-  { name: 'newspaper', hash: `#/p/${bySub(/news/)?.id}` },
-  { name: 'telegram', hash: `#/p/${bySub(/telegram/)?.id}` },
-  { name: 'language', hash: `#/p/${lang?.id}` },
-  { name: 'polity', hash: `#/p/${polity?.id}` },
-  { name: 'settlement', hash: `#/p/${settlement?.id}` },
-  { name: 'browse', hash: `#/browse?kind=artifact` },
+  ...[300, 1500, 3200, 4600, 4990].map((y) => ({ name: `map-${y}`, hash: `#/map?y=${y}&l=political` })),
+  { name: 'map-culture', hash: `#/map?y=2500&l=culture`, wait: 1500 },
+  { name: 'map-religion', hash: `#/map?y=3800&l=religion`, dark: true, wait: 1500 },
+  { name: 'map-sel', hash: `#/map?y=2600&l=political&sel=${polity}` },
+  { name: 'map-routes', hash: `#/map?y=4000&l=political&routes=1`, dark: true },
+  { name: 'graph', hash: `#/graph?y=3500`, wait: 6000 },
+  { name: 'graph-dark', hash: `#/graph?y=4990&k=all&d=1`, dark: true, wait: 9000 },
+  { name: 'ego', hash: `#/graph?y=5000&focus=${war}`, wait: 6000 },
+  { name: 'event', hash: `#/p/${war}` },
+  { name: 'compare', hash: `#/compare/${war}` },
+  { name: 'polity', hash: `#/p/${polity}` },
+  { name: 'person', hash: `#/p/${person}` },
+  { name: 'treaty', hash: `#/p/${ids.treaty}` },
+  { name: 'chronicle', hash: `#/p/${ids.chronicle}` },
+  { name: 'inscription', hash: `#/p/${ids.inscription}` },
+  { name: 'inscription', hash: `#/p/${ids.inscription}`, dark: true },
+  { name: 'ledger', hash: `#/p/${ids.ledger}` },
+  { name: 'letter', hash: `#/p/${ids.letter}` },
+  { name: 'language', hash: `#/p/${ids.language}` },
+  { name: 'settlement', hash: `#/p/${ids.settlement}` },
+  { name: 'climate', hash: `#/p/${ids.climate}` },
+  { name: 'browse', hash: `#/browse?kind=artifact&sub=treaty`, wait: 1500 },
   { name: 'about', hash: `#/about` },
   { name: 'search', hash: `#/search` },
 ];
@@ -60,7 +74,10 @@ await new Promise<void>((resolve, reject) => {
   server.stdout!.on('data', (b: Buffer) => { if (b.toString().includes(String(PORT))) { clearTimeout(t); resolve(); } });
 });
 
-const browser = await chromium.launch();
+// Prefer full Chromium with the real GPU (Metal on macOS); the headless shell falls back to software GL,
+// which makes WebGL/canvas timings meaningless.
+const browser = await chromium.launch({ channel: 'chromium', args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
+  .catch(() => chromium.launch());
 const errors: string[] = [];
 try {
   for (const vp of [{ tag: 'phone', width: 390, height: 844, scale: 2, mobile: true }, { tag: 'desktop', width: 1440, height: 900, scale: 1, mobile: false }]) {
@@ -169,15 +186,50 @@ try {
       const slider = document.querySelector('.slider__track') as HTMLElement;
       slider.focus();
       const t0 = performance.now();
+      const steps: number[] = [];
       for (let i = 0; i < 100; i++) {
-        slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        const s0 = performance.now();
+        slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: i % 10 === 9, bubbles: true }));
         await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+        steps.push(performance.now() - s0);
       }
       const total = performance.now() - t0;
+      steps.sort((a, b) => a - b);
+      (window as unknown as { __steps: number[] }).__steps = steps;
       const d = r.drawTimes.slice().sort((a, b) => a - b);
-      return { frames: d.length, median: d[Math.floor(d.length / 2)], p95: d[Math.floor(d.length * 0.95)], max: d[d.length - 1], total };
+      return { frames: d.length, median: d[Math.floor(d.length / 2)], p95: d[Math.floor(d.length * 0.95)], max: d[d.length - 1], total, stepP95: steps[95] };
     });
-    console.log(`perf: slider scrub 100 steps — ${res.frames} draws, median ${res.median.toFixed(1)}ms, p95 ${res.p95.toFixed(1)}ms, max ${res.max.toFixed(1)}ms`);
+    console.log(`perf: slider scrub 100 steps — ${res.frames} draws, median ${res.median.toFixed(1)}ms, p95 ${res.p95.toFixed(1)}ms, max ${res.max.toFixed(1)}ms, ${(res.total / 100).toFixed(1)}ms/step wall (2 frames min), step p95 ${res.stepP95.toFixed(1)}ms`);
+    // initial load: navigation start -> first map draw
+    const p2 = await ctx.newPage();
+    const tStart = Date.now();
+    await p2.goto(BASE + '#/map?y=2000');
+    await p2.waitForFunction(() => ((window as unknown as { __palimpsestMap?: { drawTimes: number[] } }).__palimpsestMap?.drawTimes.length ?? 0) > 0, null, { timeout: 30000 });
+    console.log(`perf: first map draw ${Date.now() - tStart}ms after navigation (local server)`);
+    // graph: worker load + chunked build, then scrub refresh times
+    const p3 = await ctx.newPage();
+    const g0 = Date.now();
+    await p3.goto(BASE + '#/graph?y=2500');
+    await p3.waitForFunction(() => (window as unknown as { __palimpsestGraph?: { buildMs?: number } }).__palimpsestGraph?.buildMs !== undefined, null, { timeout: 60000 });
+    const gp = await p3.evaluate(() => (window as unknown as { __palimpsestGraph: { loadMs: number; buildMs: number; nodes: number; edges: number } }).__palimpsestGraph);
+    console.log(`perf: graph ready ${Date.now() - g0}ms after navigation — worker fetch+parse+index ${Math.round(gp.loadMs)}ms, build ${Math.round(gp.buildMs)}ms for ${gp.nodes} nodes / ${gp.edges} edges`);
+    const lt = await p3.evaluate(async () => {
+      // long tasks during a scrub
+      const longs: number[] = [];
+      const po = new PerformanceObserver((l) => { for (const e of l.getEntries()) longs.push(e.duration); });
+      po.observe({ type: 'longtask', buffered: false });
+      const slider = document.querySelector('.slider__track') as HTMLElement;
+      slider.focus();
+      for (let i = 0; i < 60; i++) {
+        slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }));
+        await new Promise((res) => setTimeout(res, 30));
+      }
+      await new Promise((res) => setTimeout(res, 400));
+      po.disconnect();
+      const r = (window as unknown as { __palimpsestGraph: { refreshMs: number[] } }).__palimpsestGraph.refreshMs.slice().sort((a, b) => a - b);
+      return { longs, refreshMedian: r[Math.floor(r.length / 2)], refreshP95: r[Math.floor(r.length * 0.95)], n: r.length };
+    });
+    console.log(`perf: graph scrub — ${lt.n} refreshes, median ${lt.refreshMedian?.toFixed(1)}ms, p95 ${lt.refreshP95?.toFixed(1)}ms; long tasks: ${lt.longs.length ? lt.longs.map((x) => Math.round(x)).join(',') : 'none'}`);
     await ctx.close();
   }
 } finally {

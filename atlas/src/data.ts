@@ -42,6 +42,7 @@ export interface SearchIndex {
   kinds: string[];
   t0: number[];
   aliases: string[];
+  subs: string[];
   lower: string[];
   aliasLower: string[];
   byId: Map<string, number>;
@@ -50,13 +51,14 @@ let searchP: Promise<SearchIndex> | null = null;
 export function loadSearch(): Promise<SearchIndex> {
   if (!searchP) {
     searchP = fetchJson<SearchJson>('search.json').then((s) => {
-      const idx: SearchIndex = { ids: [], titles: [], kinds: [], t0: [], aliases: [], lower: [], aliasLower: [], byId: new Map() };
-      s.entries.forEach(([id, title, kind, t0, aliases], i) => {
+      const idx: SearchIndex = { ids: [], titles: [], kinds: [], t0: [], aliases: [], subs: [], lower: [], aliasLower: [], byId: new Map() };
+      s.entries.forEach(([id, title, kind, t0, aliases, sub], i) => {
         idx.ids.push(id);
         idx.titles.push(title);
         idx.kinds.push(kind);
         idx.t0.push(t0);
         idx.aliases.push(aliases);
+        idx.subs.push(sub ?? '');
         idx.lower.push(fold(title));
         idx.aliasLower.push(fold(aliases));
         idx.byId.set(id, i);

@@ -7,7 +7,10 @@ export interface MapData {
   world: WorldJson;
   timeline: TimelineJson;
   geo: Geo;
-  layers: Record<LayerName, LayerState>;
+  /** political is always present; culture/religion load lazily. */
+  layers: { political: LayerState; culture?: LayerState; religion?: LayerState };
+  polityByIdx: Map<number, TimelineJson['polities'][number]>;
+  settlementByIdx: Map<number, TimelineJson['settlements'][number]>;
 }
 
 interface Label { text: string; kicker: string; x: number; y: number; cells: number; idx: number }
@@ -101,7 +104,7 @@ export class MapRenderer {
     this.theme = theme;
     this.ctx = canvas.getContext('2d', { alpha: false })!;
     this.d = data;
-    data.timeline.layers.political.legend.forEach((l) => this.polityIdxById.set(l.id, l.idx));
+    data.layers.political.layer.legend.forEach((l) => this.polityIdxById.set(l.id, l.idx));
     data.timeline.settlements.forEach((s) => this.settlementById.set(s.id, s.idx));
     this.eventsSorted = data.timeline.events.slice().sort((a, b) => a.year - b.year);
     this.eventYearIdx = Int32Array.from(this.eventsSorted.map((e) => e.year));
@@ -341,29 +344,29 @@ export class MapRenderer {
 
   // ---------------------------------------------------------------- time-dependent geometry
   layerState(): LayerState {
-    return this.d.layers[this.layer];
+    return this.d.layers[this.layer] ?? this.d.layers.political;
   }
 
   ownerAt(cell: number, layer: LayerName = this.layer): number {
-    return this.d.layers[layer].at(this.year)[cell];
+    const st = this.d.layers[layer];
+    return st ? st.at(this.year)[cell] : -1;
   }
 
   polityName(idx: number, year = this.year): string {
-    const p = this.d.timeline.polities[idx];
-    const legend = this.d.timeline.layers.political.legend[idx];
-    if (!p || !p.names.length) return legend?.name ?? '';
-    let name = p.names[0][1];
-    for (const [y, nm] of p.names) if (y <= year) name = nm; else break;
+    const p = this.d.polityByIdx.get(idx);
+    let name = this.d.layers.political.byIdx.get(idx)?.name ?? '';
+    if (p) for (const [y, nm] of p.names) { if (y <= year) name = nm; else break; }
     return name;
   }
 
   private geomFor(): YearGeom {
-    const key = `${this.layer}:${this.year}`;
+    const layer = this.layerState();
+    const layerName = this.d.layers[this.layer] ? this.layer : 'political';
+    const key = `${layerName}:${this.year}`;
     let g = this.yearCache.get(key);
     if (g) return g;
     const { geo } = this.d;
-    const layer = this.layerState();
-    const legend = layer.layer.legend;
+    const legend = { get: (i: number) => layer.byIdx.get(i) };
     const state = layer.at(this.year);
     const dark = this.theme === 'dark';
     const fillAlpha = this.layer === 'political' ? (dark ? 0.5 : 0.46) : dark ? 0.55 : 0.5;
@@ -378,7 +381,7 @@ export class MapRenderer {
       addCellToPath(geo, p, i);
       counts.set(o, (counts.get(o) ?? 0) + 1);
     }
-    const fills = [...paths.entries()].map(([idx, path]) => ({ idx, color: alpha(legend[idx]?.color ?? '#888888', fillAlpha), path }));
+    const fills = [...paths.entries()].map(([idx, path]) => ({ idx, color: alpha(legend.get(idx)?.color ?? '#888888', fillAlpha), path }));
 
     const borders = new Path2D();
     const frontierPaths = new Map<number, Path2D>();
@@ -400,7 +403,7 @@ export class MapRenderer {
       }
     }
     const frontiers = [...frontierPaths.entries()].map(([idx, path]) => {
-      const c = hexToRgb(legend[idx]?.color ?? '#888888');
+      const c = hexToRgb(legend.get(idx)?.color ?? '#888888');
       const d = dark ? shade(c, 0.25) : shade(c, -0.35);
       return { idx, color: `rgba(${d[0] | 0},${d[1] | 0},${d[2] | 0},0.85)`, path };
     });
@@ -440,7 +443,7 @@ export class MapRenderer {
         const d = (geo.sx[c] - cx) ** 2 + (geo.sy[c] - cy) ** 2 + (deg - interior) * 900;
         if (d < bd) { bd = d; bc = c; }
       }
-      const name = this.layer === 'political' ? this.polityName(idx) : legend[idx]?.name ?? '';
+      const name = layerName === 'political' ? this.polityName(idx) : legend.get(idx)?.name ?? '';
       const m = name.match(KICKERS);
       labels.push({ text: (m ? m[2] : name), kicker: m ? m[1] + ' of' : '', x: geo.sx[bc], y: geo.sy[bc], cells: cells.length, idx });
     }
@@ -457,9 +460,9 @@ export class MapRenderer {
     let s = this.capitalsCache.get(k);
     if (s) return s;
     s = new Set();
-    const legend = this.d.timeline.layers.political.legend;
+    const legend = this.d.layers.political.byIdx;
     for (const p of this.d.timeline.polities) {
-      const l = legend[p.idx];
+      const l = legend.get(p.idx);
       if (!l || l.start > year || l.end < year) continue;
       let cap = -1;
       for (const [y, si] of p.capitals) if (y <= year) cap = si; else break;
@@ -591,10 +594,10 @@ export class MapRenderer {
       const accent = dark ? '#f0b08f' : '#7a1f12';
       if (sel.startsWith('pol:') || sel.startsWith('cul:') || sel.startsWith('mov:')) {
         const layerName: LayerName = sel.startsWith('pol:') ? 'political' : sel.startsWith('cul:') ? 'culture' : 'religion';
-        const legend = timeline.layers[layerName].legend;
-        const idx = legend.find((l) => l.id === sel)?.idx ?? -1;
-        if (idx >= 0) {
-          const st = this.d.layers[layerName].at(this.year);
+        const ls = this.d.layers[layerName];
+        const idx = ls ? (layerName === 'political' ? this.polityIdx(sel) : ls.layer.legend.find((l) => l.id === sel)?.idx ?? -1) : -1;
+        if (ls && idx >= 0) {
+          const st = ls.at(this.year);
           const p = new Path2D();
           for (let e = 0; e < geo.edgeCount; e++) {
             const a = geo.edgeA[e], b = geo.edgeB[e];
@@ -635,7 +638,7 @@ export class MapRenderer {
       if (rs) {
         ctx.setLineDash([5 * px, 4 * px]);
         for (const [a, b, v] of rs.edges) {
-          const sa = timeline.settlements[a], sb = timeline.settlements[b];
+          const sa = this.d.settlementByIdx.get(a), sb = this.d.settlementByIdx.get(b);
           if (!sa || !sb) continue;
           ctx.strokeStyle = dark ? `rgba(232,190,120,${0.35 + v * 0.5})` : `rgba(122,74,28,${0.35 + v * 0.5})`;
           ctx.lineWidth = (0.6 + v * 2.2) * px;
@@ -673,19 +676,22 @@ export class MapRenderer {
 
     // settlements
     const caps = this.capitalsAt(this.year);
-    const live: { idx: number; x: number; y: number; pop: number; cap: boolean }[] = [];
+    const live: { idx: number; x: number; y: number; pop: number; cap: boolean; s: TimelineJson['settlements'][number] }[] = [];
     for (const s of timeline.settlements) {
       if (s.start > this.year || (s.end < this.year && s.end < 5000)) continue;
       const [x, y] = this.toScreen(geo.sx[s.cell], geo.sy[s.cell]);
       if (!onScreen(x, y)) continue;
-      live.push({ idx: s.idx, x, y, pop: MapRenderer.popAt(s.pop, this.year), cap: caps.has(s.idx) });
+      live.push({ idx: s.idx, x, y, pop: MapRenderer.popAt(s.pop, this.year), cap: caps.has(s.idx), s });
     }
     live.sort((a, b) => Number(b.cap) - Number(a.cap) || b.pop - a.pop);
+    // declutter: at low zoom show capitals plus the largest towns only
+    const maxDots = zoom < 1.4 ? 70 : zoom < 2.5 ? 160 : zoom < 4 ? 320 : Infinity;
+    if (live.length > maxDots) live.length = maxDots;
     const ink = dark ? '#ece3cf' : '#1f1a14';
     const paper = dark ? '#11151b' : '#fbf8f1';
-    const dotScale = Math.min(1.8, 0.75 + zoom * 0.2);
+    const dotScale = Math.min(1.8, 0.7 + zoom * 0.2);
     for (const s of live) {
-      const r = Math.max(1.6, Math.min(5.5, 1.2 + Math.sqrt(s.pop) / 90)) * dotScale;
+      const r = Math.max(1.4, Math.min(4.2, 1 + Math.sqrt(s.pop) / 140)) * dotScale;
       ctx.beginPath();
       ctx.arc(s.x, s.y, r + (s.cap ? 1.6 : 0.9), 0, Math.PI * 2);
       ctx.fillStyle = paper;
@@ -696,12 +702,12 @@ export class MapRenderer {
       ctx.fill();
       if (s.cap) {
         ctx.beginPath();
-        ctx.arc(s.x, s.y, r + 3, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, r + 2.6, 0, Math.PI * 2);
         ctx.strokeStyle = ink;
         ctx.lineWidth = 1.1;
         ctx.stroke();
       }
-      const id = timeline.settlements[s.idx].id;
+      const id = s.s.id;
       if (id === sel) {
         ctx.beginPath();
         ctx.arc(s.x, s.y, r + 7, 0, Math.PI * 2);
@@ -709,7 +715,7 @@ export class MapRenderer {
         ctx.lineWidth = 2;
         ctx.stroke();
       }
-      this.markerHits.push({ x: s.x, y: s.y, r: Math.max(9, r + 4), hit: { type: 'settlement', id, idx: s.idx, cell: timeline.settlements[s.idx].cell } });
+      this.markerHits.push({ x: s.x, y: s.y, r: Math.max(9, r + 4), hit: { type: 'settlement', id, idx: s.idx, cell: s.s.cell } });
     }
 
     // polity / layer labels
@@ -756,7 +762,7 @@ export class MapRenderer {
     ctx.textAlign = 'left';
     for (const s of live) {
       if (shown >= maxSettLabels) break;
-      const name = timeline.settlements[s.idx].name;
+      const name = s.s.name;
       const fs = s.cap ? 13 : 11.5;
       ctx.font = `${s.cap ? 600 : 500} ${fs}px ${display}`;
       const tw = ctx.measureText(name).width;

@@ -5,8 +5,8 @@ import { Sparkline } from '../components/Sparkline.tsx';
 import { fmtSpan, fmtYear, subLabel } from '../format.ts';
 import { KIND_LABEL, KINDS, kindFromId } from '../kinds.ts';
 import { inline, render } from '../md.ts';
-import { mapHref, year } from '../state.ts';
-import { ensureSearch, searchIndex, titleOf } from '../store.ts';
+import { isMobile, mapHref, year } from '../state.ts';
+import { titleOf } from '../store.ts';
 
 const MAP_SELECTABLE = new Set(['polity', 'settlement', 'event', 'culture', 'movement']);
 
@@ -29,7 +29,6 @@ export function docStyle(sub: string): string {
 
 export function PageView({ id }: { id: string }) {
   const { page, loading, missing } = usePage(id);
-  useEffect(() => { ensureSearch().catch(() => {}); }, []);
   useEffect(() => {
     if (page) document.title = `${page.title} — Palimpsest`;
   }, [page]);
@@ -49,9 +48,14 @@ export function PageView({ id }: { id: string }) {
   return <Page page={page} />;
 }
 
+/** Display title for an id referenced by a page: the page's own label map first. */
+export function labeler(page: PageJson) {
+  return (id: string): string | undefined => page.labels?.[id] ?? titleOf(id);
+}
+
 function Page({ page }: { page: PageJson }) {
-  const idx = searchIndex.value; // re-render when titles arrive
-  const bodyHtml = useMemo(() => render(page.body, titleOf), [page, idx]);
+  const label = labeler(page);
+  const bodyHtml = useMemo(() => render(page.body, label), [page]);
   const a = page.artifact;
   const style = page.kind === 'artifact' ? docStyle(page.sub) : '';
   const y = year.value;
@@ -60,7 +64,8 @@ function Page({ page }: { page: PageJson }) {
     ? mapHref({ y: mapYear, sel: MAP_SELECTABLE.has(page.kind) ? page.id : page.cell >= 0 ? `cell:${page.cell}` : null })
     : null;
 
-  const hasAside = page.infobox.length > 0 || (page.series?.length ?? 0) > 0 || (page.names?.length ?? 0) > 0;
+  const mobile = isMobile.value;
+  const hasAside = (!mobile && page.infobox.length > 0) || (page.series?.length ?? 0) > 0 || (page.names?.length ?? 0) > 0;
   return (
     <article class={`reader reader--${page.kind}${hasAside ? '' : ' reader--single'}`}>
       <div class="reader__main">
@@ -71,7 +76,7 @@ function Page({ page }: { page: PageJson }) {
             <span class="reader__span">{page.kind === 'artifact' && a ? <>{a.date ? <><span class="reader__local">{a.date}</span> · </> : null}{fmtYear(page.t0)}</> : fmtSpan(page.t0, page.t1)}</span>
             {a?.flagship && <span class="badge badge--flag" title="Written by hand from the archive's dossier">Flagship</span>}
           </div>
-          {page.summary && <p class="reader__summary">{page.summary}</p>}
+          {page.summary && <Html tag="p" class="reader__summary" html={inline(page.summary, label)} />}
           <div class="actions">
             {mapLink && <a class="btn" href={mapLink}>
               <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
@@ -83,7 +88,9 @@ function Page({ page }: { page: PageJson }) {
           </div>
         </header>
 
-        {a && <CatalogPlate page={page} />}
+        {mobile && page.infobox.length > 0 && <Infobox page={page} label={label} inline />}
+
+        {a && page.infobox.length === 0 && <CatalogPlate page={page} label={label} />}
 
         {a?.interlinear && <Interlinear it={a.interlinear} />}
 
@@ -95,28 +102,17 @@ function Page({ page }: { page: PageJson }) {
           </section>
         )}
 
-        {a?.ledger && <Ledger ledger={a.ledger} />}
+        {a?.ledger && <Ledger ledger={a.ledger} label={label} />}
 
-        {page.accounts && page.accounts.sources.length > 0 && <AccountsTeaser page={page} />}
+        {page.accounts && page.accounts.sources.length > 0 && <AccountsTeaser page={page} label={label} />}
 
-        {page.language && <LanguagePanel lang={page.language} />}
+        {page.language && <LanguagePanel lang={page.language} label={label} />}
 
         <LinkLists page={page} />
       </div>
 
       {hasAside && <aside class="reader__aside">
-        {page.infobox.length > 0 && (
-          <section class="infobox">
-            <dl class="kv">
-              {page.infobox.map(([k, v]) => (
-                <>
-                  <dt>{k}</dt>
-                  <Html tag="dd" html={inline(v, titleOf)} />
-                </>
-              ))}
-            </dl>
-          </section>
-        )}
+        {!mobile && page.infobox.length > 0 && <Infobox page={page} label={label} />}
         {page.series && page.series.length > 0 && (
           <section class="aside-sect">
             <h2 class="sect">Over time</h2>
@@ -126,6 +122,26 @@ function Page({ page }: { page: PageJson }) {
         {page.names && page.names.length > 0 && <Names names={page.names} />}
       </aside>}
     </article>
+  );
+}
+
+function Infobox({ page, label, inline: isInline = false }: { page: PageJson; label: (id: string) => string | undefined; inline?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const rows = isInline && !open ? page.infobox.slice(0, 6) : page.infobox;
+  return (
+    <section class={`infobox${isInline ? ' infobox--inline' : ''}`} aria-label="Facts">
+      <dl class="kv">
+        {rows.map(([k, v]) => (
+          <>
+            <dt>{k}</dt>
+            <Html tag="dd" html={inline(v, label)} />
+          </>
+        ))}
+      </dl>
+      {isInline && page.infobox.length > 6 && (
+        <button class="linkish small infobox__more" onClick={() => setOpen(!open)}>{open ? 'Fewer facts' : `All ${page.infobox.length} facts`}</button>
+      )}
+    </section>
   );
 }
 
@@ -141,7 +157,7 @@ function ShareButton({ title }: { title: string }) {
   return <button class="btn btn--ghost" onClick={share}>{done ? 'Link copied' : 'Share'}</button>;
 }
 
-function CatalogPlate({ page }: { page: PageJson }) {
+function CatalogPlate({ page, label }: { page: PageJson; label: (id: string) => string | undefined }) {
   const a = page.artifact!;
   const rows: [string, preact.ComponentChildren, boolean?][] = [
     ['Catalogue', <span class="mono">{a.catalog}</span>],
@@ -151,8 +167,8 @@ function CatalogPlate({ page }: { page: PageJson }) {
     ['Script', a.script],
   ];
   let optional = 0;
-  if (a.authorId) { rows.push(['Author', <a href={`#/p/${a.authorId}`}>{titleOf(a.authorId) ?? a.authorId}</a>]); optional++; }
-  if (a.translatorId) { rows.push(['Translated by', <a href={`#/p/${a.translatorId}`}>{titleOf(a.translatorId) ?? a.translatorId}</a>]); optional++; }
+  if (a.authorId) { rows.push(['Author', <a href={`#/p/${a.authorId}`}>{label(a.authorId) ?? a.authorId}</a>]); optional++; }
+  if (a.translatorId) { rows.push(['Translated by', <a href={`#/p/${a.translatorId}`}>{label(a.translatorId) ?? a.translatorId}</a>]); optional++; }
   rows.push(['Condition', a.condition, optional % 2 === 0]);
   rows.push(['Provenance', a.provenance, true]);
   return (
@@ -208,7 +224,7 @@ function Interlinear({ it }: { it: NonNullable<NonNullable<PageJson['artifact']>
   );
 }
 
-function Ledger({ ledger }: { ledger: NonNullable<NonNullable<PageJson['artifact']>['ledger']> }) {
+function Ledger({ ledger, label }: { ledger: NonNullable<NonNullable<PageJson['artifact']>['ledger']>; label: (id: string) => string | undefined }) {
   const numeric = ledger.columns.map((_, c) => ledger.rows.length > 0 && ledger.rows.every((r) => /^[−\-+]?[\d,.\s]*$/.test(r[c] ?? '') && (r[c] ?? '') !== ''));
   return (
     <section class="ledger" aria-label="Ledger">
@@ -225,14 +241,14 @@ function Ledger({ ledger }: { ledger: NonNullable<NonNullable<PageJson['artifact
       </div>
       {ledger.notes.length > 0 && (
         <ol class="ledger__notes">
-          {ledger.notes.map((n) => <li><Html tag="span" html={inline(n, titleOf)} /></li>)}
+          {ledger.notes.map((n) => <li><Html tag="span" html={inline(n, label)} /></li>)}
         </ol>
       )}
     </section>
   );
 }
 
-function AccountsTeaser({ page }: { page: PageJson }) {
+function AccountsTeaser({ page, label }: { page: PageJson; label: (id: string) => string | undefined }) {
   const acc = page.accounts!;
   const truth = new Map(acc.truth);
   return (
@@ -247,7 +263,7 @@ function AccountsTeaser({ page }: { page: PageJson }) {
           for (const [f, v] of s.claims) if (truth.has(f)) { total++; if (norm(v) === norm(truth.get(f)!)) agree++; }
           return (
             <li>
-              <a href={`#/p/${s.artifactId}`}>{titleOf(s.artifactId) ?? s.artifactId}</a>
+              <a href={`#/p/${s.artifactId}`}>{label(s.artifactId) ?? s.artifactId}</a>
               <span class="muted"> — {s.author}, for {s.side}. </span>
               <span class="agree">{agree}/{total} claims match the record</span>
             </li>
@@ -281,16 +297,16 @@ function Names({ names }: { names: NonNullable<PageJson['names']> }) {
   );
 }
 
-function LanguagePanel({ lang }: { lang: NonNullable<PageJson['language']> }) {
+function LanguagePanel({ lang, label }: { lang: NonNullable<PageJson['language']>; label: (id: string) => string | undefined }) {
   const [all, setAll] = useState(false);
   const changes = lang.soundChanges.slice().sort((a, b) => a.year - b.year);
   const shown = all ? changes : changes.slice(0, 14);
   return (
     <section class="langpanel">
       <div class="langpanel__fam">
-        {lang.parent && <div><span class="muted">Descends from </span><a href={`#/p/${lang.parent}`}>{titleOf(lang.parent) ?? lang.parent}</a></div>}
+        {lang.parent && <div><span class="muted">Descends from </span><a href={`#/p/${lang.parent}`}>{label(lang.parent) ?? lang.parent}</a></div>}
         {lang.daughters.length > 0 && (
-          <div><span class="muted">Daughter languages: </span>{lang.daughters.map((d, i) => <>{i > 0 && ', '}<a href={`#/p/${d}`}>{titleOf(d) ?? d}</a></>)}</div>
+          <div><span class="muted">Daughter languages: </span>{lang.daughters.map((d, i) => <>{i > 0 && ', '}<a href={`#/p/${d}`}>{label(d) ?? d}</a></>)}</div>
         )}
       </div>
       {lang.words.length > 0 && (
@@ -339,15 +355,17 @@ function LanguagePanel({ lang }: { lang: NonNullable<PageJson['language']> }) {
 }
 
 function LinkLists({ page }: { page: PageJson }) {
+  const label = labeler(page);
+  const more = Math.max(0, (page.backlinkCount ?? page.backlinks.length) - page.backlinks.length);
   return (
     <div class="linklists">
-      {page.links.length > 0 && <Grouped title="Mentions" ids={page.links} />}
-      {page.backlinks.length > 0 && <Grouped title="Referenced by" ids={page.backlinks} />}
+      {page.links.length > 0 && <Grouped title="Mentions" ids={page.links} label={label} />}
+      {page.backlinks.length > 0 && <Grouped title="Referenced by" ids={page.backlinks} label={label} total={page.backlinkCount} more={more} />}
     </div>
   );
 }
 
-function Grouped({ title, ids }: { title: string; ids: string[] }) {
+function Grouped({ title, ids, label, total, more = 0 }: { title: string; ids: string[]; label: (id: string) => string | undefined; total?: number; more?: number }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const groups = useMemo(() => {
     const m = new Map<string, string[]>();
@@ -358,11 +376,10 @@ function Grouped({ title, ids }: { title: string; ids: string[] }) {
     }
     return KINDS.filter((k) => m.has(k)).map((k) => [k, m.get(k)!] as const);
   }, [ids]);
-  searchIndex.value;
   const LIMIT = 12;
   return (
     <section class="grouped">
-      <h2 class="sect">{title} <span class="muted small">({ids.length})</span></h2>
+      <h2 class="sect">{title} <span class="muted small">({(total ?? ids.length).toLocaleString('en-US')})</span></h2>
       {groups.map(([k, list]) => {
         const isOpen = open[k];
         const items = isOpen ? list : list.slice(0, LIMIT);
@@ -370,12 +387,13 @@ function Grouped({ title, ids }: { title: string; ids: string[] }) {
           <div class="grouped__g">
             <h3 class="grouped__k"><span class={`kdot k-${k}`} aria-hidden="true" />{KIND_LABEL[k][list.length === 1 ? 0 : 1]} <span class="muted">{list.length}</span></h3>
             <ul class="grouped__list">
-              {items.map((id) => <li><a href={`#/p/${id}`}>{titleOf(id) ?? id}</a></li>)}
+              {items.map((id) => <li><a href={`#/p/${id}`}>{label(id) ?? id}</a></li>)}
             </ul>
             {list.length > LIMIT && <button class="linkish small" onClick={() => setOpen({ ...open, [k]: !isOpen })}>{isOpen ? 'Show fewer' : `Show all ${list.length}`}</button>}
           </div>
         );
       })}
+      {more > 0 && <p class="muted small grouped__more">…and {more.toLocaleString('en-US')} more pages refer here. <a href="#/browse">Browse the archive</a> to find them by kind and period.</p>}
     </section>
   );
 }

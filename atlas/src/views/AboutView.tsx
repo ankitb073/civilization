@@ -3,6 +3,7 @@ import { fmtBytes } from '../format.ts';
 import { KIND_LABEL, KINDS } from '../kinds.ts';
 import { ensureMeta, meta } from '../store.ts';
 import { mapHref } from '../state.ts';
+import { Featured } from './MapPanel.tsx';
 
 export function AboutView() {
   const m = meta.value;
@@ -21,6 +22,12 @@ export function AboutView() {
           and then the archive such a world would leave behind: treaties, ledgers, inscriptions and histories that disagree.
           Every document links to everything it mentions, and every claim is checked against the record.
         </p>
+        <div class="proof" role="note">
+          <span class={`proof__badge ${m.check.passed && totalViol === 0 ? 'is-ok' : 'is-bad'}`}>{m.check.passed && totalViol === 0 ? '✓ Consistent' : '✗ Violations'}</span>
+          <span class="proof__n">{totalChecks.toLocaleString('en-US')}</span>
+          <span class="proof__t">facts checked against the causal record across {m.check.invariants.length} invariants — {totalViol === 0 ? 'zero violations' : `${totalViol.toLocaleString('en-US')} violations`}.</span>
+          <a class="proof__a" href="#consistency" onClick={(e) => { e.preventDefault(); document.getElementById('consistency')?.scrollIntoView({ behavior: 'smooth' }); }}>See the report</a>
+        </div>
         <div class="actions">
           <a class="btn btn--accent" href={mapHref({ y: 0 })}>Start at year 0</a>
           <a class="btn" href="#/browse">Browse the archive</a>
@@ -47,6 +54,11 @@ export function AboutView() {
       </section>
 
       <section class="about__sect">
+        <h2 class="sect">Start here</h2>
+        <Featured limit={20} />
+      </section>
+
+      <section class="about__sect" id="consistency">
         <h2 class="sect">Consistency report</h2>
         <p class="muted">
           {m.check.passed ? 'Passed.' : 'Failed.'} {totalChecks.toLocaleString('en-US')} checks across {m.check.invariants.length} invariants,{' '}

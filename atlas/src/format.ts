@@ -1,11 +1,13 @@
 export const YEAR_LABEL = 'AY';
 
 export function fmtYear(y: number): string {
-  return `${Math.round(y)} ${YEAR_LABEL}`;
+  const r = Math.round(y);
+  return r < 0 ? `${-r} before ${YEAR_LABEL} 0` : `${r} ${YEAR_LABEL}`;
 }
 export function fmtSpan(t0: number, t1: number, end = 5000): string {
   if (t0 === t1) return fmtYear(t0);
-  if (t1 >= end) return `${t0} ${YEAR_LABEL} – present`;
+  if (t1 >= end) return `${fmtYear(t0)} – present`;
+  if (t0 < 0) return `${fmtYear(t0)} – ${fmtYear(t1)}`;
   return `${t0}–${t1} ${YEAR_LABEL}`;
 }
 export function fmtInt(n: number): string {

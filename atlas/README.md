@@ -6,7 +6,7 @@ It reads only the files defined in `../engine/src/export/contract.ts`, which liv
 
 ```sh
 npm install
-npm run mock       # or: (repo root) npm run export
+npm run mock       # stand-in data (refuses to overwrite a real export without -- --force)
 npm run dev        # http://localhost:5173
 npm run build      # tsc + vite build -> dist/
 npm run shoot      # screenshots (.shots/), interaction flows, slider perf probe

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { fold } from '../data.ts';
 import { KIND_LABEL, KINDS } from '../kinds.ts';
+import { subLabel } from '../format.ts';
 import { route } from '../state.ts';
 import { ensureSearch, meta, searchIndex } from '../store.ts';
 
@@ -13,11 +14,12 @@ export function BrowseView() {
   const [from, setFrom] = useState<number>(Number(p.get('from') ?? 0));
   const [to, setTo] = useState<number>(Number(p.get('to') ?? 5000));
   const [sort, setSort] = useState<'date' | 'title'>((p.get('sort') as 'date' | 'title') ?? 'date');
+  const [sub, setSub] = useState<string>(p.get('sub') ?? '');
   const [limit, setLimit] = useState(PAGE);
   const idx = searchIndex.value;
   const m = meta.value;
   useEffect(() => { ensureSearch().catch(() => {}); }, []);
-  useEffect(() => { setLimit(PAGE); }, [kind, q, from, to, sort]);
+  useEffect(() => { setLimit(PAGE); }, [kind, q, from, to, sort, sub]);
   useEffect(() => {
     const t = setTimeout(() => {
       const sp = new URLSearchParams();
@@ -26,13 +28,15 @@ export function BrowseView() {
       if (from > 0) sp.set('from', String(from));
       if (to < 5000) sp.set('to', String(to));
       if (sort !== 'date') sp.set('sort', sort);
+      if (sub) sp.set('sub', sub);
       history.replaceState(null, '', `#/browse?${sp.toString()}`);
     }, 250);
     return () => clearTimeout(t);
-  }, [kind, q, from, to, sort]);
+  }, [kind, q, from, to, sort, sub]);
 
-  const { rows, facets, hist } = useMemo(() => {
-    if (!idx) return { rows: [] as number[], facets: new Map<string, number>(), hist: [] as number[] };
+  const { rows, facets, hist, subFacets } = useMemo(() => {
+    if (!idx) return { rows: [] as number[], facets: new Map<string, number>(), hist: [] as number[], subFacets: [] as [string, number][] };
+    const subCounts = new Map<string, number>();
     const fq = fold(q.trim());
     const words = fq.split(/\s+/).filter(Boolean);
     const facets = new Map<string, number>();
@@ -45,14 +49,18 @@ export function BrowseView() {
       const inRange = t0 >= from && t0 <= to;
       if (inRange) facets.set(idx.kinds[i], (facets.get(idx.kinds[i]) ?? 0) + 1);
       if (kind !== 'all' && idx.kinds[i] !== kind) continue;
+      if (inRange && kind !== 'all') subCounts.set(idx.subs[i], (subCounts.get(idx.subs[i]) ?? 0) + 1);
+      if (sub && idx.subs[i] !== sub) continue;
       hist[Math.min(bins - 1, Math.max(0, Math.floor((t0 / 5000) * bins)))]++;
       if (!inRange) continue;
       rows.push(i);
     }
-    if (sort === 'date') rows.sort((a, b) => idx.t0[a] - idx.t0[b] || (idx.titles[a] < idx.titles[b] ? -1 : 1));
-    else rows.sort((a, b) => idx.lower[a].localeCompare(idx.lower[b]));
-    return { rows, facets, hist };
-  }, [idx, kind, q, from, to, sort]);
+    const cmpTitle = (a: number, b: number) => (idx.lower[a] < idx.lower[b] ? -1 : idx.lower[a] > idx.lower[b] ? 1 : 0);
+    if (sort === 'date') rows.sort((a, b) => idx.t0[a] - idx.t0[b] || cmpTitle(a, b));
+    else rows.sort(cmpTitle);
+    const subFacets = [...subCounts.entries()].filter(([k]) => k).sort((a, b) => b[1] - a[1]);
+    return { rows, facets, hist, subFacets };
+  }, [idx, kind, q, from, to, sort, sub]);
 
   const total = [...facets.values()].reduce((s, n) => s + n, 0);
   const hmax = Math.max(1, ...hist);
@@ -60,7 +68,7 @@ export function BrowseView() {
     <div class="browse">
       <header class="browse__head">
         <h1 class="h-page">The archive</h1>
-        <p class="muted">{m ? `${Object.entries(m.counts).filter(([k]) => k !== 'links').reduce((s, [, n]) => s + n, 0).toLocaleString('en-US')} pages` : ''}{m?.counts.links ? ` · ${m.counts.links.toLocaleString('en-US')} links` : ''}. Filter by kind, period and name.</p>
+        <p class="muted">{m ? `${KINDS.reduce((s, k) => s + (m.counts[k] ?? 0), 0).toLocaleString('en-US')} pages` : ''}{m?.counts.links ? ` · ${m.counts.links.toLocaleString('en-US')} links` : ''}. Filter by kind, period and name.</p>
       </header>
       <div class="browse__filters">
         <input class="input" type="search" placeholder="Filter by name…" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Filter by name" />
@@ -75,13 +83,23 @@ export function BrowseView() {
         </div>
       </div>
       <div class="chips" role="radiogroup" aria-label="Kind">
-        <button role="radio" aria-checked={kind === 'all'} class={`chip${kind === 'all' ? ' is-on' : ''}`} onClick={() => setKind('all')}>All <span>{total.toLocaleString('en-US')}</span></button>
+        <button role="radio" aria-checked={kind === 'all'} class={`chip${kind === 'all' ? ' is-on' : ''}`} onClick={() => { setKind('all'); setSub(''); }}>All <span>{total.toLocaleString('en-US')}</span></button>
         {KINDS.filter((k) => facets.has(k)).map((k) => (
-          <button role="radio" aria-checked={kind === k} class={`chip${kind === k ? ' is-on' : ''}`} onClick={() => setKind(k)}>
+          <button role="radio" aria-checked={kind === k} class={`chip${kind === k ? ' is-on' : ''}`} onClick={() => { setKind(k); setSub(''); }}>
             <span class={`kdot k-${k}`} aria-hidden="true" />{KIND_LABEL[k][1]} <span>{(facets.get(k) ?? 0).toLocaleString('en-US')}</span>
           </button>
         ))}
       </div>
+      {kind !== 'all' && subFacets.length > 1 && (
+        <div class="chips chips--sub" role="radiogroup" aria-label="Type">
+          <button role="radio" aria-checked={!sub} class={`chip chip--sub${!sub ? ' is-on' : ''}`} onClick={() => setSub('')}>Any type</button>
+          {subFacets.slice(0, 24).map(([k, n]) => (
+            <button role="radio" aria-checked={sub === k} class={`chip chip--sub${sub === k ? ' is-on' : ''}`} onClick={() => setSub(sub === k ? '' : k)}>
+              {subLabel(k)} <span>{n.toLocaleString('en-US')}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div class="hist" aria-hidden="true">
         {hist.map((h, i) => {
           const y0 = (i / hist.length) * 5000;
@@ -100,7 +118,7 @@ export function BrowseView() {
                 <a class="row" href={`#/p/${idx.ids[i]}`}>
                   <span class="row__y">{idx.t0[i]}</span>
                   <span class={`kdot k-${idx.kinds[i]}`} aria-hidden="true" />
-                  <span class="row__t">{idx.titles[i]}</span>
+                  <span class="row__t">{idx.titles[i]}{idx.subs[i] && kind === 'all' || (idx.subs[i] && !sub) ? <span class="row__sub">{subLabel(idx.subs[i])}</span> : null}</span>
                   {idx.aliases[i] && <span class="row__a">{idx.aliases[i].split('|').slice(0, 3).join(' · ')}</span>}
                 </a>
               </li>

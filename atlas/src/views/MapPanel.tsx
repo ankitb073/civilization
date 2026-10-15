@@ -1,7 +1,8 @@
-import { useMemo } from 'preact/hooks';
-import { layer, selection, setYear, year } from '../state.ts';
-import { eraAt, mapData, meta } from '../store.ts';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { layer, selection, setYear, year, type LayerName } from '../state.ts';
+import { capitalAt, ensureLayer, eraAt, layersVersion, legendOf, mapData, meta, polityNameAt } from '../store.ts';
 import { fmtCompact, fmtYear, subLabel } from '../format.ts';
+import { KIND_LABEL, kindFromId } from '../kinds.ts';
 import { PageCard } from '../components/PageCard.tsx';
 import { MapRenderer } from './mapRenderer.ts';
 
@@ -10,27 +11,55 @@ export function MapPanel() {
   return sel ? <Selected id={sel} /> : <Intro />;
 }
 
+/** Strip a trailing disambiguating id such as " (cli:71)" from a display title. */
+export function cleanTitle(t: string): string {
+  return t.replace(/\s*\([a-z]{3}:\d+\)\s*$/, '');
+}
+
+export function Featured({ limit = 4 }: { limit?: number }) {
+  const m = meta.value;
+  const [all, setAll] = useState(false);
+  if (!m || !m.featured.length) return null;
+  const items = all ? m.featured : m.featured.slice(0, limit);
+  return (
+    <section class="featured">
+      <h3 class="sect">Start here</h3>
+      {items.map((f) => {
+        const k = kindFromId(f.id) ?? 'artifact';
+        return (
+          <a class="feat" href={`#/p/${f.id}`}>
+            <span class="feat__k"><span class={`kdot k-${k}`} aria-hidden="true" />{KIND_LABEL[k][0]}</span>
+            <span class="feat__t">{cleanTitle(f.title)}</span>
+            <span class="feat__w">{f.why}</span>
+          </a>
+        );
+      })}
+      {m.featured.length > limit && (
+        <button class="linkish small feat__more" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${m.featured.length} entry points`}</button>
+      )}
+    </section>
+  );
+}
+
 function Intro() {
   const m = meta.value;
   const d = mapData.value;
   const y = year.value;
   const L = layer.value;
   const era = eraAt(y);
+  const lv = layersVersion.value;
   const top = useMemo(() => {
-    if (!d) return [];
-    const st = d.layers[L].at(y);
+    const st = d?.layers[L];
+    if (!d || !st) return [];
+    const arr = st.at(y);
     const counts = new Map<number, number>();
-    for (let i = 0; i < d.geo.n; i++) if (st[i] >= 0 && d.geo.land[i]) counts.set(st[i], (counts.get(st[i]) ?? 0) + 1);
-    const legend = d.timeline.layers[L].legend;
+    for (let i = 0; i < d.geo.n; i++) if (arr[i] >= 0 && d.geo.land[i]) counts.set(arr[i], (counts.get(arr[i]) ?? 0) + 1);
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([idx, n]) => {
-      let name = legend[idx]?.name ?? '';
-      if (L === 'political') {
-        const p = d.timeline.polities[idx];
-        if (p) for (const [yy, nm] of p.names) if (yy <= y) name = nm;
-      }
-      return { id: legend[idx]?.id, name, color: legend[idx]?.color, n, total: counts.size };
+      const l = legendOf(d, L, idx);
+      const name = L === 'political' ? polityNameAt(d, idx, y) : l?.name ?? '';
+      return { id: l?.id, name, color: l?.color, n, total: counts.size };
     });
-  }, [d, L, Math.floor(y / 5)]);
+  }, [d, L, lv, Math.floor(y / 5)]);
   const total = top[0]?.total ?? 0;
   return (
     <div class="intro">
@@ -44,6 +73,7 @@ function Intro() {
         <li><span>2</span>Tap a territory, city or marker to see who held it.</li>
         <li><span>3</span>Open any page to read the primary sources behind it.</li>
       </ol>
+      <Featured />
       {top.length > 0 && (
         <section class="legend">
           <h3 class="sect">{L === 'political' ? `${total} powers in ${y}` : L === 'culture' ? `${total} peoples in ${y}` : `${total} faiths in ${y}`}</h3>
@@ -71,17 +101,6 @@ function Intro() {
           <li><svg viewBox="-8 -8 16 16" aria-hidden="true"><circle r="3" fill="currentColor" /><circle r="5.5" fill="none" stroke="currentColor" stroke-width="1.2" /></svg>Capital</li>
         </ul>
       </section>
-      {m && m.featured.length > 0 && (
-        <section class="featured">
-          <h3 class="sect">Start here</h3>
-          {m.featured.map((f) => (
-            <a class="feat" href={`#/p/${f.id}`}>
-              <span class="feat__t">{f.title}</span>
-              <span class="feat__w">{f.why}</span>
-            </a>
-          ))}
-        </section>
-      )}
     </div>
   );
 }
@@ -110,30 +129,26 @@ function Selected({ id }: { id: string }) {
 
   let extra = null;
   if (d && id.startsWith('pol:')) {
-    const idx = d.timeline.layers.political.legend.find((l) => l.id === id)?.idx ?? -1;
-    if (idx >= 0) {
+    const idx = d.layers.political.layer.legend.find((l) => l.id === id)?.idx ?? -1;
+    const legend = legendOf(d, 'political', idx);
+    if (legend) {
       const st = d.layers.political.at(y);
       let n = 0;
       for (let i = 0; i < d.geo.n; i++) if (st[i] === idx) n++;
-      const p = d.timeline.polities[idx];
-      let cap = -1;
-      let name = d.timeline.layers.political.legend[idx].name;
-      if (p) {
-        for (const [yy, si] of p.capitals) if (yy <= y) cap = si;
-        for (const [yy, nm] of p.names) if (yy <= y) name = nm;
-      }
-      const legend = d.timeline.layers.political.legend[idx];
+      const cap = capitalAt(d, idx, y);
+      const capS = cap >= 0 ? d.settlementByIdx.get(cap) : undefined;
+      const name = polityNameAt(d, idx, y);
       extra = (
         <div class="now">
           <div class="now__label">In {y}</div>
           {n > 0 ? (
             <div class="now__body">
-              <strong>{name}</strong> holds {n} {n === 1 ? 'cell' : 'cells'} of land
-              {cap >= 0 && <> · capital <a href="#" onClick={(e) => { e.preventDefault(); selection.value = d.timeline.settlements[cap].id; }}>{d.timeline.settlements[cap].name}</a></>}
+              <strong>{name}</strong> holds {n} {n === 1 ? 'district' : 'districts'}
+              {capS && <> · capital <a href="#" onClick={(e) => { e.preventDefault(); selection.value = capS.id; }}>{capS.name}</a></>}
             </div>
           ) : (
             <div class="now__body muted">
-              {legend.start > y ? <>Not yet founded — first appears in <button class="linkish" onClick={() => setYear(legend.start)}>{legend.start}</button>.</> : <>No longer exists — last seen in <button class="linkish" onClick={() => setYear(Math.min(legend.end, 5000))}>{legend.end}</button>.</>}
+              {legend.start > y ? <>Not yet founded — first appears in <button class="linkish" onClick={() => setYear(legend.start)}>{legend.start}</button>.</> : <>No longer exists — last seen in <button class="linkish" onClick={() => setYear(Math.max(0, Math.min(legend.end, 5000) - 1))}>{legend.end}</button>.</>}
             </div>
           )}
         </div>
@@ -144,7 +159,7 @@ function Selected({ id }: { id: string }) {
     if (s) {
       const alive = s.start <= y && (s.end >= y || s.end >= 5000);
       const owner = d.layers.political.at(y)[s.cell];
-      const ownerL = owner >= 0 ? d.timeline.layers.political.legend[owner] : null;
+      const ownerL = legendOf(d, 'political', owner);
       extra = (
         <div class="now">
           <div class="now__label">In {y}</div>
@@ -152,7 +167,7 @@ function Selected({ id }: { id: string }) {
             {alive ? (
               <>
                 About <strong>{fmtCompact(MapRenderer.popAt(s.pop, y))}</strong> inhabitants
-                {ownerL && <> · held by <a href="#" onClick={(e) => { e.preventDefault(); selection.value = ownerL.id; }}>{ownerL.name}</a></>}
+                {ownerL && <> · held by <a href="#" onClick={(e) => { e.preventDefault(); selection.value = ownerL.id; }}>{polityNameAt(d, owner, y)}</a></>}
               </>
             ) : s.start > y ? (
               <span class="muted">Not yet founded (founded <button class="linkish" onClick={() => setYear(s.start)}>{s.start}</button>).</span>
@@ -177,20 +192,20 @@ function Selected({ id }: { id: string }) {
 function CellInfo({ cell }: { cell: number }) {
   const d = mapData.value!;
   const y = year.value;
-  const row = (label: string, layerName: 'political' | 'culture' | 'religion') => {
-    const v = d.layers[layerName].at(y)[cell];
-    const l = v >= 0 ? d.timeline.layers[layerName].legend[v] : null;
-    let name = l?.name;
-    if (l && layerName === 'political') {
-      const p = d.timeline.polities[v];
-      if (p) for (const [yy, nm] of p.names) if (yy <= y) name = nm;
-    }
+  layersVersion.value;
+  useEffect(() => { ensureLayer('culture').catch(() => {}); ensureLayer('religion').catch(() => {}); }, []);
+  const row = (label: string, layerName: LayerName) => {
+    const st = d.layers[layerName];
+    if (!st) return (<><dt>{label}</dt><dd class="muted">…</dd></>);
+    const v = st.at(y)[cell];
+    const l = legendOf(d, layerName, v);
+    const name = l && layerName === 'political' ? polityNameAt(d, v, y) : l?.name;
     return (
       <>
         <dt>{label}</dt>
         <dd>
           {l ? (
-            <button class="linkish" onClick={() => { selection.value = l.id; }}>
+            <button class="linkish" onClick={() => { if (layerName !== layer.peek() && layerName !== 'political') layer.value = layerName; selection.value = l.id; }}>
               <span class="swatch swatch--sm" style={{ background: l.color }} />{name}
             </button>
           ) : <span class="muted">{layerName === 'political' ? 'Unclaimed' : '—'}</span>}
@@ -199,7 +214,7 @@ function CellInfo({ cell }: { cell: number }) {
     );
   };
   const region = d.world.regions[d.world.regionOf[cell]];
-  const biome = d.world.biomes[d.world.biome[cell]];
+  const biome = d.world.biomes.find((b) => b.id === d.world.biome[cell]) ?? d.world.biomes[d.world.biome[cell]];
   const near = useMemo(() => {
     const out: { id: string; title: string; year: number; sub: string; dist: number }[] = [];
     const cx = d.geo.sx[cell], cy = d.geo.sy[cell];
@@ -221,7 +236,7 @@ function CellInfo({ cell }: { cell: number }) {
         <dt>Land</dt>
         <dd>{biome?.name ?? '—'}</dd>
       </dl>
-      <h3 class="sect">Nearby, {y - 60}–{y + 60}</h3>
+      <h3 class="sect">Nearby, {Math.max(0, y - 60)}–{y + 60}</h3>
       {near.length ? (
         <ul class="evlist">
           {near.map((e) => (
