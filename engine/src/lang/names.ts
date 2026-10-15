@@ -138,7 +138,7 @@ export function coin(ctx: CoinCtx): Coined {
     if (isPerson && ctx.parts.length === 2 && typeof ctx.parts[0] === 'number' && typeof ctx.parts[1] === 'string') {
       meaning = `${glosses[0]} ${thirdSg(ctx.parts[1] as Concept)}`;
     } else if (ctx.parts.length === 2 && typeof ctx.parts[0] === 'string' && typeof ctx.parts[1] === 'number') {
-      meaning = `${glosses[0]} of ${glosses[1]}`;
+      meaning = conceptDef(ctx.parts[0] as Concept).pos === 'adj' ? `${glosses[0]} ${glosses[1]}` : `${glosses[0]} of ${glosses[1]}`;
     }
     if (kind === 'polity' || kind === 'region') {
       const d = ctx.deriv('place');

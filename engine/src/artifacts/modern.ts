@@ -54,6 +54,7 @@ function headline(g: Gen, d: ReturnType<Gen['doc']>, e: SimEvent, p: Polity): { 
   const ours = (role: string) => first(role) === `pol:${p.id}`;
   switch (e.sub) {
     case 'war': {
+      if (!(ours('attacker') || ours('defender'))) return { head: `WAR BETWEEN ${d.nameOf(first('attacker')!).toUpperCase()} AND ${d.nameOf(first('defender')!).toUpperCase()}`, body: `${d.n(first('attacker')!)} has opened hostilities against ${d.n(first('defender')!)}. (${d.n(`evt:${e.id}`)})` };
       const o = other(p.id);
       return { head: `WAR WITH ${o ? d.nameOf(o).toUpperCase() : 'THE ENEMY'}`, body: `${ours('attacker') ? 'The government has declared war on' : 'Hostilities have been opened by'} ${o ? d.n(o) : 'a foreign power'}. ${d.pick(['Reservists are ordered to report to their depots.', 'Crowds gathered outside the ministry late into the night.', 'The exchange fell sharply on the news.'])} (${d.n(`evt:${e.id}`)})` };
     }
@@ -61,6 +62,11 @@ function headline(g: Gen, d: ReturnType<Gen['doc']>, e: SimEvent, p: Polity): { 
       const won = e.data.winner === p.id;
       const near = first('near');
       const place = near ? d.nameOf(near).toUpperCase() : 'THE FRONT';
+      const involved = ours('attacker') || ours('defender');
+      if (!involved) {
+        const v = `pol:${e.data.winner}`;
+        return { head: `FIGHTING AT ${place}`, body: `Our correspondent reports a battle${near ? ` near ${d.n(near)}` : ''} between ${d.n(first('attacker')!)} and ${d.n(first('defender')!)}; ${d.n(v)} holds the field. Losses are put at ${fmt(Number(e.data.attackerLosses) + Number(e.data.defenderLosses))}. (${d.n(`evt:${e.id}`)})` };
+      }
       const ourLoss = Number(ours('attacker') ? e.data.attackerLosses : e.data.defenderLosses);
       const theirLoss = Number(ours('attacker') ? e.data.defenderLosses : e.data.attackerLosses);
       return won
@@ -92,7 +98,7 @@ function newspaper(g: Gen, p: Polity, e: SimEvent): void {
   const capCity = ctx.capitalAt(p, year);
   const title = `The ${d.nameOf(`set:${capCity}`)} ${d.pick(PAPERS)}`;
   const items = [e];
-  const others = s.events.filter((x) => x.year === year && x.id !== e.id && NEWS_SUBS.has(x.sub) && x.sig >= 0.35 && g.T.pageRefs.has(`evt:${x.id}`)).sort((a, b) => b.sig - a.sig).slice(0, 2);
+  const others = s.events.filter((x) => x.year === year && x.id < e.id && NEWS_SUBS.has(x.sub) && x.sig >= 0.35 && g.T.pageRefs.has(`evt:${x.id}`)).sort((a, b) => b.sig - a.sig).slice(0, 2);
   items.push(...others);
   const lines: string[] = [`**${title.toUpperCase()}**  ·  ${localDate(ctx, d, p, year).replace(/ \[AY \d+\]$/, '')}  ·  ${d.pick(['Price one copper', 'Morning edition', 'Late edition', 'Special edition'])}`, ''];
   for (const it of items) {
@@ -103,7 +109,7 @@ function newspaper(g: Gen, p: Polity, e: SimEvent): void {
   const cur = ctx.currencyAt(p.id, year);
   if (markets !== null && cur >= 0 && s.currencies[cur].born <= year) lines.push(`*Markets: grain ${fmtPrice(markets / ctx.contentAt(cur, year))} ${d.n(`cur:${cur}`)} the measure.*`);
   g.add({
-    sub: 'newspaper', year, title: `${title}, AY ${year}: ${headline(g, g.doc(lang, year, `newsT:${e.id}`), e, p).head.toLowerCase().replace(/^./, (c) => c.toUpperCase())}`, author: null,
+    sub: 'newspaper', year, title: `${title}, AY ${year}: ${g.T.short.get(`evt:${e.id}`)}`, author: null,
     polity: p.id, lang, script: ctx.scriptOf(p, year), medium: 'newsprint', cell: s.settlements[capCity].cell, settlement: capCity,
     about: items.map((x) => x.id), body: lines.join('\n'), mentions: d.mentions, dateText: localDate(ctx, d, p, year), flagship: false,
     durable: 0.8, tau: 3000, seat: capCity,

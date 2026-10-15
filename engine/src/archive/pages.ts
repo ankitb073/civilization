@@ -430,8 +430,8 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
   for (const c of s.currencies) {
     const ref = `cur:${c.id}`;
     const pg = blank(ref, T, c.kind, c.born, c.died ?? 5000, s.settlements[s.polities[c.polity].capital].cell);
-    pg.summary = `The ${T.short.get(ref)} was ${c.kind === 'weight' ? 'a weight standard of silver' : c.kind === 'coin' ? `a ${c.metal} coin` : c.kind === 'paper' ? 'a banknote currency' : 'a fiat currency'} of ${T.short.get(`pol:${c.polity}`)}, ${span(c.born, c.died)}. It began at ${c.history[0][1]} g of silver${c.history.length > 1 ? ` and ended at ${c.history[c.history.length - 1][1]} g` : ''}.`;
-    pg.infobox = [['Issuer', LT(T, `pol:${c.polity}`)], ['Kind', c.kind], ['Metal', c.metal], ['Introduced', LT(T, `evt:${c.event}`)], ['Initial value', `${c.history[0][1]} g silver`], ['Final value', `${c.history[c.history.length - 1][1]} g silver`]];
+    pg.summary = `The ${T.short.get(ref)} was ${c.kind === 'weight' ? 'a weight standard of silver' : c.kind === 'coin' ? `a ${c.metal} coin` : c.kind === 'paper' ? 'a banknote currency' : 'a fiat currency'} of ${T.short.get(`pol:${c.polity}`)}, ${span(c.born, c.died)}. It began at ${sig3(c.history[0][1])} g of silver${c.history.length > 1 ? ` and ended at ${sig3(c.history[c.history.length - 1][1])} g` : ''}.`;
+    pg.infobox = [['Issuer', LT(T, `pol:${c.polity}`)], ['Kind', c.kind], ['Metal', c.metal], ['Introduced', LT(T, `evt:${c.event}`)], ['Initial value', `${sig3(c.history[0][1])} g silver`], ['Final value', `${sig3(c.history[c.history.length - 1][1])} g silver`]];
     pg.series = [{ label: 'Silver value', unit: 'g', points: c.history.map(([y, v]) => [y, v] as [number, number]) }];
     pg.body = ['## History', '', eventList(ctx, T, eventsOf(ctx, ref), 30)].join('\n');
     pages.set(ref, pg);
@@ -497,6 +497,12 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
     pages.set(ref, pg);
   }
   return pages;
+}
+
+function sig3(x: number): string {
+  if (x === 0) return '0';
+  const d = Math.max(0, 2 - Math.floor(Math.log10(Math.abs(x))));
+  return x.toFixed(Math.min(6, d));
 }
 
 function compressOwners(hist: [number, number][], from: number): [number, number, number][] {

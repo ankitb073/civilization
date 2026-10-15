@@ -417,7 +417,7 @@ function numberWars(ctx: Ctx, T: Titles, want: Map<string, string>): void {
     refs.forEach((ref, i) => {
       const e = s.events[ctx.idNum(ref)];
       let nt: string;
-      if (e.sub === 'war') nt = `${cap(ordinalWord(i + 1))} ${t}`;
+      if (e.sub === 'war' || ((e.sub === 'battle' || e.sub === 'siege' || e.sub === 'sack') && refs.length <= 12)) nt = `${cap(ordinalWord(i + 1))} ${t}`;
       else nt = `${t} (AY ${e.year})`;
       want.set(ref, nt);
       T.short.set(ref, nt);

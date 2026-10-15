@@ -181,7 +181,14 @@ function annals(g: Gen, p: Polity, from: number, to: number, evs: SimEvent[], rn
   lines.push('');
   const self = `pol:${p.id}`;
   const roleOf = (e: SimEvent) => e.parts.find(([r]) => r === self)?.[1];
-  const chosen = evs.length > 28 ? evs.filter((e) => e.sig > 0.12 || rng.chance(0.4)).slice(0, 28) : evs;
+  const perWar = new Map<number, number>();
+  const pruned = evs.filter((e) => {
+    if (e.sub !== 'battle') return true;
+    const w = Number(e.data.war);
+    perWar.set(w, (perWar.get(w) ?? 0) + 1);
+    return perWar.get(w)! <= 2;
+  });
+  const chosen = pruned.length > 28 ? pruned.filter((e) => e.sig > 0.12 || rng.chance(0.4)).slice(0, 28) : pruned;
   for (const e of chosen) {
     const when = cap(localDate(ctx, d, p, e.year).replace(/ \[AY \d+\]$/, ''));
     const role = roleOf(e);
@@ -288,7 +295,7 @@ function census(g: Gen, p: Polity, year: number, row: (number | string | null)[]
   lines.push(`| **Total** | **${fmt(hh)}** | **${fmt(souls)}** |`);
   lines.push('');
   lines.push(`Men fit to bear arms: ${fmt(Number(row[6]) * (1.5 + rng.next()))}. ${d.pick(['The scribes of the provinces swore to the count before the gods.', 'Fugitives and slaves are not counted.', 'Priests and their households are exempt.'])}`);
-  lines.push('', '---', '', `**Editorial note.** The simulation records ${fmt(total)} inhabitants for ${d.ed(`pol:${p.id}`)} in AY ${row[1]}; the census total differs by ${Math.round((souls / Math.max(1, total) - 1) * 100)}%, within the error typical of pre-modern counts.`);
+  lines.push('', '---', '', `**Editorial note.** The ground-truth record gives ${fmt(total)} inhabitants for ${d.ed(`pol:${p.id}`)} in AY ${row[1]}; the census total differs by ${Math.round((souls / Math.max(1, total) - 1) * 100)}%, within the error typical of pre-modern counts.`);
   const m = medium(era, rng, 'soft');
   const capCity = ctx.capitalAt(p, year);
   g.add({
@@ -453,6 +460,10 @@ function travelogue(g: Gen, path: number[], year: number, rng: Rng): void {
   const lang = ctx.polityLang(home, year);
   const d = g.doc(lang, year, `travel:${path[0]}:${year}`);
   const author = g.author(home, 'envoy', year);
+  const hc = ctx.currencyAt(home.id, year);
+  const hcOk = hc >= 0 && s.currencies[hc].born <= year;
+  const hg = hcOk ? ctx.contentAt(hc, year) : 8.3;
+  const hunit = hcOk ? d.n(`cur:${hc}`) : 'shekels of silver';
   const lines: string[] = [];
   lines.push(`${d.pick(['I, ', 'This is the account of '])}${d.n(`per:${author.id}`)}, ${d.pick(['who set out from', 'having left', 'a merchant of'])} ${d.n(`set:${path[0]}`)} ${localDate(ctx, d, home, year)}${d.pick([', to see the cities of the world.', ', on the business of my house.', ', sent by the king to the far countries.'])}`);
   for (const sid of path.slice(1)) {
@@ -464,7 +475,7 @@ function travelogue(g: Gen, path: number[], year: number, rng: Rng): void {
     const pop = t.popHistory.filter(([y]) => y <= year).pop()?.[1] ?? t.peakPop;
     lines.push('');
     const size = pop > 60000 ? d.pick(['a great city, crowded beyond counting', 'a vast city with many gates']) : pop > 15000 ? d.pick(['a fair city', 'a busy town with a good market']) : d.pick(['a small town', 'a poor place of mud houses']);
-    lines.push(`**${d.n(`set:${sid}`)}.** ${cap(size)}. ${o >= 0 ? `It belongs to ${d.n(`pol:${o}`)}${lord ? `, whose ruler is ${d.n(`per:${lord.person}`)}` : ''}.` : 'It obeys no king.'} ${rel >= 0 ? `The people worship after the ${d.n(`mov:${rel}`)}.` : ''} ${pr !== null ? `Grain sells for ${fmt(pr)} grains of silver the measure.` : ''} ${d.pick(['The water is good.', 'Beware the money-changers.', 'The inns are dear.', 'The people are friendly to strangers.', 'Thieves abound.', ''])}`.replace(/\s+$/, ''));
+    lines.push(`**${d.n(`set:${sid}`)}.** ${cap(size)}. ${o >= 0 ? `It belongs to ${d.n(`pol:${o}`)}${lord ? `, whose ruler is ${d.n(`per:${lord.person}`)}` : ''}.` : 'It obeys no king.'} ${rel >= 0 ? `The people worship after the ${d.n(`mov:${rel}`)}.` : ''} ${pr !== null ? `Grain sells for ${fmtPrice(pr / hg)} ${hunit} the measure.` : ''} ${d.pick(['The water is good.', 'Beware the money-changers.', 'The inns are dear.', 'The people are friendly to strangers.', 'Thieves abound.', ''])}`.replace(/\s+/g, ' ').trim());
     const recent = (ctx.eventsByRef.get(`set:${sid}`) ?? []).map((i) => s.events[i]).filter((e) => e.year <= year && e.year > year - 40 && (e.sub === 'sack' || e.sub === 'siege' || e.sub === 'battle' || e.sub === 'founding-city'));
     if (recent.length) {
       const e = recent[recent.length - 1];

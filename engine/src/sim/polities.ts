@@ -35,8 +35,22 @@ export function createPolity(
   const rng = s.rng.fork('polity', o.key);
   const id = s.polities.length;
   const capital = s.settlements[o.capital];
-  const basis = o.nameBasis ?? (o.gov === 'city-state' || o.gov === 'chiefdom' || o.gov === 'merchant-republic' ? 'city' : rng.chance(0.5) ? 'region' : 'people');
-  const nameId = basis === 'city' ? capital.nameId : basis === 'region' ? s.regionNames[s.world.region[capital.cell]] : s.cultures[o.culture].nameId;
+  let basis = o.nameBasis ?? (o.gov === 'city-state' || o.gov === 'chiefdom' || o.gov === 'merchant-republic' ? 'city' : rng.chance(0.5) ? 'region' : 'people');
+  const byBasis = (b: Polity['nameBasis']) => (b === 'city' ? capital.nameId : b === 'region' ? s.regionNames[s.world.region[capital.cell]] : s.cultures[o.culture].nameId);
+  // a new state does not take the name of a living one: try another basis, then a qualified name ("New X")
+  const taken = (nid: number) => s.polities.some((q) => q.died === null && q.nameId === nid);
+  let nameId = byBasis(basis);
+  if (taken(nameId)) {
+    const alt = (['city', 'region', 'people'] as const).find((b) => !taken(byBasis(b)));
+    if (alt) { basis = alt; nameId = byBasis(alt); }
+    else {
+      const lang = s.cultures[o.culture].lang;
+      for (const adj of rng.shuffle(['new', 'high', 'low', 'great', 'small', 'far', 'white', 'red', 'black', 'first'])) {
+        const nid = s.lang.coinName(lang, Math.max(year, s.lang.info(lang).born), 'polity', `pol:${id}:${adj}`, { parts: [adj, byBasis(basis)] });
+        if (!taken(nid)) { nameId = nid; break; }
+      }
+    }
+  }
   const parts: [string, string][] = [[ref('pol', id), 'polity'], [ref('set', o.capital), 'capital'], ...(o.extraParts ?? [])];
   if (o.predecessor != null) parts.push([ref('pol', o.predecessor), 'predecessor']);
   const ev = event(s, o.sub ?? 'founding', year, { cell: capital.cell, parts, causes: o.causes, sig: o.sig ?? 0.3 });

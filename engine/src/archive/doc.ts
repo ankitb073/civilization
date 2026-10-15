@@ -79,6 +79,19 @@ export class Doc {
     return this.rng.chance(p);
   }
 
+  private days = new Map<number, [number, number]>();
+
+  /** A stable (month index, day) for a given year within this document. */
+  dayOf(year: number, maxDay = 28): [number, number] {
+    let v = this.days.get(year);
+    if (!v) {
+      const r = this.rng.fork('day', year);
+      v = [r.int(0, 11), r.int(1, maxDay)];
+      this.days.set(year, v);
+    }
+    return v;
+  }
+
   /** The native word for a concept, scholarly romanization in italics. */
   term(concept: string): string {
     return `*${this.ctx.s.lang.word(this.lang, concept, this.year).scholarly}*`;
@@ -126,8 +139,7 @@ export function localDate(ctx: Ctx, d: Doc, p: Polity | null, year: number, opts
     if (!opts.day) return '';
     const cu = ctx.polityCulture(p, year);
     const ms = months(ctx, cu);
-    const mi = d.rng.int(0, 11);
-    const day = d.rng.int(1, 29);
+    const [mi, day] = d.dayOf(year, 29);
     return `on the ${ordinal(day)} day of ${d.link(`cul:${cu}`, ctx.name(ms[mi], d.lang, year))}, `;
   };
   if (era <= 1 || (era <= 3 && style === 0)) {
@@ -155,7 +167,6 @@ export function localDate(ctx: Ctx, d: Doc, p: Polity | null, year: number, opts
   const label = m && m.kind !== 'pantheon' && m.born <= year ? d.n(`mov:${m.id}`) : d.n(`pol:${p.id}`);
   const cu = ctx.polityCulture(p, year);
   const ms = months(ctx, cu);
-  const mi = d.rng.int(0, 11);
-  const day = d.rng.int(1, 28);
+  const [mi, day] = d.dayOf(year, 28);
   return `${day} ${d.link(`cul:${cu}`, ctx.name(ms[mi], d.lang, year))} ${year - anchor + 1} of the ${label}${norm}`;
 }
