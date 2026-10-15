@@ -68,12 +68,12 @@ for (const [ref, t] of A.title) if (ref.startsWith('evt:') && !evByTitle.has(t))
 // numbers in text, digits or words
 const ONES = 'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen'.split(' ');
 const TENS = 'twenty thirty forty fifty sixty seventy eighty ninety'.split(' ');
-const W = '(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|half)';
+const W = '(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundreds?|thousands?|millions?|half|score)';
 const WORDS = new RegExp(`\\b${W}(?:[\\s-]+(?:and[\\s-]+)?${W})*\\b`, 'gi');
 const DIGITS = /(?<![\w·])(\d+(?:[.,]\d+)*)\s*(million|thousand|m\b|k\b)?/gi;
 function wordValue(s: string): number | null {
-  const toks = s.toLowerCase().split(/[\s-]+/).filter((w) => w && w !== 'and');
-  if (!toks.some((w) => ONES.includes(w) || TENS.includes(w) || ['hundred', 'thousand', 'million'].includes(w))) return null;
+  const toks = s.toLowerCase().split(/[\s-]+/).filter((w) => w && w !== 'and').map((w) => (/^(hundreds|thousands|millions)$/.test(w) ? w.slice(0, -1) : w));
+  if (!toks.some((w) => ONES.includes(w) || TENS.includes(w) || ['hundred', 'thousand', 'million', 'score'].includes(w))) return null;
   let total = 0, cur = 0;
   for (const w of toks) {
     if (w === 'a' || w === 'an') cur = cur || 1;
@@ -81,6 +81,7 @@ function wordValue(s: string): number | null {
     else if (ONES.includes(w)) cur += ONES.indexOf(w);
     else if (TENS.includes(w)) cur += 10 * (TENS.indexOf(w) + 2);
     else if (w === 'hundred') cur = (cur || 1) * 100;
+    else if (w === 'score') cur = (cur || 1) * 20;
     else { total += (cur || 1) * (w === 'thousand' ? 1e3 : 1e6); cur = 0; }
   }
   const v = total + cur;
