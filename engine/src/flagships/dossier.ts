@@ -532,3 +532,60 @@ export function buildLives(a: Archive, exclude: Set<string>): Dossier[] {
   });
   return out;
 }
+
+const VOICES: Record<string, string[]> = {
+  famine: ['diary of a farmer’s wife in the hungry year', 'petition of villagers to the governor', 'song of the empty granary', 'prayer scratched on a potsherd'],
+  plague: ['letter of an apprentice to his mother', 'lullaby sung in the plague year', 'list of the dead kept by a gravedigger, with his notes', 'vow made by a widow at a shrine'],
+  sack: ['letter of a refugee to a cousin', 'song of the burned city sung by its survivors', 'testimony of a servant who hid in the cellar'],
+  migration: ['song of the long road', 'complaint of farmers about the newcomers', 'memories of a newcomer girl told in old age'],
+  debasement: ['market woman’s tally and her complaints', 'letter of a soldier about his wages in light coin', 'street song mocking the new coin'],
+  conquest: ['letter home of a conscript in the conquering army', 'lament of a village under the new masters', 'prayer of a captive'],
+  colonization: ['letter of a settler’s wife', 'song of the people of the coast about the ships', 'complaint of a fisherman about the colonists'],
+  revolution: ['diary of a seamstress during the revolution', 'letter of a student to his father', 'song of the barricades'],
+  eruption: ['diary of a shepherd in the ash years', 'prayer for the return of the sun'],
+  drought: ['letter of a herdsman from the dry pastures', 'rain charm and its story', 'diary of a well-keeper'],
+  war: ['letter home of a conscript', 'song of the mothers of soldiers', 'deserter’s confession'],
+};
+
+/** Fourth wave: "Voices from below", anonymous ordinary people living through great events (fl-701+). */
+export function buildVoices(a: Archive, exclude: Set<string>): Dossier[] {
+  const ctx = a.ctx;
+  const s = ctx.s;
+  const T = a.T;
+  const rng = new Rng(s.seed).fork('voices');
+  const simPersons = a.ctx.r.simPersons ?? s.persons.length;
+  const simEvents = a.ctx.r.simEvents ?? s.events.length;
+  const isSim = (ref: string) => !ref.startsWith('per:') || ctx.idNum(ref) < simPersons;
+  const quotas: [string, number, ((e: SimEvent) => boolean)?][] = [
+    ['famine', 22], ['plague', 18], ['sack', 22], ['migration', 10], ['debasement', 8], ['conquest', 18], ['colonization', 10],
+    ['revolution', 12], ['eruption', 6], ['drought', 8], ['war', 18, (e) => e.data.outcome !== 'dissolved'],
+  ];
+  const out: Dossier[] = [];
+  for (const [sub, n, f] of quotas) {
+    const evs = s.events.filter((e) => e.id < simEvents && e.sub === sub && T.pageRefs.has(`evt:${e.id}`) && !exclude.has(`evt:${e.id}`) && e.cell >= 0 && (!f || f(e)))
+      .sort((x, y) => y.sig - x.sig || x.id - y.id);
+    // spread across the five millennia
+    const picked: SimEvent[] = [];
+    for (const e of evs) {
+      if (picked.length >= n) break;
+      if (picked.some((p) => Math.abs(p.year - e.year) < 5000 / (n * 1.6))) continue;
+      picked.push(e);
+    }
+    for (const e of picked) {
+      const r = rng.fork(e.id);
+      const form = r.pick(VOICES[sub]);
+      const d0 = dossier(a, { kind: sub === 'conquest' ? 'war' : sub, e }, 700 + out.length, r, isSim);
+      if (!d0) continue;
+      // an anonymous ordinary author, placed where the event happened
+      const region = s.world.region[e.cell];
+      const place = s.settlementAt[e.cell] >= 0 ? `set:${s.settlementAt[e.cell]}` : `reg:${region}`;
+      const placeName = T.short.get(place) ?? '';
+      d0.form = form;
+      d0.author = { id: null, name: 'anonymous', role: `an ordinary person: the voice of the form ("${form}"), living in or near ${placeName}`, polity: d0.author?.polity ?? null, born: null, died: null, stance: 'an ordinary person who suffered or witnessed the event; knows little of high politics, a great deal about prices, weather, family and fear; may misname distant powers or blame the wrong people' };
+      d0.frontmatter = d0.frontmatter.replace(/^form: .*$/m, `form: ${form}`).replace(/^author: .*$/m, 'author: null');
+      d0.guidance = d0.guidance + '\n- This is a voice from below: write as the ordinary person the form implies (a conscript, a farmer’s wife, an apprentice, a market woman…). They are not named and do not know court secrets. Concrete daily life: food, prices (use the context’s currency and grain price), weather, kin, rumours. You may give the narrator and their family plain first names only if the form needs it, but do not link them and do not make them historical actors. 300–650 words.';
+      out.push(d0);
+    }
+  }
+  return out;
+}
