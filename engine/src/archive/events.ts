@@ -150,7 +150,14 @@ export function describeEvent(ctx: Ctx, T: Titles, e: SimEvent): { summary: stri
     case 'revolution': case 'reform':
       summary = `${e.sub === 'revolution' ? 'A revolution' : 'A reform'} in ${P('polity')} in ${yr(e.year)} turned the ${govWord(String(e.data.from))} into ${govArticle(String(e.data.to))}${first('leader') ? `, led by ${P('leader')}` : ''}${first('deposed') ? `; ${P('deposed')} was deposed` : ''}.`;
       break;
-    case 'founding': summary = `${P('polity')} was founded at ${P('capital')} in ${yr(e.year)}.`; break;
+    case 'founding': {
+      // the state is founded; its capital is usually an older town
+      const cap = first('capital');
+      const town = cap && cap.startsWith('set:') ? ctx.s.settlements[ctx.idNum(cap)] : null;
+      const age = town ? e.year - town.founded : 0;
+      summary = `${P('polity')} arose as a state at ${P('capital')} in ${yr(e.year)}${age >= 10 ? `, a town already some ${age >= 100 ? Math.round(age / 10) * 10 : age} years old` : ''}.`;
+      break;
+    }
     case 'successor-state': summary = `${P('polity')} arose at ${P('capital')} in ${yr(e.year)}${first('predecessor') ? `, a successor of ${P('predecessor')}` : ''}.`; break;
     case 'revolt': summary = `${P('leader')} led a revolt against ${P('against')} in ${yr(e.year)}, founding ${P('polity')}.`; break;
     case 'civil-war': summary = `${P('claimant')} claimed the throne of ${P('against')} in ${yr(e.year)}, splitting the realm.`; break;

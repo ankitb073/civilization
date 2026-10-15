@@ -363,7 +363,7 @@ export function eventTitle(ctx: Ctx, T: Titles, e: SimEvent): string {
     case 'conquest': return `Conquest of ${P('vanquished')}`;
     case 'suppression': return `Suppression of the ${P('vanquished')} Revolt`;
     case 'collapse': return `Collapse of the ${polShort(T, first('collapsed'))} State`;
-    case 'founding': return `Founding of ${polShort(T, first('polity'))}`;
+    case 'founding': return `Rise of ${polShort(T, first('polity'))}`;
     case 'successor-state': return `Rise of ${polShort(T, first('polity'))}`;
     case 'revolt': return `Revolt of ${polShort(T, first('polity'))}`;
     case 'civil-war': return `Secession of ${polShort(T, first('polity'))}`;
