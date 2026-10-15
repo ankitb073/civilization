@@ -7,6 +7,8 @@ import { route } from '../state.ts';
 import { ensureSearch, meta, searchIndex } from '../store.ts';
 
 const PAGE = 120;
+/** Sub-type chips shown before "more types" (the rest stay one tap away). */
+const SUBS = 16;
 
 export function BrowseView() {
   const p = route.value.params;
@@ -18,6 +20,7 @@ export function BrowseView() {
   const [sub, setSub] = useState<string>(p.get('sub') ?? '');
   const [flag, setFlag] = useState(p.get('flag') === '1');
   const [limit, setLimit] = useState(PAGE);
+  const [allSubs, setAllSubs] = useState(false);
   const idx = searchIndex.value;
   const m = meta.value;
   const flagSet = useMemo(() => new Set(m?.flagships ?? []), [m]);
@@ -116,13 +119,14 @@ export function BrowseView() {
       {kind !== 'all' && subFacets.length > 1 && (
         <div class="chips chips--sub" role="radiogroup" aria-label="Type">
           <button role="radio" aria-checked={!sub} class={`chip chip--sub${!sub ? ' is-on' : ''}`} onClick={() => setSub('')}>Any type</button>
-          {subFacets.slice(0, 24).map(([k, n]) => (
+          {subFacets.filter(([k], i) => allSubs || i < SUBS || k === sub).map(([k, n]) => (
             <button role="radio" aria-checked={sub === k} class={`chip chip--sub${sub === k ? ' is-on' : ''}`} onClick={() => setSub(sub === k ? '' : k)}>
-              {subLabel(k)} <span>{n.toLocaleString('en-US')}</span>
+              {subLabel(k, kind)} <span>{n.toLocaleString('en-US')}</span>
             </button>
           ))}
         </div>
       )}
+      {kind !== 'all' && subFacets.length > SUBS && <button class="linkish small chips__more" aria-expanded={allSubs} onClick={() => setAllSubs(!allSubs)}>{allSubs ? 'Fewer types' : `All ${subFacets.length} types`}</button>}
       <div class="hist" aria-hidden="true">
         {hist.map((h, i) => {
           const y0 = (i / hist.length) * 5000;
@@ -141,7 +145,7 @@ export function BrowseView() {
                 <a class="row" href={`#/p/${idx.ids[i]}`}>
                   <span class="row__y">{idx.t0[i]}</span>
                   <span class={`kdot k-${idx.kinds[i]}`} aria-hidden="true" />
-                  <span class="row__t">{flagSet.has(idx.ids[i]) && <span class="row__flag" title="Flagship source" aria-hidden="true">✦</span>}{idx.titles[i]}{idx.subs[i] && kind === 'all' || (idx.subs[i] && !sub) ? <span class="row__sub">{subLabel(idx.subs[i])}</span> : null}</span>
+                  <span class="row__t">{flagSet.has(idx.ids[i]) && <span class="row__flag" title="Flagship source" aria-hidden="true">✦</span>}{idx.titles[i]}{idx.subs[i] && kind === 'all' || (idx.subs[i] && !sub) ? <span class="row__sub">{subLabel(idx.subs[i], idx.kinds[i])}</span> : null}</span>
                   {idx.aliases[i] && <span class="row__a">{idx.aliases[i].split('|').slice(0, 3).join(' · ')}</span>}
                 </a>
               </li>

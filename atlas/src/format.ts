@@ -31,6 +31,15 @@ export function fmtBytes(b: number): string {
 export function cap(s: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
-export function subLabel(s: string): string {
-  return cap(s.replace(/[-_]/g, ' '));
+/** Display names for sub-types whose raw key reads badly ("muster", "periplus"). Keyed "kind:sub" where the
+ *  same key means different things in different kinds (a currency's "paper" vs an essay). */
+const SUB_LABEL: Record<string, string> = {
+  omen: 'Omen collection', periplus: 'Itinerary', tariff: 'Customs tariff', muster: 'Muster roll',
+  exercise: 'School exercise', 'artifact:excavation': 'Excavation report', manifest: 'Harbour register', record: 'Record of calamity',
+  market: 'Market report', debate: 'Assembly debate', yearbook: 'Statistical yearbook', 'artifact:paper': 'Essay',
+  'artifact:coin': 'Coin issue', 'currency:paper': 'Paper money', 'currency:fiat': 'Fiat money', 'currency:weight': 'Weight standard',
+  'city-state': 'City-state', 'one-party-state': 'One-party state', 'founding-city': 'City founding', 'climate:cold': 'Cold spell',
+};
+export function subLabel(s: string, kind?: string): string {
+  return SUB_LABEL[`${kind}:${s}`] ?? SUB_LABEL[s] ?? cap(s.replace(/[-_]/g, ' '));
 }

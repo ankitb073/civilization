@@ -5,10 +5,13 @@ import { ensureMeta, meta } from '../store.ts';
 import { mapHref } from '../state.ts';
 import { Featured } from './MapPanel.tsx';
 import { HistomapThumb } from './HistomapView.tsx';
+import { ensureCollections, historyBook, hrefOf, readerDownload } from '../book.ts';
 
 export function AboutView() {
   const m = meta.value;
-  useEffect(() => { ensureMeta().catch(() => {}); }, []);
+  useEffect(() => { ensureMeta().catch(() => {}); ensureCollections().catch(() => {}); }, []);
+  const hist = historyBook();
+  const epub = readerDownload(m);
   if (!m) return <div class="center-load"><div class="spinner" /> Loading…</div>;
   const base = import.meta.env.BASE_URL;
   const totalChecks = m.check.invariants.reduce((s, i) => s + i.checked, 0);
@@ -30,12 +33,35 @@ export function AboutView() {
           <a class="proof__a" href="#consistency" onClick={(e) => { e.preventDefault(); document.getElementById('consistency')?.scrollIntoView({ behavior: 'smooth' }); }}>See the report</a>
         </div>
         <div class="actions">
-          <a class="btn btn--accent" href="#/story">Read the story</a>
+          {hist && <a class="btn btn--accent" href="#/collections/history">Read the History</a>}
+          <a class={`btn${hist ? '' : ' btn--accent'}`} href="#/story">Read the story</a>
           <a class="btn" href={mapHref({ y: 0 })}>Start at year 0</a>
           <a class="btn" href="#/browse">Browse the archive</a>
           <a class="btn btn--ghost" href="https://github.com/ankitb073/civilization" target="_blank" rel="noopener">Source on GitHub</a>
         </div>
       </header>
+
+      {(hist || epub) && (
+        <section class="about__sect">
+          <h2 class="sect">Read it as a book</h2>
+          <div class="bookfeat">
+            {hist && (
+              <a class="bookfeat__c" href="#/collections/history">
+                <span class="bookfeat__k">The History · {hist.items.length} parts</span>
+                <span class="bookfeat__t">{hist.title}</span>
+                <span class="bookfeat__b">{hist.blurb}</span>
+              </a>
+            )}
+            {epub && (
+              <a class="bookfeat__c bookfeat__c--epub" href={hrefOf(epub)} download>
+                <span class="bookfeat__k">Download · EPUB · {fmtBytes(epub.bytes)}</span>
+                <span class="bookfeat__t">The Reader</span>
+                <span class="bookfeat__b">The History, the literary sources in date order, the Lives and the essays, for any e-reader. Every name links back to its page in the atlas.</span>
+              </a>
+            )}
+          </div>
+        </section>
+      )}
 
       <section class="about__sect">
         <h2 class="sect">What’s inside</h2>
@@ -69,6 +95,7 @@ export function AboutView() {
       <section class="about__sect">
         <h2 class="sect">More ways in</h2>
         <nav class="explore explore--wide" aria-label="Explore">
+          {hist && <a href="#/collections/history"><span>History</span>{hist.title}, in {hist.items.length} parts</a>}
           <a href="#/story"><span>Story</span>Five thousand years in seven chapters</a>
           <a href="#/collections"><span>Collections</span>Curated lists: queens, plagues, lost works, wars told twice</a>
           <a href="#/dynasties"><span>Dynasties</span>Family trees of the great ruling houses</a>

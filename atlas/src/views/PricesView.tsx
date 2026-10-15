@@ -234,6 +234,35 @@ export function PricesView() {
         )}
       </div>
 
+      <details class="a11ylist">
+        <summary>Prices by century, as a table</summary>
+        <div class="table-wrap">
+          <table class="report pricetable">
+            <caption class="sr-only">Median prices in grams of silver, smoothed as in the chart, and the general price level</caption>
+            <thead><tr><th>Year <span class="muted">AY</span></th>{SERIES.map((s) => <th class="r">{s.name}<br /><span class="muted">g/{s.unit}</span></th>)}<th class="r">Price<br /><span class="muted">level</span></th><th class="r">Mar&shy;kets</th></tr></thead>
+            <tbody>
+              {e.prices.filter((p) => p[0] % 100 === 0).map((p) => {
+                const v = at(p[0]);
+                return (
+                  <tr>
+                    <th scope="row">{p[0]}</th>
+                    {v.prices.map((x) => <td class="r num">{x != null ? x.toFixed(1) : '—'}</td>)}
+                    <td class="r num">{v.level != null ? `${v.level.toFixed(2)}×` : '—'}</td>
+                    <td class="r num">{p[4]}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <h3 class="sect">Events on the chart</h3>
+        <ul>
+          {LANES.map((lane) => evs.filter((x) => x.sub === lane.sub).map((x) => (
+            <li><a href={`#/p/${x.id}`}>{x.title}</a> <span class="muted small">{lane.label.replace(/s$/, '').toLowerCase()}, AY {x.year}</span></li>
+          )))}
+        </ul>
+      </details>
+
       <section class="prices__sect">
         <h2 class="sect">The most debased currencies</h2>
         <p class="muted small">Silver behind each unit of account, from its first issue to its last record. When rulers ran short, the coin got lighter; when paper took over, the backing could vanish entirely.</p>

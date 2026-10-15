@@ -11,6 +11,12 @@ import { HistomapThumb } from './HistomapView.tsx';
 import { CollectionStrip } from './CollectionsView.tsx';
 import { SurpriseButton } from '../components/Surprise.tsx';
 import { reducedMotion } from '../state.ts';
+import { lazy, Suspense } from 'preact/compat';
+import { ensureCollections } from '../book.ts';
+
+// the History and today's document appear only after the first map paint: keep them out of the main chunk
+const HistoryCard = lazy(() => import('../components/Reading.tsx').then((m) => ({ default: m.HistoryCard })));
+const TodayCard = lazy(() => import('../components/Reading.tsx').then((m) => ({ default: m.TodayCard })));
 
 export function MapPanel() {
   const sel = selection.value;
@@ -81,6 +87,8 @@ function Intro() {
     });
   }, [d, L, lv, Math.floor(y / 5)]);
   const total = top[0]?.total ?? 0;
+  const painted = firstPaint.value;
+  useEffect(() => { if (painted) ensureCollections().catch(() => {}); }, [painted]);
   return (
     <div class="intro">
       <div class="intro__peek">
@@ -88,6 +96,7 @@ function Intro() {
         <div class="intro__now"><strong>{fmtYear(y)}</strong> · {era?.name}</div>
       </div>
       <p class="intro__lede">{m?.subtitle ?? 'A 5,000-year archive of a civilization that never existed.'}</p>
+      {painted && <Suspense fallback={null}><HistoryCard /><TodayCard /></Suspense>}
       <ol class="hints">
         <li><span>1</span>Drag the timeline — borders, cities and events follow the year.</li>
         <li><span>2</span>Tap a territory, city or marker to see who held it.</li>
@@ -98,7 +107,7 @@ function Intro() {
         {!reducedMotion && <button class="introlink" onClick={startTour}><span class="introlink__k">Watch</span>All 5,000 years in nine seconds ▶</button>}
       </div>
       <Featured />
-      {firstPaint.value && <CollectionStrip ids={['queens', 'rival', 'lives']} />}
+      {painted && <CollectionStrip ids={['queens', 'rival', 'lives']} />}
       <div class="introdice"><SurpriseButton label="Surprise me: a random document" /></div>
       <section class="hmsect">
         <h2 class="sect">The Histomap</h2>

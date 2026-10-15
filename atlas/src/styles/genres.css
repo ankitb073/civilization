@@ -287,3 +287,559 @@
   font-size: 0.88em;
   color: var(--muted);
 }
+
+/* ------------------------------------------------------------ omen collection: a clay tablet, sign | outcome */
+.clay {
+  --c1: #dcc29c;
+  --c2: #c49f72;
+  --ci: #34230f;
+  --cm: #4a3420;
+  --cr: rgb(80 45 15 / 0.3);
+  --ch: rgb(255 244 222 / 0.4);
+  margin: 2px -4px 24px;
+  padding: 30px 30px 20px;
+  border-radius: 28px 22px 30px 24px / 34px 28px 26px 30px;
+  background: radial-gradient(130% 100% at 28% 12%, var(--c1), var(--c2));
+  color: var(--ci);
+  box-shadow: inset 0 2px 1px var(--ch), inset 0 -4px 8px rgb(60 30 10 / 0.22), 0 8px 20px rgb(60 35 15 / 0.18);
+  font-size: 18.5px;
+}
+:root[data-theme='dark'] .clay {
+  --c1: #5e4a35;
+  --c2: #46362a;
+  --ci: #f3e6cf;
+  --cm: #dccab0;
+  --cr: rgb(0 0 0 / 0.35);
+  --ch: rgb(255 230 190 / 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .clay {
+    --c1: #5e4a35;
+    --c2: #46362a;
+    --ci: #f3e6cf;
+    --cm: #dccab0;
+    --cr: rgb(0 0 0 / 0.35);
+    --ch: rgb(255 230 190 / 0.08);
+  }
+}
+.clay a.wl,
+.clay .lac {
+  color: inherit;
+}
+.clay > p:first-child {
+  text-align: center;
+  font-variant: small-caps;
+  letter-spacing: 0.03em;
+}
+.om-head,
+.clay li {
+  display: grid;
+  grid-template-columns: 2em minmax(0, 1.2fr) minmax(0, 1fr);
+  column-gap: 18px;
+}
+.om-head {
+  padding: 0 0 6px;
+  border-bottom: 2px solid var(--cr);
+  font: 600 10.5px/1.2 var(--font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cm);
+}
+.om-head span:first-child {
+  grid-column: 2;
+}
+.clay ol {
+  list-style: none;
+  counter-reset: om;
+  padding: 0;
+  margin: 0 0 1em;
+}
+.prose .clay li {
+  counter-increment: om;
+  margin: 0;
+  padding: 10px 0 9px;
+  border-bottom: 1px solid var(--cr);
+  box-shadow: 0 1px 0 var(--ch);
+  line-height: 1.45;
+}
+.clay li::before {
+  content: counter(om);
+  grid-row: span 2;
+  text-align: right;
+  color: var(--cm);
+  font-variant-numeric: lining-nums;
+}
+.om-if {
+  font-style: italic;
+}
+.om-lost {
+  grid-column: 2 / -1;
+}
+.om-who {
+  grid-column: 2 / -1;
+  margin-top: 4px;
+  font-size: 0.8em;
+  color: var(--cm);
+}
+.clay ol + p {
+  text-align: center;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+/* ------------------------------------------------------------ itinerary: stages on a route line (road-book / portolan) */
+.route {
+  position: relative;
+  margin-bottom: 20px;
+}
+.prose .route .stage,
+.route > p:not(.stage):has(+ .stage) {
+  position: relative;
+  margin: 0 0 0 10px;
+  padding: 0 0 1.1em 26px;
+  border-left: 3px double var(--faint);
+}
+.route .stage::before,
+.route > p:not(.stage):has(+ .stage)::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 0.3em;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+}
+.route > p:not(.stage):has(+ .stage)::before,
+.route .stage--end::before {
+  background: var(--accent);
+  border-radius: 2px;
+}
+.prose .route .stage--end {
+  border-left-color: transparent;
+}
+.route .stage > strong {
+  font-size: 1.08em;
+}
+.route .leg {
+  display: block;
+  margin: 1px 0 3px;
+  font: 600 11.5px/1.5 var(--font-ui);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.route .stage--end + p {
+  margin-top: 0.6em;
+  font-style: italic;
+}
+.doc--sea .route {
+  isolation: isolate;
+}
+.doc--sea .route::before {
+  content: '';
+  position: absolute;
+  inset: -26px 0 0;
+  z-index: -1;
+  background: repeating-conic-gradient(from 3deg at 96% 0, transparent 0 11deg, var(--rule) 11deg 11.3deg);
+  -webkit-mask-image: radial-gradient(circle at 96% 0, #000, transparent 360px);
+  mask-image: radial-gradient(circle at 96% 0, #000, transparent 360px);
+}
+.prose .doc--sea .route .stage,
+.doc--sea .route > p:not(.stage):has(+ .stage) {
+  border-left: 2px dashed var(--faint);
+}
+.doc--sea .route::after {
+  content: '✦';
+  position: absolute;
+  right: 4%;
+  top: -26px;
+  translate: 50% -50%;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--accent);
+}
+
+/* ------------------------------------------------------------ customs tariff: a posted schedule of dues */
+.posted {
+  margin: 2px 0 24px;
+  padding: 28px 28px 16px;
+  border: 4px double var(--ink-2);
+  background:
+    radial-gradient(circle at 12px 12px, var(--faint) 0 3px, transparent 3.5px),
+    radial-gradient(circle at calc(100% - 12px) 12px, var(--faint) 0 3px, transparent 3.5px),
+    radial-gradient(circle at 12px calc(100% - 12px), var(--faint) 0 3px, transparent 3.5px),
+    radial-gradient(circle at calc(100% - 12px) calc(100% - 12px), var(--faint) 0 3px, transparent 3.5px),
+    var(--surface-2);
+}
+.posted > p:first-child {
+  text-align: center;
+  font-variant: small-caps;
+  letter-spacing: 0.02em;
+}
+.posted > p:nth-child(2) {
+  text-align: center;
+  font: 600 11.5px/1.5 var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.posted table {
+  font: 16px/1.35 var(--font-display);
+}
+.posted th {
+  font: 600 10.5px/1.3 var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 3px double var(--ink-2);
+}
+.posted td {
+  border-bottom: 1px dotted var(--faint);
+}
+.posted td:first-child {
+  font-weight: 600;
+}
+.posted td:nth-child(2),
+.posted td:nth-child(5) {
+  color: var(--ink-2);
+  font-style: italic;
+}
+.posted td:nth-child(4) {
+  font-weight: 600;
+}
+.posted td[data-free] {
+  color: var(--ok);
+}
+.posted ol {
+  font-size: 0.9em;
+}
+.posted ol + p {
+  text-align: right;
+  font-style: italic;
+}
+@media (max-width: 599px) {
+  .posted {
+    padding: 22px 14px 10px;
+  }
+  .posted table,
+  .posted tbody {
+    display: block;
+  }
+  .posted thead {
+    display: none;
+  }
+  .posted tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    column-gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px dotted var(--faint);
+  }
+  .posted td {
+    padding: 0;
+    border: none;
+  }
+  .posted td:nth-child(5) {
+    grid-column: 1 / -1;
+    font-size: 0.88em;
+  }
+}
+
+/* ------------------------------------------------------------ books: reading width, chapter navigation, contents */
+.reader--book {
+  grid-template-columns: minmax(0, 700px);
+  justify-content: center;
+}
+.reader--book .reader__main {
+  max-width: none;
+}
+.reader--book .reader__aside {
+  position: static;
+}
+.reader--book .doc--report {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+.reader--book .doc--report .doc__label {
+  display: none;
+}
+.reader--book .prose {
+  font-size: 20px;
+  line-height: 1.68;
+}
+.prose h2[id] {
+  scroll-margin-top: calc(var(--topbar-h) + 20px);
+}
+.nowrap {
+  white-space: nowrap;
+}
+.booknav {
+  margin: 0 0 20px;
+}
+.booknav--end {
+  margin: 30px 0 34px;
+}
+.booknav__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.booknav__prev,
+.booknav__next,
+.booknav__on {
+  display: grid;
+  min-width: 0;
+  color: var(--ink);
+  text-decoration: none;
+}
+.booknav__next {
+  text-align: right;
+}
+.booknav__dir,
+.bookcard__k,
+.bookfeat__k {
+  font: 600 10.5px/1.4 var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.booknav__t {
+  font: 16px/1.3 var(--font-display);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.booknav__here {
+  max-width: 12em;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.booknav__on,
+.booknav__fin {
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.booknav__on:hover,
+.bookfeat__c:hover {
+  border-color: var(--accent);
+}
+.booknav__title {
+  font: 500 24px/1.2 var(--font-display);
+}
+.booknav__fin {
+  text-align: center;
+}
+.booknav__fin p {
+  margin: 0 0 12px;
+  font: italic 20px/1.3 var(--font-display);
+}
+.booknav__fin .btn,
+.collections__head .btn {
+  display: inline-block;
+  white-space: normal;
+  height: auto;
+  min-height: 36px;
+  padding: 8px 14px;
+  line-height: 1.4;
+  text-align: center;
+}
+.toc {
+  margin: 0 0 24px;
+  padding: 10px 16px 8px;
+  border-left: 2px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  background: var(--surface);
+}
+.toc summary {
+  cursor: pointer;
+  font: 600 11px/1.8 var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.toc ol {
+  margin: 6px 0 4px;
+  padding-left: 1.4em;
+  font: 17px/1.35 var(--font-display);
+}
+.toc li {
+  margin: 4px 0;
+}
+.toc .linkish {
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------ landing: the History, today in the archive */
+.bookcard,
+.today {
+  display: grid;
+  gap: 4px;
+  margin: 14px 0 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.bookcard {
+  background: linear-gradient(135deg, var(--surface), var(--surface-2));
+  box-shadow: var(--shadow);
+}
+.bookcard__t,
+.today__t {
+  font: 500 21px/1.2 var(--font-display);
+  color: var(--ink);
+  text-decoration: none;
+}
+.bookcard__go {
+  display: grid;
+  gap: 1px;
+  margin-top: 6px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  text-decoration: none;
+  font: 16.5px/1.25 var(--font-display);
+}
+.bookcard__go span {
+  font: 600 10.5px/1.4 var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.bookcard__bar {
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--rule-2);
+  overflow: hidden;
+}
+.bookcard__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.today .sect {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 4px;
+}
+.today__day {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.today__d {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.today__x {
+  margin: 4px 0 8px;
+  font: italic 16px/1.45 var(--font-display);
+  color: var(--ink-2);
+}
+.today__a {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.today__wait {
+  min-height: 92px;
+}
+
+/* ------------------------------------------------------------ about, story, collections, browse, prices */
+.bookfeat {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 12px;
+}
+.bookfeat__c {
+  display: grid;
+  gap: 5px;
+  align-content: start;
+  padding: 18px 20px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+.bookfeat__t {
+  font: 500 26px/1.1 var(--font-display);
+}
+.bookfeat__b {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.story__book {
+  display: inline-block;
+  margin: 0 0 12px;
+  font: 17px/1.4 var(--font-display);
+}
+.colindex--book .colindex__row {
+  grid-template-columns: 34px 112px minmax(0, 1fr) auto;
+}
+.colindex__read {
+  color: var(--ok);
+  font-weight: 600;
+}
+.chips__more {
+  margin: 0 0 10px;
+}
+.pricetable th,
+.pricetable td {
+  padding: 6px 8px;
+}
+.pricetable th[scope='row'] {
+  font: 500 13.5px var(--font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+}
+@media (max-width: 767px) {
+  .clay {
+    margin: 0 -6px 20px;
+    padding: 22px 16px 14px;
+    font-size: 17px;
+  }
+  .om-head {
+    display: none;
+  }
+  .clay li {
+    grid-template-columns: 1.6em minmax(0, 1fr);
+    column-gap: 10px;
+  }
+  .om-then,
+  .om-who {
+    grid-column: 2;
+  }
+  .om-then::before {
+    content: '→ ';
+  }
+  .reader--book .prose {
+    font-size: 19px;
+  }
+  .booknav__title {
+    font-size: 21px;
+  }
+  .colindex--book .colindex__row {
+    grid-template-columns: 26px minmax(0, 1fr);
+  }
+}

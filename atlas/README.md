@@ -24,8 +24,18 @@ npm run shoot -- --only=og --year=2750   # writes public/og.png social card (nee
 | Compare | `#/compare/<eventId>` | Rival accounts set against the ground truth. |
 | Browse | `#/browse?kind=&from=&to=&q=` | Filterable lists. |
 | About | `#/about` | About the project. |
+| Collections | `#/collections[/<id>]` | Curated lists. `#/collections/history` is the History's contents page. |
+| Today | `#/today[/YYYY-MM-DD]` | Opens the document of the day: a flagship picked by hashing the viewer's local date, the same for everyone. |
 
 `clean=1` hides the UI chrome. The social card uses it.
+
+## Books and reading
+
+- Pages in an ordered collection (`history`, then `lives`, then `voices`, in `collections.json` order) get previous/next navigation at the top and bottom (`src/book.ts`, `BookNav` in `PageView.tsx`).
+- Long documents (a book chapter, or 1,500+ words) read in a single 700 px column, with a reading-time estimate (words / 230) and a contents list built from their `##` headings.
+- Reading progress through the History is kept in this browser only (`localStorage` key `pal-reading`). The landing panel shows "Continue reading" from it.
+- The EPUB ("The Reader", the `.epub` entry in `meta.downloads`) is offered on About, on the History's contents page and after its last chapter.
+- Genre layouts that Markdown alone can't express (omen tablets, itineraries, customs tariffs) reshape the rendered HTML in `src/genres.ts`. Their styles live in `src/styles/genres.css`.
 
 ## Data preparation
 

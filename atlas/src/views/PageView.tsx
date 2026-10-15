@@ -1,26 +1,30 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { PageJson } from '../../../engine/src/export/contract.ts';
 import { Eyebrow, Html, usePage } from '../components/PageCard.tsx';
 import { Sparkline } from '../components/Sparkline.tsx';
-import { fmtSpan, fmtYear, subLabel } from '../format.ts';
+import { fmtBytes, fmtSpan, fmtYear, subLabel } from '../format.ts';
 import { KIND_LABEL, KINDS, kindFromId } from '../kinds.ts';
 import { inline, render } from '../md.ts';
-import { isMobile, mapHref, year } from '../state.ts';
+import { isMobile, mapHref, reducedMotion, year } from '../state.ts';
 import { PersonHouse, PolityDynasties } from './DynastyView.tsx';
 import { CiteButton } from '../components/Cite.tsx';
 import { Territory } from '../components/Territory.tsx';
-import { titleOf } from '../store.ts';
+import { meta, titleOf } from '../store.ts';
+import { GENRE_HTML, sections, wordCount } from '../genres.ts';
+import { chapterCount, ensureCollections, hrefOf, markDone, markOpened, partName, placeOf, readerDownload, type Place } from '../book.ts';
 
 const DOC_LABEL: Record<string, string> = {
   verse: 'Verse, in translation', diary: 'Entries, in translation', glossary: 'Word list', muster: 'Muster roll',
   will: 'Testament, in translation', exercise: 'Exercise, with the teacher’s corrections', graffito: 'Scratched on the stone',
   almanac: 'The year’s calendar', lawsuit: 'Case record, in translation', manifest: 'Harbour register',
+  omen: 'Tablet, in translation', periplus: 'The route, in translation', tariff: 'Schedule of dues, in translation',
 };
 
 const MAP_SELECTABLE = new Set(['polity', 'settlement', 'event', 'culture', 'movement']);
 
 export function docStyle(sub: string): string {
   const s = sub.toLowerCase();
+  if (s === 'omen' || s === 'periplus' || s === 'tariff') return s;
   if (/glossary|word-?list|lexicon/.test(s)) return 'glossary';
   if (/muster/.test(s)) return 'muster';
   if (/\bwill\b|testament/.test(s)) return 'will';
@@ -76,12 +80,20 @@ function Page({ page }: { page: PageJson }) {
   const label = labeler(page);
   const a = page.artifact;
   const style = page.kind === 'artifact' ? docStyle(page.sub) : '';
-  const bodyHtml = useMemo(() => {
+  const { html: bodyHtml, heads } = useMemo(() => {
     let md = page.body;
     // the structured language panel below replaces the plain sound-change list
     if (page.language) md = md.replace(/^##\s+(Sound changes|Daughter languages)\s*\n[\s\S]*?(?=^##\s|(?![\s\S]))/gm, '');
-    return render(md, label, { breaks: style === 'verse' });
+    const html = render(md, label, { breaks: style === 'verse' });
+    return sections(GENRE_HTML[style]?.(html) ?? html);
   }, [page]);
+  const words = useMemo(() => (a ? wordCount(page.body) : 0), [page]);
+  // flagships may be chapters of a book (an ordered collection): fetch the collections to find out
+  useEffect(() => { if (a?.flagship) ensureCollections().catch(() => {}); }, [page.id]);
+  const place = a?.flagship ? placeOf(page.id) : null;
+  useEffect(() => { if (place) markOpened(place); }, [place?.c, place?.i]);
+  const book = !!place || words >= 1500;
+  const hist = place?.c.id === 'history';
   const y = year.value;
   const mapYear = y >= page.t0 && y <= page.t1 ? y : page.t0;
   const mapLink = page.cell >= 0 || MAP_SELECTABLE.has(page.kind)
@@ -91,15 +103,16 @@ function Page({ page }: { page: PageJson }) {
   const mobile = isMobile.value;
   const hasAside = (!mobile && page.infobox.length > 0) || (page.series?.length ?? 0) > 0 || (page.names?.length ?? 0) > 0 || page.kind === 'polity';
   return (
-    <article class={`reader reader--${page.kind}${hasAside ? '' : ' reader--single'}`}>
+    <article class={`reader reader--${page.kind}${hasAside ? '' : ' reader--single'}${book ? ' reader--book' : ''}`}>
       <div class="reader__main">
+        {place && <BookNav place={place} />}
         <header class="reader__head">
-          <Eyebrow kind={page.kind} sub={page.sub} />
+          <Eyebrow kind={page.kind} sub={page.sub} label={hist ? <><a href="#/collections/history">{place!.c.title}</a> · {partName(place!.c, place!.i)}</> : undefined} />
           <h1 class="reader__title">{page.title}</h1>
           <div class="reader__meta">
             <span class="reader__span">{page.kind === 'artifact' && a
-              ? <>{a.date ? <><Html tag="span" class="reader__local" html={inline(a.date, label)} /> · </> : null}<YearLink y={page.t0} /></>
-              : <YearSpan t0={page.t0} t1={page.t1} />}</span>
+              ? <>{a.date && a.date !== `AY ${page.t0}` ? <><Html tag="span" class="reader__local" html={inline(a.date, label)} /> · </> : null}<YearLink y={page.t0} /></>
+              : <YearSpan t0={page.t0} t1={page.t1} />}{words >= 600 && <> · <span class="nowrap">{Math.max(1, Math.round(words / 230))} min read</span></>}</span>
             {a?.flagship && (
               <a class="badge badge--flag" href="#/browse?kind=artifact&flag=1" title="A flagship source: written in full from the archive’s dossier and checked against the record like every other document">
                 <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M8 1.5l1.9 4.1 4.5.5-3.4 3 1 4.4L8 11.3 4 13.5l1-4.4-3.4-3 4.5-.5z" fill="currentColor" /></svg>
@@ -107,7 +120,7 @@ function Page({ page }: { page: PageJson }) {
               </a>
             )}
           </div>
-          {page.summary && <Html tag="p" class="reader__summary" html={inline(page.summary, label)} />}
+          {page.summary && !hist && <Html tag="p" class="reader__summary" html={inline(page.summary, label)} />}
           <div class="actions">
             {mapLink && <a class="btn" href={mapLink}>
               <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
@@ -122,19 +135,25 @@ function Page({ page }: { page: PageJson }) {
           </div>
         </header>
 
-        {mobile && page.infobox.length > 0 && <Infobox page={page} label={label} inline />}
+        {mobile && !book && page.infobox.length > 0 && <Infobox page={page} label={label} inline />}
 
         {a && page.infobox.length === 0 && <CatalogPlate page={page} label={label} />}
 
         {a?.interlinear && <Interlinear it={a.interlinear} />}
 
+        {book && heads.length >= 3 && <Contents heads={heads} />}
+
         {bodyHtml.trim() && (
-          <section class={`doc${style ? ` doc--${style}` : ''}`} aria-label={page.kind === 'artifact' ? 'Text' : 'Article'}>
+          <section class={`doc${style ? ` doc--${style}` : ''}${style === 'periplus' && /^(Periplus|Sailing)/.test(page.title) ? ' doc--sea' : ''}`} aria-label={page.kind === 'artifact' ? 'Text' : 'Article'}>
             {page.kind === 'artifact' && a?.interlinear && <div class="doc__label">Commentary</div>}
             {page.kind === 'artifact' && !a?.interlinear && <div class="doc__label">{DOC_LABEL[style] ?? (style === 'stone' ? 'Text' : 'Translation')}</div>}
             <Html class="doc__body prose" html={bodyHtml} />
           </section>
         )}
+
+        {place && <BookNav place={place} end />}
+
+        {mobile && book && page.infobox.length > 0 && <Infobox page={page} label={label} inline />}
 
         {a?.ledger && <Ledger ledger={a.ledger} label={label} />}
 
@@ -195,16 +214,74 @@ function YearSpan({ t0, t1 }: { t0: number; t1: number }) {
   return <><a class="ylink" href={`#/year/${t0}`}>{t0}</a>–<a class="ylink" href={`#/year/${t1}`}>{t1}</a> AY</>;
 }
 
-function ShareButton({ title }: { title: string }) {
+export function ShareButton({ title, hash }: { title: string; hash?: string }) {
   const [done, setDone] = useState(false);
   const share = async () => {
-    const url = location.href;
+    const url = hash ? location.href.replace(/#.*$/, '') + hash : location.href;
     try {
       if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ title, url });
       else { await navigator.clipboard.writeText(url); setDone(true); setTimeout(() => setDone(false), 1600); }
     } catch { /* cancelled */ }
   };
   return <button class="btn btn--ghost" onClick={share}>{done ? 'Link copied' : 'Share'}</button>;
+}
+
+/** "‹ previous · Chapter N of M · next ›" for a page in an ordered collection; at the end, the next chapter
+ *  as a call to read on (and, after the History's last chapter, the EPUB). */
+function BookNav({ place: { c, i }, end = false }: { place: Place; end?: boolean }) {
+  const hist = c.id === 'history';
+  const prev = c.items[i - 1], next = c.items[i + 1];
+  const name = (j: number) => (hist ? partName(c, j) : c.items[j].title);
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    // reaching the end of a chapter marks it read
+    if (!end || !hist || !ref.current) return;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) markDone(c.items[i].id); });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [c, i, end]);
+  const part = partName(c, i);
+  const here = hist ? (part.startsWith('Chapter') ? `${part} of ${chapterCount(c)}` : part) : `${c.title}, ${part}`;
+  const epub = end && hist && !next ? readerDownload(meta.value) : undefined;
+  return (
+    <nav ref={ref} class={`booknav${end ? ' booknav--end' : ''}`} aria-label={`${c.title}: ${end ? 'read on' : 'chapters'}`}>
+      {end && next && (
+        <a class="booknav__on" href={`#/p/${next.id}`}>
+          <span class="booknav__dir">Next{hist ? ` · ${partName(c, i + 1)}` : ''}</span>
+          <span class="booknav__title">{next.title} →</span>
+        </a>
+      )}
+      {end && !next && (
+        <div class="booknav__fin">
+          <p>{hist ? `The end of ${c.title}.` : `The last of ${c.items.length} in ${c.title}.`}</p>
+          {epub && <a class="btn btn--accent" href={hrefOf(epub)} download>Take the whole book with you <span class="nowrap">· EPUB, {fmtBytes(epub.bytes)}</span></a>}
+        </div>
+      )}
+      <div class="booknav__row">
+        {prev ? <a class="booknav__prev" href={`#/p/${prev.id}`} rel="prev"><span class="booknav__dir">‹ Previous</span><span class="booknav__t">{name(i - 1)}</span></a> : <span />}
+        <a class="booknav__here" href={`#/collections/${c.id}`} aria-label={`${here}: contents`}>{hist ? here : <>{c.title}<br /><span class="nowrap">{part}</span></>}</a>
+        {next ? <a class="booknav__next" href={`#/p/${next.id}`} rel="next"><span class="booknav__dir">Next ›</span><span class="booknav__t">{name(i + 1)}</span></a> : <span />}
+      </div>
+    </nav>
+  );
+}
+
+/** A small in-page table of contents from the document's ## headings. */
+function Contents({ heads }: { heads: string[] }) {
+  const go = (k: number) => {
+    const el = document.getElementById(`sec-${k + 1}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+    el.focus({ preventScroll: true });
+  };
+  return (
+    <nav class="toc" aria-label="Contents">
+      <details open={!isMobile.peek()}>
+        <summary>Contents <span class="muted">· {heads.length} sections</span></summary>
+        <ol>{heads.map((h, k) => <li><button class="linkish" onClick={() => go(k)}>{h}</button></li>)}</ol>
+      </details>
+    </nav>
+  );
 }
 
 function CatalogPlate({ page, label }: { page: PageJson; label: (id: string) => string | undefined }) {

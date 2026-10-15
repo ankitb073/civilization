@@ -44,9 +44,22 @@ const ids = {
   diary: firstOf('artifact', /^diary$/),
   flagship: (meta.flagships ?? []).find((id) => !/^(poem|diary)$/.test(search.find((e) => e[0] === id)?.[5] ?? '')) ?? meta.flagships?.[0],
 };
-console.log('pages:', JSON.stringify(ids));
+// the History as a book (fallback: Lives, the other ordered collection, until three chapters exist)
+let book: { id: string; items: { id: string }[] } | undefined;
+try {
+  const cols = (JSON.parse(readFileSync(join(DATA, 'collections.json'), 'utf8')).collections as { id: string; items: { id: string }[] }[]);
+  book = cols.find((c) => c.id === 'history') ?? cols.find((c) => c.id === 'lives');
+} catch { /* older export */ }
+const chapter = book?.items[Math.min(1, book.items.length - 1)]?.id;
+const lastChapter = book?.items.at(-1)?.id;
+// a reader who has finished the first two parts and opened the third
+const reading = book && book.items.length >= 3 && book.id === 'history'
+  ? `localStorage.setItem('pal-reading', ${JSON.stringify(JSON.stringify({ id: book.items[2].id, part: 'Chapter 2', title: '', done: [book.items[0].id, book.items[1].id] }))});`
+  : '';
+const periplusOf = (re: RegExp) => search.find((e) => e[2] === 'artifact' && e[5] === 'periplus' && re.test(e[1]))?.[0];
+console.log('pages:', JSON.stringify({ ...ids, chapter, lastChapter }));
 
-const views: { name: string; hash: string; dark?: boolean; wait?: number; full?: boolean; reduced?: boolean; click?: string }[] = [
+const views: { name: string; hash: string; dark?: boolean; wait?: number; full?: boolean; reduced?: boolean; click?: string; phoneClicks?: string[]; scroll?: string; init?: string }[] = [
   ...[300, 1500, 3200, 4600, 4990].map((y) => ({ name: `map-${y}`, hash: `#/map?y=${y}&l=political` })),
   { name: 'map-culture', hash: `#/map?y=2500&l=culture`, wait: 1500 },
   { name: 'map-religion', hash: `#/map?y=3800&l=religion`, dark: true, wait: 1500 },
@@ -84,6 +97,18 @@ const views: { name: string; hash: string; dark?: boolean; wait?: number; full?:
   { name: 'collection-queens', hash: `#/collections/queens`, wait: 1200 },
   { name: 'dynasties', hash: `#/dynasties`, wait: 1500 },
   ...(dyn ? [{ name: 'dynasty', hash: `#/dynasty/${dyn.id}`, wait: 1500 }, { name: 'polity-dyn', hash: `#/p/${dyn.polity}`, wait: 1500 }] : []),
+  ...(chapter ? [
+    { name: 'history-chapter', hash: `#/p/${chapter}`, wait: 1500 },
+    { name: 'history-chapter', hash: `#/p/${chapter}`, wait: 1500, dark: true, scroll: '.booknav--end' },
+    { name: 'history-end', hash: `#/p/${lastChapter}`, wait: 1500, scroll: '.booknav--end', init: reading },
+    { name: 'history-contents', hash: `#/collections/${book!.id}`, wait: 1200, init: reading },
+  ] : []),
+  { name: 'landing', hash: `#/map?y=2600&l=political`, wait: 2600, init: reading, phoneClicks: ['.sheet__grip', '.sheet__grip'] },
+  { name: 'landing', hash: `#/map?y=2600&l=political`, wait: 2600, init: reading, dark: true, phoneClicks: ['.sheet__grip', '.sheet__grip'] },
+  ...[['omen', firstOf('artifact', /^omen$/)], ['tariff', firstOf('artifact', /^tariff$/)], ['periplus-sea', periplusOf(/^(Periplus|Sailing)/)], ['periplus-land', periplusOf(/^(Itinerary|Route)/)]]
+    .flatMap(([name, id]) => (id ? [{ name: `genre-${name}`, hash: `#/p/${id}`, wait: 900, scroll: '.doc' }, { name: `genre-${name}`, hash: `#/p/${id}`, wait: 900, dark: true, scroll: '.doc' }] : [])),
+  { name: 'browse-omen', hash: `#/browse?kind=artifact&sub=omen`, wait: 1500 },
+  { name: 'prices-table', hash: `#/prices`, wait: 1800, click: '.a11ylist summary', scroll: '.a11ylist' },
   ...['muster', 'will', 'exercise', 'graffito', 'lawsuit', 'almanac', 'glossary', 'manifest'].flatMap((sub) => {
     const id = firstOf('artifact', new RegExp(`^${sub}$`));
     return id ? [{ name: `genre-${sub}`, hash: `#/p/${id}`, wait: 900 }] : [];
@@ -115,10 +140,13 @@ try {
       page.on('console', (m) => { if (m.type() === 'error') { if (!m.text().startsWith('Failed to load resource')) errors.push(`[${vp.tag} ${v.name}] ${m.text()}`); }; });
       page.on('pageerror', (e) => errors.push(`[${vp.tag} ${v.name}] PAGEERROR ${e.message}`));
       page.on('response', (r) => { if (r.status() >= 400) errors.push(`[${vp.tag} ${v.name}] HTTP ${r.status()} ${r.url().replace(BASE, '')}`); });
+      if (v.init) await page.addInitScript(v.init);
       const t0 = Date.now();
       await page.goto(BASE + v.hash, { waitUntil: 'networkidle' });
       await page.waitForTimeout(v.wait ?? 700);
       if (v.click) { await page.locator(v.click).first().click(); await page.waitForTimeout(300); }
+      if (vp.mobile) for (const c of v.phoneClicks ?? []) { await page.locator(c).first().click(); await page.waitForTimeout(400); }
+      if (v.scroll) { await page.locator(v.scroll).first().scrollIntoViewIfNeeded(); await page.waitForTimeout(400); }
       const ms = Date.now() - t0;
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       const file = `${v.name}-${vp.tag}${v.dark ? '-dark' : ''}.png`;

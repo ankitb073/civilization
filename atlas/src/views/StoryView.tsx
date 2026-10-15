@@ -6,6 +6,7 @@ import { isMobile, mapHref, reducedMotion, theme } from '../state.ts';
 import { ensureMapData, ensureMeta, eraAt, layersVersion, mapData, meta, titleOf } from '../store.ts';
 import { MapRenderer } from './mapRenderer.ts';
 import { fmtYear } from '../format.ts';
+import { ensureCollections, historyBook } from '../book.ts';
 
 /** Scroll a stop into the reading zone (below the sticky map on phones). */
 function scrollToStop(key: string, smooth: boolean) {
@@ -43,6 +44,7 @@ export function StoryView() {
     loadStory().then(setStory).catch(() => {});
     ensureMapData().catch(() => {});
     ensureMeta().catch(() => {});
+    ensureCollections().catch(() => {});
     document.title = 'The story of five thousand years — Palimpsest';
   }, []);
 
@@ -123,6 +125,7 @@ export function StoryView() {
   }, [story, mobile]);
 
   const activeStop = stops.get(active);
+  const hist = historyBook();
   const era = eraAt(mapYear);
   return (
     <div class="story">
@@ -142,6 +145,7 @@ export function StoryView() {
           <div class="eyebrow">The story</div>
           <h1 class="h-page story__title">Five thousand years of {m?.worldName ?? 'a world'}</h1>
           <p class="story__lede">Seven ages, told through the moments that shaped them — and the documents that remember them. Scroll; the map follows.</p>
+          {hist && <a class="story__book" href="#/collections/history">Want the long version? Read <em>{hist.title}</em>, in {hist.items.length} parts →</a>}
           {story && (
             <nav class="story__toc" aria-label="Chapters">
               {story.chapters.map((c, ci) => (
@@ -190,7 +194,7 @@ export function StoryView() {
         {story && (
           <footer class="story__end">
             <p>That is the story the archive tells. There are {m ? (m.counts.artifact ?? 0).toLocaleString('en-US') : 'thousands of'} documents behind it.</p>
-            <div class="actions"><a class="btn btn--accent" href="#/browse?kind=artifact&flag=1">Read the flagship sources</a><a class="btn" href={mapHref({ y: 2500 })}>Explore the atlas</a></div>
+            <div class="actions">{hist && <a class="btn btn--accent" href="#/collections/history">Read {hist.title}</a>}<a class={`btn${hist ? '' : ' btn--accent'}`} href="#/browse?kind=artifact&flag=1">Read the flagship sources</a><a class="btn" href={mapHref({ y: 2500 })}>Explore the atlas</a></div>
           </footer>
         )}
       </div>

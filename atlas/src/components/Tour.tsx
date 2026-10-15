@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { freshLanding, playing, reducedMotion, setYear, yearEnd } from '../state.ts';
 import { eraAt, meta } from '../store.ts';
+import { continueAt, ensureCollections, historyBook, progress } from '../book.ts';
 
 /** A short, skippable flight through all five thousand years on first landing. */
 export const touring = signal(false);
@@ -106,7 +107,9 @@ export function Explainer({ docs, warId, world }: { docs: number; warId?: string
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [explaining.value]);
+  useEffect(() => { if (explaining.value) ensureCollections().catch(() => {}); }, [explaining.value]);
   if (!explaining.value) return null;
+  const hist = historyBook();
   return (
     <div class="explainer" role="dialog" aria-modal="false" aria-labelledby="explainer-t" tabIndex={-1} ref={ref}>
       <button class="btn-icon btn-icon--sm explainer__x" aria-label="Close" onClick={dismissExplainer}>
@@ -118,7 +121,9 @@ export function Explainer({ docs, warId, world }: { docs: number; warId?: string
         {docs.toLocaleString('en-US')} documents, every one checked against what really happened.
       </p>
       <div class="explainer__ways">
-        <a class="explainer__w" href="#/story" onClick={dismissExplainer}><span>Read</span>The story, in seven ages</a>
+        {hist
+          ? <a class="explainer__w" href={`#/p/${continueAt(hist, progress.peek())?.id ?? hist.items[0].id}`} onClick={dismissExplainer}><span>Read</span>The History of {world}</a>
+          : <a class="explainer__w" href="#/story" onClick={dismissExplainer}><span>Read</span>The story, in seven ages</a>}
         {warId && <a class="explainer__w" href={`#/compare/${warId}`} onClick={dismissExplainer}><span>Compare</span>A war told twice</a>}
         <button class="explainer__w" onClick={() => { dismissExplainer(); void import('../extras.ts').then((m) => m.surprise()); }}><span>Open</span>A document at random</button>
       </div>

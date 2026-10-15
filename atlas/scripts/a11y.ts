@@ -13,11 +13,21 @@ const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const PORT = 4185;
 const server = await serveDist(join(ROOT, 'dist'), PORT);
 const meta = JSON.parse(readFileSync(join(ROOT, 'dist', 'data', 'meta.json'), 'utf8'));
+// the book (History, else Lives) and the newest genres
+const search = (JSON.parse(readFileSync(join(ROOT, 'dist', 'data', 'search.json'), 'utf8')).entries as string[][]);
+const genre = (sub: string) => search.find((e) => e[2] === 'artifact' && e[5] === sub)?.[0];
+let book: { id: string; items: { id: string }[] } | undefined;
+try { const cols = JSON.parse(readFileSync(join(ROOT, 'dist', 'data', 'collections.json'), 'utf8')).collections; book = cols.find((c: { id: string }) => c.id === 'history') ?? cols.find((c: { id: string }) => c.id === 'lives'); } catch { /* older export */ }
+const extra = [
+  ...(book ? [['book', `#/collections/${book.id}`], ['chapter', `#/p/${book.items[Math.min(1, book.items.length - 1)].id}`]] : []),
+  ...['omen', 'tariff', 'periplus'].map((sub) => [sub, `#/p/${genre(sub)}`]).filter(([, h]) => !h.endsWith('undefined')),
+];
 const views = [
   ['map', '#/map?y=2600'], ['story', '#/story'], ['histomap', '#/histomap'], ['languages', '#/languages'], ['graph', '#/graph?y=3000'],
   ['browse', '#/browse'], ['about', '#/about'], ['collections', '#/collections'], ['year', '#/year/2310'], ['prices', '#/prices'],
   ['war', `#/p/${meta.featured[0].id}`], ['compare', `#/compare/${meta.featured[0].id}`], ['polity', `#/p/${meta.featured.find((f: { id: string }) => f.id.startsWith('pol:'))?.id}`],
   ['inscription', `#/p/${meta.featured.find((f: { id: string; title: string }) => /inscription/i.test(f.title))?.id ?? meta.featured[0].id}`],
+  ...extra,
 ];
 const browser = await chromium.launch();
 const totals = new Map<string, { impact: string; help: string; count: number; where: Set<string> }>();

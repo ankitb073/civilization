@@ -157,7 +157,7 @@ export function YearView({ y: raw }: { y: string }) {
               <li>
                 <span class="yrlist__y">{idx!.t0[i]}</span>
                 <a href={`#/p/${idx!.ids[i]}`}>{flags.has(idx!.ids[i]) && <span class="row__flag" aria-hidden="true">✦</span>}{idx!.titles[i]}</a>
-                <span class="yrlist__s">{subLabel(idx!.subs[i] || (KIND_LABEL.artifact[0]))}</span>
+                <span class="yrlist__s">{subLabel(idx!.subs[i] || (KIND_LABEL.artifact[0]), 'artifact')}</span>
               </li>
             ))}
             {docs.length > 24 && <li class="muted small"><a href={`#/browse?kind=artifact&from=${y - 2}&to=${y + 2}`}>All {docs.length} documents →</a></li>}

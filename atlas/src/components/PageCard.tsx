@@ -19,12 +19,12 @@ export function usePage(id: string | null): { page: PageJson | null; loading: bo
   return { page: st.id === id ? st.page : null, loading: st.loading || st.id !== id, missing: !st.loading && st.id === id && !st.page };
 }
 
-export function Eyebrow({ kind, sub }: { kind: string; sub?: string }) {
+export function Eyebrow({ kind, sub, label }: { kind: string; sub?: string; label?: preact.ComponentChildren }) {
   const k = (KIND_LABEL as Record<string, [string, string]>)[kind]?.[0] ?? kind;
   return (
     <div class="eyebrow">
       <span class={`kdot k-${kind}`} aria-hidden="true" />
-      {k}{sub && sub !== kind ? <> · {subLabel(sub)}</> : null}
+      {label ?? <>{k}{sub && sub !== kind ? <> · {subLabel(sub, kind)}</> : null}</>}
     </div>
   );
 }

@@ -17,6 +17,7 @@ const CollectionsView = lazy(() => import('./views/CollectionsView.tsx').then((m
 const DynastiesView = lazy(() => import('./views/DynastyView.tsx').then((m) => ({ default: m.DynastiesView })));
 const YearView = lazy(() => import('./views/YearView.tsx').then((m) => ({ default: m.YearView })));
 const PricesView = lazy(() => import('./views/PricesView.tsx').then((m) => ({ default: m.PricesView })));
+const TodayRedirect = lazy(() => import('./components/Reading.tsx').then((m) => ({ default: m.TodayRedirect })));
 
 const NAV = [
   { view: 'map', label: 'Atlas', href: () => mapHref({}), icon: 'M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14' },
@@ -115,6 +116,7 @@ export function App() {
             <YearView y={r.id} />
           </Suspense>
         )}
+        {r.view === 'today' && <Suspense fallback={null}><TodayRedirect date={r.id} /></Suspense>}
         {r.view === 'page' && r.id && <PageView id={r.id} />}
         {r.view === 'compare' && r.id && <CompareView id={r.id} />}
         {r.view === 'browse' && <BrowseView />}
