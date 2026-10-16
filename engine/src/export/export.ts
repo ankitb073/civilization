@@ -403,15 +403,27 @@ function wordsJson(r: SimResult, a: Archive): { index: WordsIndexJson; words: Wo
       let w = L.word(l.id, c, l.born);
       steps.push([l.born, w.conventional, w.ipa, l.parent === null ? 'proto' : null]);
       let prev = w.conventional;
+      let last = l.born;
+      // between two sound changes a form changes only by replacement: find the year it happened (binary search),
+      // so a replacement is not dated to the eve of the language's next sound change
+      const replacements = (hi: number) => {
+        while (hi > last && L.word(l.id, c, hi).conventional !== prev) {
+          let lo = last, up = hi;
+          while (up - lo > 1) { const m = (lo + up) >> 1; if (L.word(l.id, c, m).conventional === prev) lo = m; else up = m; }
+          const x = L.word(l.id, c, up);
+          steps.push([up, x.conventional, x.ipa, 'replaced']);
+          prev = x.conventional;
+          last = up;
+        }
+      };
       const own = L.soundChanges(l.id).filter((ch) => ch.lang === l.id && ch.year > l.born && ch.year <= end);
       for (const ch of own) {
-        const before = L.word(l.id, c, ch.year - 1);
-        if (before.conventional !== prev && ch.year - 1 > steps[steps.length - 1][0]) { steps.push([ch.year - 1, before.conventional, before.ipa, 'replaced']); prev = before.conventional; }
+        replacements(ch.year - 1);
         w = L.word(l.id, c, ch.year);
         if (w.conventional !== prev) { steps.push([ch.year, w.conventional, w.ipa, ch.label]); prev = w.conventional; }
+        last = Math.max(last, ch.year);
       }
-      w = L.word(l.id, c, end);
-      if (w.conventional !== prev) steps.push([end, w.conventional, w.ipa, 'replaced']);
+      replacements(end);
       return { id: `lan:${l.id}`, steps };
     }),
   }));

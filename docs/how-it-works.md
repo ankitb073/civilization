@@ -33,7 +33,7 @@ Territory, culture and religion are written to append-only logs: 199,575 border 
 
 Each people speaks a language descended from one of six proto-languages. A language accumulates sound changes over time (lenition, apocope, vowel breaking, palatalization…), timed by a Poisson process and written in standard notation (`k > ʔ`). When a people splits, the daughter language inherits every change up to the split and then goes its own way. Words are borrowed with phonological adaptation, and places get exonyms.
 
-The proto-Tasemem word for water, *kikweka*, becomes *'ikwe'a* by glottalization, *'igwe'e* by intervocalic voicing (AY 381), *yegwe* (AY 1288), *yebe* (AY 2112) and finally *yiv* in Simem (AY 4919). In Tasemem itself the old word was replaced in AY 1509 by a borrowing, *usashi*, which wore down to *uash*. The Word Machine view traces 114 words through all 126 languages this way.
+The proto-Tasemem word for water, *kikweka*, becomes *'ikwe'a* by debuccalization (k > ʔ, −2478), *'igwe'e* by intervocalic voicing (AY 381), *yegwe* (AY 1288), *yebe* (AY 2112) and finally *yiv* in Simem (AY 4919). In Tasemem itself the old word was replaced in AY 1486 by a borrowing, *usashi*, which wore down to *uash*. The Word Machine view traces 114 words through all 126 languages this way.
 
 Five kinds of script carry these languages, from logosyllabic systems with borrowed logograms to alphabets. An inscription is generated as a clause, then rendered as transliteration, normalized text, a Leipzig interlinear gloss and an English translation. All four come from the same structure, so they always agree.
 

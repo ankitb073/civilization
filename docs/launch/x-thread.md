@@ -25,11 +25,11 @@ The biggest boast: King Nambulame "killed 260,200 soldiers" at Khambive. The rec
 **4/** The languages evolve by real sound laws, and every change is dated.
 
 Proto-Tasemem *kikweka*, "water", 3,200 years before the first city:
-→ 'ikwe'a (glottalization, −2478)
+→ 'ikwe'a (debuccalization, k > ʔ, −2478)
 → 'igwe'e (voicing, AY 381)
 → yegwe (AY 1288) → yebe (AY 2112) → yiv (AY 4919) in Simem.
 
-Back home in Tasemem the word was swapped out in AY 1509 for a borrowing, *usashi*, which wore down to *uash*.
+Back home in Tasemem the word was swapped out in AY 1486 for a borrowing, *usashi*, which wore down to *uash*.
 
 The Word Machine traces 114 words through all 126 languages.
 
