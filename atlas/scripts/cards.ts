@@ -3,9 +3,9 @@
 // (s/cards.json) and points the reading pages at these files when built with PAL_CARDS=1; the deploy then runs this.
 // Usage: npm --prefix atlas run build && node atlas/scripts/cards.ts [--dist=atlas/dist] [--only=fl-905,fl-004]
 
-import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { createServer } from 'node:http';
+import { mkdirSync, readFileSync, existsSync, statSync } from 'node:fs';
+import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
@@ -18,11 +18,17 @@ const cards = manifest.cards.filter((c) => !ONLY.size || ONLY.has(c.id));
 const OUT = join(DIST, 's', 'card');
 mkdirSync(OUT, { recursive: true });
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort', '--outDir', DIST], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
-await new Promise<void>((ok, fail) => {
-  const t = setTimeout(() => fail(new Error('preview server did not start')), 20000);
-  server.stdout!.on('data', (b: Buffer) => { if (b.toString().includes(String(PORT))) { clearTimeout(t); ok(); } });
+// a static server in this process (a spawned `vite preview` outlived its npx parent in CI and held the job open)
+const TYPES: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.woff': 'font/woff' };
+const server = createServer((req, res) => {
+  const path = decodeURIComponent((req.url ?? '/').split('?')[0]).replace(/^\/civilization\/?/, '/');
+  let file = normalize(join(DIST, path));
+  if (!file.startsWith(DIST)) { res.writeHead(403).end(); return; }
+  if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
+  if (!existsSync(file)) { res.writeHead(404).end(); return; }
+  res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(readFileSync(file));
 });
+await new Promise<void>((ok) => server.listen(PORT, '127.0.0.1', ok));
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const browser = await chromium.launch({ channel: 'chromium' }).catch(() => chromium.launch());
@@ -30,7 +36,7 @@ try {
   const ctx = await browser.newContext({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1, reducedMotion: 'reduce', colorScheme: 'light' });
   const page = await ctx.newPage();
   // the about view loads the atlas's fonts without starting the map
-  await page.goto(`http://localhost:${PORT}/civilization/#/about`, { waitUntil: 'networkidle' });
+  await page.goto(`http://127.0.0.1:${PORT}/civilization/#/about`, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
   let n = 0;
   for (const c of cards) {
@@ -57,5 +63,5 @@ try {
   await ctx.close();
 } finally {
   await browser.close();
-  server.kill();
+  server.close();
 }

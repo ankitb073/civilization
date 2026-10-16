@@ -43,6 +43,8 @@ jobs:
         run: npm --prefix atlas run build
       - name: Social cards for the reading pages
         working-directory: atlas
+        timeout-minutes: 10
+        continue-on-error: true # a missing card only costs a link preview; never hold the deploy
         run: |
           npx playwright install --with-deps chromium
           npm run cards
