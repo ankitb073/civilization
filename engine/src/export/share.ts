@@ -182,7 +182,11 @@ ${foot}
       const href = f ? `../${page(f)}` : `../../#/p/${it.id}`;
       return `<li><a href="${esc(href)}">${esc(it.title)}</a><span>${k + 1}. ${esc(it.note)}</span></li>`;
     }).join('');
-    writeFileSync(join(dir, 'c', `${c.id}.html`), `${head(`${c.title}: from the archive of ${world}`, c.blurb, url, 'og.png', 'website').replace(/href="\.\.\/favicon\.svg"/, 'href="../../favicon.svg"')}
+    // the card leads with the collection's first entry, over the map of its age
+    const first = c.items[0];
+    const cardImg = cards ? `s/card/c-${c.id}.jpg` : 'og.png';
+    if (first) manifest.push({ id: `c-${c.id}`, kicker: 'A collection from the archive', title: c.title, quote: first.note.length > 14 ? `${first.title}: ${first.note}` : c.blurb, map: `og/ch${String(Math.min(20, Math.max(1, Math.floor(first.year / 250) + 1))).padStart(2, '0')}.jpg` });
+    writeFileSync(join(dir, 'c', `${c.id}.html`), `${head(`${c.title}: from the archive of ${world}`, c.blurb, url, first ? cardImg : 'og.png', 'website').replace(/href="\.\.\/favicon\.svg"/, 'href="../../favicon.svg"')}
 </head><body>
 ${top.replace('href="../"', 'href="../../"')}
 <main class="toc">
