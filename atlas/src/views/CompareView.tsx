@@ -77,7 +77,7 @@ export function CompareView({ id }: { id: string }) {
         <p class="compare__lede">
           The simulation knows what happened. The people who wrote it down did not — or would not say. Each surviving account is a projection
           of the record through its author’s loyalties: casualties inflated or hidden, blame reversed, defeats omitted. Highlighted cells
-          disagree with the ground truth.
+          disagree with the ground truth. <a href="#/game">Can you tell how far each scribe lies? Play the game →</a>
         </p>
       </header>
 

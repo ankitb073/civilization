@@ -270,6 +270,18 @@ export interface EconomyJson {
 
 // ---------------------------------------------------------------- collections.json
 /** Curated reading lists generated from the record. */
+/** The lying-chronicle game: wars told by both sides, with what each scribe claimed and what the record holds. */
+export interface GameJson {
+  rounds: {
+    war: string;               // evt:N
+    title: string;
+    years: [number, number];
+    sides: [string, string];   // display names: attacker, defender
+    truth: { lossesA: number; lossesD: number; began: string; outcome: string };
+    accounts: { art: string; side: 'attacker' | 'defender'; author: string; lossesA: number; lossesD: number; began: string; outcome: string }[];
+  }[];
+}
+
 export interface CollectionsJson {
   collections: { id: string; title: string; blurb: string; items: { id: string; title: string; note: string; year: number }[] }[];
 }

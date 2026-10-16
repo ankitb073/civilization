@@ -41,6 +41,8 @@ The worst offender, the Tlayiyan account of the Third Nis Trade War, admits 15 o
 
 [image: docs/img/compare.png]
 
+Or play it: five wars a day, two lying scribes each, guess the real death toll. ankitb073.github.io/civilization/s/game.html
+
 **6/** Then the world's own scholars write its history: *A History of Yüvinzhi*, 21 chapters, ~60,000 words, citing ~300 surviving documents by catalogue number.
 
 > "Men lie about the dead, but they seldom lie about the price of bread, and that is why this book reckons in grams of silver."

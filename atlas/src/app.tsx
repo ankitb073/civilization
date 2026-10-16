@@ -18,6 +18,7 @@ const DynastiesView = lazy(() => import('./views/DynastyView.tsx').then((m) => (
 const YearView = lazy(() => import('./views/YearView.tsx').then((m) => ({ default: m.YearView })));
 const PricesView = lazy(() => import('./views/PricesView.tsx').then((m) => ({ default: m.PricesView })));
 const WordsView = lazy(() => import('./views/WordsView.tsx').then((m) => ({ default: m.WordsView })));
+const GameView = lazy(() => import('./views/GameView.tsx').then((m) => ({ default: m.GameView })));
 const TodayRedirect = lazy(() => import('./components/Reading.tsx').then((m) => ({ default: m.TodayRedirect })));
 
 const NAV = [
@@ -45,7 +46,7 @@ export function App() {
   }, [r.view, m]);
   useEffect(() => { if (r.view !== 'map' && r.view !== 'graph') window.scrollTo(0, 0); }, [r.view, r.id]);
 
-  const active = r.view === 'page' || r.view === 'compare' || r.view === 'collections' || r.view === 'dynasties' ? 'browse' : r.view === 'prices' ? 'about' : r.view === 'year' ? 'map' : r.view === 'words' ? 'languages' : r.view;
+  const active = r.view === 'page' || r.view === 'compare' || r.view === 'collections' || r.view === 'dynasties' || r.view === 'game' ? 'browse' : r.view === 'prices' ? 'about' : r.view === 'year' ? 'map' : r.view === 'words' ? 'languages' : r.view;
   const tabActive = active === 'languages' || r.view === 'prices' ? 'browse' : active;
   const clean = r.params.get('clean') === '1';
   const og = r.params.get('og') === '1' || r.params.get('frames') === '1';
@@ -100,6 +101,11 @@ export function App() {
         {r.view === 'words' && (
           <Suspense fallback={<div class="center-load"><div class="spinner" /> Warming up the Word Machine…</div>}>
             <WordsView concept={r.id} />
+          </Suspense>
+        )}
+        {r.view === 'game' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Unrolling the chronicles…</div>}>
+            <GameView />
           </Suspense>
         )}
         {r.view === 'prices' && (

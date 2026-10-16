@@ -30,7 +30,7 @@ export function CollectionsView({ id }: { id: string | null }) {
         <div class="eyebrow">Curated from the archive</div>
         <h1 class="h-page">Collections</h1>
         <p class="collections__lede">Ways into {data.collections.reduce((s, c) => s + c.items.length, 0).toLocaleString('en-US')} pages, chosen by what makes them remarkable: the longest reigns, the deadliest plagues, the wars both sides wrote down.</p>
-        <SurpriseButton label="Or open one at random" />
+        <div class="actions"><SurpriseButton label="Or open one at random" /><a class="btn btn--accent" href="#/game">Play: catch the lying chronicle</a></div>
       </header>
       <div class="colgrid">
         {data.collections.map((c) => <CollectionCard c={c} />)}

@@ -1,0 +1,28 @@
+/* Catch the lying chronicle (#/game) */
+.game { max-width: 760px; margin: 0 auto; padding: 28px 16px 64px; }
+.game__kicker { font: 600 12px/1.4 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+.game__title { font-family: var(--font-display); font-weight: 500; font-size: clamp(28px, 5vw, 40px); line-height: 1.1; margin: 0 0 14px; }
+.game__title .muted { font-size: .55em; white-space: nowrap; }
+.game__lede { font-family: var(--font-display); font-size: 19px; line-height: 1.5; color: var(--ink-2); margin: 0 0 20px; }
+.game__accounts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0 22px; }
+@media (max-width: 560px) { .game__accounts { grid-template-columns: 1fr; } }
+.game__acc { margin: 0; padding: 14px 16px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); }
+.game__acc figcaption { font: 600 13px/1.4 var(--font-ui); color: var(--ink-2); margin-bottom: 8px; }
+.game__acc p { margin: 0 0 6px; font-family: var(--font-display); font-size: 18px; line-height: 1.45; }
+.game__acc p.muted { font-size: 15px; }
+.game__bend { font: 500 13px/1.4 var(--font-ui) !important; color: var(--diff-ink); background: var(--diff-bg); border-radius: var(--radius-sm); padding: 6px 8px; margin-top: 8px !important; }
+.game__ask { padding: 16px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface-2); }
+.game__ask label { display: block; font: 500 15px/1.4 var(--font-ui); margin-bottom: 6px; }
+.game__guess { display: block; font-family: var(--font-display); font-size: 34px; line-height: 1.1; margin: 4px 0 10px; font-variant-numeric: tabular-nums; }
+.game__ask input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+.game__scale { display: flex; justify-content: space-between; font: 12px var(--font-ui); color: var(--muted); }
+.game .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.game__reveal { margin-top: 18px; padding: 14px 16px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 var(--radius) var(--radius) 0; }
+.game__reveal p { margin: 0 0 8px; font-family: var(--font-display); font-size: 18px; line-height: 1.5; }
+.game__score { font-size: 26px !important; }
+.game__dots { display: flex; gap: 8px; margin: 8px 0 22px; }
+.game__dot { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; font: 600 15px var(--font-ui); color: #fff; }
+.game__dot--good { background: var(--ok); }
+.game__dot--mid { background: #b8862e; }
+.game__dot--bad { background: var(--accent); }
+.game__note { font-size: 15px; line-height: 1.55; color: var(--muted); margin-top: 26px; }

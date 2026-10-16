@@ -7,7 +7,7 @@ import type { SimResult } from '../sim/run.ts';
 import type { Archive } from '../archive/build.ts';
 import type { CheckReport } from '../check/check.ts';
 import type {
-  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson, StoryJson, LanguagesJson, EconomyJson, CollectionsJson, DynastiesJson, WordsIndexJson, WordJson,
+  MetaJson, WorldJson, TimelineJson, GraphJson, SearchJson, SearchEntry, PageJson, Layer, Era, EntityKind, HistomapJson, StoryJson, LanguagesJson, EconomyJson, CollectionsJson, GameJson, DynastiesJson, WordsIndexJson, WordJson,
 } from './contract.ts';
 import { SHARD_COUNT, shardOf, shardFile } from './contract.ts';
 import { BIOMES } from '../world/biomes.ts';
@@ -209,6 +209,7 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
 
   // ---------------------------------------------------------------- collections & dynasties
   writeSized('collections.json', collectionsJson(r, a));
+  writeSized('game.json', gameJson(a));
   writeSized('dynasties.json', dynastiesJson(r, a));
 
   // ---------------------------------------------------------------- languages & economy
@@ -266,6 +267,25 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
 
 function trim(x: string, n: number): string {
   return x.length <= n ? x : x.slice(0, n - 1) + '…';
+}
+
+/** Rounds for the lying-chronicle game: every war whose two rival accounts survive, with both sides' losses. */
+function gameJson(a: Archive): GameJson {
+  const num = (v: string | undefined) => Number(String(v ?? '').replace(/[^\d.]/g, '')) || 0;
+  const rounds: GameJson['rounds'] = [];
+  for (const p of a.pages.values()) {
+    if (!p.accounts || p.accounts.sources.length < 2) continue;
+    const truth = new Map(p.accounts.truth);
+    const [A, D] = [...truth.keys()].filter((k) => k.startsWith('Losses of ')).map((k) => k.slice(10));
+    if (!A || !D) continue;
+    const tA = num(truth.get(`Losses of ${A}`)), tD = num(truth.get(`Losses of ${D}`));
+    if (tA < 50 || tD < 50) continue;
+    const accounts = p.accounts.sources.map((src) => { const c = new Map(src.claims); return { art: src.artifactId, side: src.side as 'attacker' | 'defender', author: src.author, lossesA: num(c.get(`Losses of ${A}`)), lossesD: num(c.get(`Losses of ${D}`)), began: c.get('Who began the war') ?? '', outcome: c.get('Outcome') ?? '' }; });
+    if (!accounts.some((x) => x.side === 'attacker') || !accounts.some((x) => x.side === 'defender') || accounts.some((x) => !x.lossesA || !x.lossesD)) continue;
+    rounds.push({ war: p.id, title: p.title, years: [p.t0, p.t1], sides: [A, D], truth: { lossesA: tA, lossesD: tD, began: truth.get('Who began the war') ?? '', outcome: truth.get('Outcome') ?? '' }, accounts: accounts.slice(0, 2) });
+  }
+  rounds.sort((x, y) => x.years[0] - y.years[0]);
+  return { rounds };
 }
 
 function collectionsJson(r: SimResult, a: Archive): CollectionsJson {

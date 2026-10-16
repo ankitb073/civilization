@@ -201,6 +201,17 @@ ${foot.replace(/href="\.\/"/, 'href="../"').replace('href="../">The atlas', 'hre
 `);
   }
 
+  // the lying-chronicle game: a page to share, with its own card, that opens the game
+  const gameDesc = `Two palace scribes wrote down the same war, one for each side. Neither tells the truth. Guess how many really died: five wars a day from the archive of ${world}, a world that never existed.`;
+  manifest.push({ id: 'game', kicker: 'A game from the archive', title: 'Catch the lying chronicle', quote: 'Two palace scribes wrote down the same war, one for each side. Both survive. Neither tells the truth. How many really died?', map: 'og/ch08.jpg' });
+  writeFileSync(join(dir, 'game.html'), `${head('Catch the lying chronicle', gameDesc, `${SITE}s/game.html`, cards ? 's/card/game.jpg' : 'og.png', 'website')}
+<meta http-equiv="refresh" content="0; url=../#/game">
+</head><body>
+${top}
+<main class="toc"><h1>Catch the lying chronicle</h1><p>${esc(gameDesc)}</p><a class="cta" href="../#/game">Play →</a></main>
+${foot}
+</body></html>
+`);
   writeFileSync(join(dir, 'cards.json'), JSON.stringify({ world, cards: manifest }));
 
   // contents
@@ -221,7 +232,7 @@ ${foot}
 `);
 
   // sitemap: the atlas, the contents and every reading page
-  const urls = [SITE, `${SITE}s/`, ...cols.map((c) => `${SITE}s/c/${c.id}.html`), ...series.flatMap((z) => z.docs.map((x) => `${SITE}s/${page(x)}`))];
+  const urls = [SITE, `${SITE}s/`, `${SITE}s/game.html`, ...cols.map((c) => `${SITE}s/c/${c.id}.html`), ...series.flatMap((z) => z.docs.map((x) => `${SITE}s/${page(x)}`))];
   writeFileSync(join(publicDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `<url><loc>${esc(u)}</loc></url>`).join('\n')}

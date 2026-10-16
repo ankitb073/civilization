@@ -1,6 +1,6 @@
 import { signal, effect, computed } from '@preact/signals';
 
-export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap' | 'languages' | 'prices' | 'collections' | 'dynasties' | 'year' | 'today' | 'words';
+export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap' | 'languages' | 'prices' | 'collections' | 'dynasties' | 'year' | 'today' | 'words' | 'game';
 export type LayerName = 'political' | 'culture' | 'religion' | 'language';
 
 export interface Route {
@@ -21,6 +21,7 @@ function parseHash(): Route {
   if (head === 'year' && parts[1]) return { view: 'year', id: parts[1], params };
   if (head === 'today') return { view: 'today', id: parts[1] ?? null, params };
   if (head === 'words') return { view: 'words', id: parts[1] ?? null, params };
+  if (head === 'game') return { view: 'game', id: null, params };
   if (head === 'dynasties') return { view: 'dynasties', id: null, params };
   if (head === 'dynasty' && parts[1]) return { view: 'dynasties', id: parts.slice(1).join('/'), params };
   if (head === 'graph' || head === 'browse' || head === 'about' || head === 'search' || head === 'story' || head === 'histomap' || head === 'languages' || head === 'prices') return { view: head, id: null, params };

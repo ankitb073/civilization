@@ -26,6 +26,8 @@ Every document links to the people, places, states and events it mentions, and e
 
 ![The Word Machine: 'water' through 8,200 years of sound change](docs/img/word-machine.png)
 
+**Catch the lying chronicle.** A daily game: two palace scribes tell the same war, each in their own favour. Guess the real death toll, then see how far each one bent it ([play](https://ankitb073.github.io/civilization/#/game)).
+
 **The Word Machine.** Pick a word and scrub through time: *\*kikweka* "water" becomes *yiv* in Simem by AY 4919, one dated sound law at a time, while Tasemem swaps it for a borrowing. 114 words, 126 languages.
 
 **[The Histomap of Yüvinzhi →](docs/img/histomap.png)**: five millennia of states as streams of population share, in the spirit of John B. Sparks's 1931 *Histomap*.
@@ -55,7 +57,7 @@ Every document links to the people, places, states and events it mentions, and e
 | **Archive** | 35 genres: treaties, rival chronicles, stelae, dedications, boundary stones, epitaphs, ledgers, letters, decrees, annals, censuses, muster rolls, wills, lawsuits, graffiti, school exercises, omen collections, itineraries, customs tariffs, ship manifests, almanacs, temple records, coins, travelogues, scriptures, council acts, polemics, newspapers, telegrams, debates, exchange reports, yearbooks, pamphlets, patents, excavation reports, scholarly papers, plus fragments of lost works. Each has a local date (regnal years, foundation eras, religious eras), a catalogue number, survival odds, an excavator and a translator. |
 | **Flagships** | For each turning point, life or period, a dossier of facts *cut at the document's date*, a real author who was alive then (or an anonymous ordinary person), and a whitelist of links. AI writers turn each dossier into a literary source, a voice from below, a Life or a chapter of the History; fact-checker agents then compare every file with the database. Ingestion validates every link and date, and the checker audits the result like any other document. |
 | **Checker** | 17 invariants verified from the SQLite database alone: causes precede effects, the logs replay exactly to the final map, every ceded district changes hands at the treaty date, no document mentions anything that did not yet exist, authors were alive and of age, ledger prices match the market series, every catalogue number a document cites exists and is older than the citing document, and every link resolves both ways. |
-| **Atlas** | Vite and Preact static site: map with time slider and political, peoples, faiths and languages layers; a year view for any year; the Story, the Histomap, the Tree of Tongues and the Word Machine; prices across five millennia; collections and dynasty trees; a WebGL graph of every entity and event; a reader with period styling, citations and a "record vs. accounts" view for rival chronicles; downloads (EPUB, Obsidian vault, SQLite). Accessible (axe-clean, keyboard map) and fast (~450 KB to first map). |
+| **Atlas** | Vite and Preact static site: map with time slider and political, peoples, faiths and languages layers; a year view for any year; the Story, the Histomap, the Tree of Tongues and the Word Machine; prices across five millennia; collections and dynasty trees; a WebGL graph of every entity and event; a reader with period styling, citations and a "record vs. accounts" view for rival chronicles; a daily game on the rival chronicles; downloads (EPUB, Obsidian vault, SQLite). Accessible (axe-clean, keyboard map) and fast (~450 KB to first map). |
 
 ## Run it
 
