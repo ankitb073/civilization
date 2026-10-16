@@ -36,6 +36,8 @@ That is about one error per 70 checked claims, and 0.07 major errors per file. H
   - The commonest fix (8 of the last 10 chapters) was a single combined figure for "coinages and weight standards", which the chapters gave as one kind. Next came peaks that were not peaks, and document counts that silently left out the literary works.
 - **The rest were single slips:** a decade row read as a point date (an old trap), an earlier yoke attributed to the wrong state, an omitted regnal numeral in a quotation.
 
+**Outside the History, a follow-up sweep** checked every statistic in the 23 modern essays and lectures. It found 16 minor errors in 8 of them. All but one were the old decade-row trap: a row labelled 450 describes the 450s, not the year 450. The other was a word-replacement date that the essay had taken from the atlas, where the date was wrong (#28, fixed).
+
 The audit also turned up two oddities in the record itself, both filed: merchant houses trading iron before iron smelting (#27), and a famine listing a state that had just ended (#18).
 
 ## Caveats
