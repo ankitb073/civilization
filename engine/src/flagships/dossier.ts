@@ -571,7 +571,22 @@ export function buildLives(a: Archive, exclude: Set<string>): Dossier[] {
 
 /** Sixth wave: "Lives II", fifty people the first Lives (all rulers) left out: generals, inventors, founders of faiths,
  *  merchants, rebels, regents, chroniclers, archaeologists and modern heads of state (fl-641+). */
-export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
+/** Lives III (wave 7): the kinds Lives II left out — envoys, priests, usurpers and philosophers — in the twelve
+ *  ids left in the Lives range (fl-689–699 and fl-600). */
+export function buildLives3(a: Archive, exclude: Set<string>): Dossier[] {
+  const roleIs = (id: number, r: string) => a.ctx.s.persons[id].roles.some((x) => x.role === r);
+  return buildLives2(a, exclude, (h) => [
+    { kind: 'envoy', n: 4, pick: (id) => roleIs(id, 'envoy') && !h.rulers.has(id), rank: (id) => h.docs(id) * 3 + h.rich(id) },
+    { kind: 'priest', n: 3, pick: (id) => roleIs(id, 'priest') && !h.rulers.has(id) && h.docs(id) >= 1, rank: (id) => h.docs(id) * 3 + h.rich(id) },
+    { kind: 'usurper', n: 3, pick: (id) => roleIs(id, 'usurper'), rank: h.rich },
+    { kind: 'philosopher', n: 2, pick: (id) => roleIs(id, 'philosopher'), rank: (id) => h.docs(id) * 3 + h.rich(id) },
+  ], ['fl-689', 'fl-690', 'fl-691', 'fl-692', 'fl-693', 'fl-694', 'fl-695', 'fl-696', 'fl-697', 'fl-698', 'fl-699', 'fl-600']);
+}
+
+type LifeKind = { kind: string; n: number; pick: (id: number) => boolean; rank: (id: number) => number };
+type LifeHelpers = { rulers: Set<number>; rich: (id: number) => number; docs: (id: number) => number };
+
+export function buildLives2(a: Archive, exclude: Set<string>, kindsFor?: (h: LifeHelpers) => LifeKind[], ids?: string[]): Dossier[] {
   const ctx = a.ctx;
   const s = ctx.s;
   const T = a.T;
@@ -602,7 +617,7 @@ export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
   const has = (id: number, k: string) => roleOf.get(id)?.has(k) ?? false;
   const usable = (id: number) => !exclude.has(`per:${id}`) && T.pageRefs.has(`per:${id}`) && s.persons[id].died <= 4950 && (id < simPersons || docsBy.has(id) || has(id, 'excavation/excavator'));
   const commands = (id: number) => (evOf.get(id) ?? []).filter((e) => e.sub === 'battle').length;
-  const kinds: { kind: string; n: number; pick: (id: number) => boolean; rank: (id: number) => number }[] = [
+  const kinds: LifeKind[] = kindsFor ? kindsFor({ rulers, rich, docs: (id) => docsBy.get(id)?.length ?? 0 }) : [
     { kind: 'general', n: 11, pick: (id) => !rulers.has(id) && commands(id) >= 4, rank: (id) => commands(id) * 2 + rich(id) },
     { kind: 'inventor', n: 6, pick: (id) => has(id, 'invention/inventor'), rank: rich },
     // reform leaders share this quota (the selection the written Lives II came from); their label says what they did
@@ -616,7 +631,7 @@ export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
   ];
   const chosen: { pid: number; kind: string }[] = [];
   const taken = new Set<number>();
-  const all = [...new Set([...evOf.keys(), ...docsBy.keys()])];
+  const all = [...new Set([...evOf.keys(), ...docsBy.keys(), ...(kindsFor ? s.persons.filter((p) => p.roles.length && p.id < simPersons).map((p) => p.id) : [])])];
   for (const k of kinds) {
     const ranked = all.filter((id) => !taken.has(id) && usable(id) && k.pick(id)).sort((x, y) => k.rank(y) - k.rank(x) || x - y);
     // spread across the five millennia: no two of a kind from the same century
@@ -650,7 +665,7 @@ export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
     const docs = (docsBy.get(pid) ?? []).sort((x, y) => x.year - y.year);
     if (docs.length) facts.push(`Surviving documents this person wrote (${docs.length}): ${docs.slice(0, 12).map((x) => `${x.catalog} "${x.title}" (${x.sub}, AY ${x.year}; ${x.condition})`).join('; ')}.`);
     const about = a.artifacts.filter((x) => x.status === 'extant' && !x.flagship && x.mentions.has(`per:${pid}`) && x.author !== pid).sort((x, y) => x.year - y.year).slice(0, 10);
-    if (about.length) facts.push(`Surviving documents that name this person: ${about.map((x) => `${x.catalog} "${x.title}" (${x.sub}, AY ${x.year})`).join('; ')}.`);
+    if (about.length) facts.push(`Surviving documents linked to this person (some only concern an event they took part in and never name them: check the text): ${about.map((x) => `${x.catalog} "${x.title}" (${x.sub}, AY ${x.year})`).join('; ')}.`);
     const links = new Set<string>([`per:${pid}`]);
     for (const r of p.roles) if (r.polity !== null) links.add(`pol:${r.polity}`);
     if (p.polity !== null) links.add(`pol:${p.polity}`);
@@ -689,7 +704,7 @@ export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
       context.push(`Technology level in AY ${mid}: ${['Bronze Age', 'Iron Age', 'Classical', 'Medieval', 'Early Modern', 'Industrial', 'Post-industrial'][Math.min(6, era(a, home, mid))]}.`);
       const surveys = (ctx.polityStats.get(home.id) ?? []);
       const near = (y: number) => surveys.reduce<(number | string | null)[] | null>((m, row) => (m === null || Math.abs((row[1] as number) - y) < Math.abs((m[1] as number) - y) ? row : m), null);
-      for (const [label, y] of [['birth', p.born], ['death', p.died]] as const) { const row = near(y); if (row && Math.abs((row[1] as number) - y) <= 30) context.push(`Survey of the ${row[1]}s (nearest the subject's ${label}): ${(row[3] as number).toLocaleString('en-US')} people, ${row[2]} districts, army ${(row[6] as number).toLocaleString('en-US')} men.`); }
+      for (const [label, y] of [['birth', p.born], ['death', p.died]] as const) { const row = near(y); if (row && Math.abs((row[1] as number) - y) <= 30) context.push(`Survey of the ${row[1]}s (${Math.abs((row[1] as number) - y) <= 9 ? `nearest the subject's ${label}` : `${(row[1] as number) > y ? 'the first after' : 'the last before'} the subject's ${label} in AY ${y}`}): ${(row[3] as number).toLocaleString('en-US')} people, ${row[2]} districts, army ${(row[6] as number).toLocaleString('en-US')} men.`); }
       const wars = (ctx.eventsByRef.get(`pol:${home.id}`) ?? []).map((i) => s.events[i]).filter((x) => x.sub === 'war' && x.year >= p.born + 15 && x.year <= p.died && x.id < simEvents)
         .sort((x, y) => (Number(y.data.lossesA ?? 0) + Number(y.data.lossesD ?? 0)) - (Number(x.data.lossesA ?? 0) + Number(x.data.lossesD ?? 0))).slice(0, 6);
       for (const w of wars) { links.add(`evt:${w.id}`); context.push(`War of their state in their lifetime: ${T.title.get(`evt:${w.id}`)} (AY ${w.year}–${w.end ?? w.year}): ${stripLinks(a.pages.get(`evt:${w.id}`)?.summary ?? '')}`); }
@@ -703,9 +718,9 @@ export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
       allowed.push({ id: ref, text: T.short.get(ref) ?? d.nameOf(ref), what: (T.title.get(ref) ?? '') + sexNote });
     }
     const thin = facts.length + docs.length < 16;
-    const id = `fl-${String(641 + out.length).padStart(3, '0')}`;
+    const id = ids ? ids[out.length] : `fl-${String(641 + out.length).padStart(3, '0')}`;
     out.push({
-      id, form: `biographical essay (Lives series): the life of a ${kind}`, register: 'Modern scholarship: a long-form life, narrative but critical; weighs legend against record; may cite AY dates.',
+      id, form: `biographical essay (Lives series): the life of ${/^[aeio]/.test(kind) ? 'an' : 'a'} ${kind}`, register: 'Modern scholarship: a long-form life, narrative but critical; weighs legend against record; may cite AY dates.',
       year, localDate: `AY ${year}`, language: T.short.get(`lan:${lang}`) ?? '', script: 'print', medium: 'book chapter',
       author: { id: `per:${who}`, name: T.short.get(`per:${who}`) ?? '', role: `${s.persons[who].sex === 'f' ? 'woman' : 'man'}; ${s.persons[who].roles.map((r) => r.role).join(', ')}`, polity: T.short.get(`pol:${ed.id}`) ?? null, born: s.persons[who].born, died: s.persons[who].died, stance: 'a modern biographer: humane, sceptical of court propaganda, interested in how ordinary lives were shaped' },
       subject: { id: `per:${pid}`, title: `The life of ${T.short.get(`per:${pid}`)}`, summary: stripLinks(pg?.summary ?? ''), facts },

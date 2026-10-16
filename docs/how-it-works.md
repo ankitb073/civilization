@@ -55,7 +55,7 @@ Then time does its work. Each document gets a medium (stone, clay, parchment, pa
 
 ## 5. Flagships: literature written against a fact sheet
 
-Some documents are written by AI agents instead of generators: epic fragments, letters from the front, laments, sermons, the diaries of ordinary people, 40 Lives and a 21-chapter *History of Yüvinzhi*. Each starts from a dossier assembled from the record. The dossier contains:
+Some documents are written by AI agents instead of generators: epic fragments, letters from the front, laments, sermons, the diaries of ordinary people, a hundred Lives and a 21-chapter *History of Yüvinzhi*. Each starts from a dossier assembled from the record. The dossier contains:
 
 - **Facts cut at the document's date.** An author writing during a war doesn't know how it ends.
 - **An author** who was alive and old enough at that date.

@@ -42,7 +42,45 @@ A last sweep of the biographical essays on the founders of faiths found 7 minor 
 
 The audit also turned up two oddities in the record itself, both filed: merchant houses trading iron before iron smelting (#27), and a famine listing a state that had just ended (#18).
 
+## Lives II and III (2026-10-16): what one fact-check leaves behind
+
+Sixty new Lives were each written by one agent from a fact sheet and then checked once by another (decision 0018). This time we measured both stages, and the second measurement is the one that matters: how much survives a single check.
+
+**The first check.**
+
+| Wave | Files | Claims checked (approx.) | Errors fixed | Clean files |
+|---|---|---|---|---|
+| Lives II (generals, inventors, founders, merchants, rebels, regents, chroniclers, heads of state) | 48 | 4,150 | 45 | 25 |
+| Lives III (envoys, priests, usurpers, philosophers) | 12 | 950 | 13 | 2 |
+
+That is about one error per 90 claims in fresh drafts. None was major in the sense above, but some would have misled a careful reader:
+- the wrong man dying in a sentence;
+- a superlative ("only one other") where SQL found two others;
+- an excavation's "21 inscriptions" that included two muster rolls and a treaty;
+- a battle credited to a king that his general fought;
+- an election count that ran to AY 5000 in an essay dated 4955.
+
+The commonest kinds were descriptions of documents (what a text says, its medium, which stanza a line is in), superlatives, and inventions in small connective phrases ("her chronicler" for a man appointed after her death).
+
+**The audit.** Four auditors then took a random third of Lives II, 16 files drawn with seed 20261016, and checked every claim independently, without reading the checkers' notes until afterwards.
+
+| Files | Claims checked (approx.) | Major | Minor |
+|---|---|---|---|
+| 16 | 1,195 | 0 | 2 |
+
+About one error per 600 claims, and no major ones. One was an ambiguous clause that read as a false age. The other is the instructive one: **the fact-checker had introduced it.** The writer's excavation counts (105, 104, 315) were right; the checker recounted using published reports instead of digs and changed them to 102, 103 and 311. A single check removes most errors but can add its own, so checkers should change a figure only after finding the query that disagrees, and should say which.
+
+**What the writers found in the record.** Close reading of sixty lives surfaced dozens of inconsistencies in the generated archive itself. The worst were fixed at the source and their flagships revised:
+- 1,644 documents credited to translators who had died before the text was written (#38, now an invariant);
+- 323 coins whose recorded end came before states stopped using them;
+- treaties, chronicles and annals giving one event three different days (#41);
+- chronicles of republics calling their president "king" (#40);
+- victors' assemblies debating a won peace in the losers' words (#43);
+- 5,567 editorial notes that spoke of "the ground truth" instead of the record (#42).
+
+The rest are filed: armies counted in full on two fronts at once (#39), and women given men's names (#44).
+
 ## Caveats
 - **This measures what the auditors caught.** Agents check claims well, but they can share a blind spot with the writers. Read the error rate as a lower bound, not a proof of accuracy.
-- **It is a sample of 30 out of 656.** Errors cluster by series and by cause, and a 95% interval on "major errors per file" from 2 in 30 runs from about 0.01 to 0.24.
+- **The first audit is a sample of 30 out of 656, the second 16 out of 48.** Errors cluster by series and by cause, and a 95% interval on "major errors per file" from 2 in 30 runs from about 0.01 to 0.24.
 - **The audit ran after an unusually thorough revision.** Most flagships had been fact-checked twice and revised against the corrected record on the same day.

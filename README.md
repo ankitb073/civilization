@@ -11,7 +11,7 @@ Palimpsest generates a world from a single seed and simulates it century by cent
 
 Every document links to the people, places, states and events it mentions, and every page links back. A consistency checker audits the archive against the causal record on every build: about 1.95 million facts, zero violations.
 
-**Start here:** [*A History of Yüvinzhi*](https://ankitb073.github.io/civilization/#/collections/history), five thousand years in twenty chapters by the archive's own historians, citing the sources by catalogue number. Or take it with you: **[The Reader (EPUB)](https://ankitb073.github.io/civilization/downloads/palimpsest-reader.epub)** collects the History, about 600 literary sources, 40 Lives and the scholars' essays.
+**Start here:** [*A History of Yüvinzhi*](https://ankitb073.github.io/civilization/#/collections/history), five thousand years in twenty chapters by the archive's own historians, citing the sources by catalogue number. Or take it with you: **[The Reader (EPUB)](https://ankitb073.github.io/civilization/downloads/palimpsest-reader.epub)** collects the History, about 600 literary sources, a hundred Lives and the scholars' essays.
 
 ![Five thousand years of borders](docs/img/borders.gif)
 
@@ -44,7 +44,7 @@ Every document links to the people, places, states and events it mentions, and e
 | People with pages | ~35,000 rulers, generals, prophets, merchants, inventors, scribes and scholars |
 | Languages | ~125 in six families, each with dated sound laws |
 | Surviving documents | ~18,500 across 35 genres, including ~450 lost works known only from quotation |
-| Flagship sources | ~660: turning points, rival-chronicle studies, 40 Lives, 107 "voices from below" and a 21-part History, all written from database dossiers, fact-checked, and validated by the checker |
+| Flagship sources | 716: turning points, rival-chronicle studies, 100 Lives (rulers and usurpers, generals, inventors, prophets, merchants, rebels, regents, envoys, priests, chroniclers), 107 "voices from below" and a 21-part History, all written from database dossiers, fact-checked, and validated by the checker |
 | Pages and links | ~106,000 pages, ~950,000 links, all bidirectional |
 
 ## What's inside
