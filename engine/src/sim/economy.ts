@@ -128,15 +128,19 @@ function issueYear(s: State, p: Polity, kind: Currency['kind'], year: number): n
 }
 
 /** The currency step runs before the decade's political years, at a nominal year inside the decade, so the
- *  ruler it names can fall in battle before that year. After the run, the record drops such a ruler; nothing
+ *  ruler it names can fall in battle, or be deposed, before that year. After the run, the record drops such a ruler; nothing
  *  in the simulation reads these parts, so no draw moves. */
 export function dropDeadIssuers(s: State): void {
   for (const e of s.events) {
     if (e.sub !== 'coinage' && e.sub !== 'weight-standard' && e.sub !== 'paper-money' && e.sub !== 'currency-reform') continue;
+    const issuer = e.parts.find(([, role]) => role === 'issuer')?.[0];
     e.parts = e.parts.filter(([r, role]) => {
       if (role !== 'ruler') return true;
       const p = s.persons[Number(r.slice(4))];
-      return !(p.died < e.year || (p.died === e.year && p.deathEvent !== null && p.deathEvent < e.id));
+      if (p.died < e.year || (p.died === e.year && p.deathEvent !== null && p.deathEvent < e.id)) return false;
+      // nor a ruler who had already been deposed, or not yet come to power, in the issuing state
+      const pol = issuer ? Number(issuer.slice(4)) : null;
+      return pol === null || p.roles.some((x) => x.polity === pol && ['ruler', 'president', 'chairman', 'regent'].includes(x.role) && x.start <= e.year && (x.end === null || x.end === undefined || x.end >= e.year));
     });
   }
 }
