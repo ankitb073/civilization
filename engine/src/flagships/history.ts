@@ -221,7 +221,8 @@ export function buildHistory(a: Archive): Dossier[] {
     const newLangs = s.lang.languages().filter((l) => l.born >= y0 && l.born < y1 && l.parent !== null).slice(0, 6);
     if (newLangs.length) facts.push(`Languages that emerged as distinct: ${newLangs.map((l) => `${name(`lan:${l.id}`)} (AY ${l.born}, from ${name(`lan:${l.parent}`)})`).join('; ')}.`);
     for (const l of newLangs) links.push(`lan:${l.id}`, `lan:${l.parent}`);
-    const laws = s.lang.languages().flatMap((l) => s.lang.soundChanges(l.id).filter((c) => c.year >= y0 && c.year < y1).map((c) => ({ l, c })));
+    // a language's list includes changes inherited from its ancestors: count each change once, in a language alive when it happened
+    const laws = s.lang.languages().flatMap((l) => s.lang.soundChanges(l.id).filter((c) => c.year >= y0 && c.year < y1 && c.year >= l.born).map((c) => ({ l, c })));
     const own = new Map<string, typeof laws[number]>();
     for (const x of laws) if (!own.has(x.c.label + x.c.year)) own.set(x.c.label + x.c.year, x);
     if (own.size) facts.push(`Distinct sound changes (by rule and year) dated to the period: ${own.size} (${laws.length} counting each language separately); for example ${[...own.values()].slice(0, 3).map((x) => `${x.c.label} in ${name(`lan:${x.l.id}`)} c. AY ${x.c.year}`).join('; ')}.`);

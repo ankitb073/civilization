@@ -1,4 +1,5 @@
-// Write flagship dossiers for the canonical world: build/dossiers/fl-NNN.json
+// Write flagship dossiers for the canonical world: build/dossiers/fl-NNN.json, or --out=<dir>.
+// build/dossiers is what the flagship validators read (allowedLinks): regenerate into --out unless you mean to replace it.
 import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { simulate } from '../sim/run.ts';
 import { buildArchive } from '../archive/build.ts';
@@ -30,9 +31,10 @@ if (wave === '5') {
   for (const f of readdirSync('build/dossiers')) { const j = JSON.parse(readFileSync(`build/dossiers/${f}`, 'utf8')); exclude.add(j.subject.id); }
   ds = buildWave2(a, exclude);
 } else ds = [...buildDossiers(a, limit), ...buildHistoriography(a)];
-mkdirSync('build/dossiers', { recursive: true });
+const outDir = process.argv.find((x) => x.startsWith('--out='))?.slice(6) ?? 'build/dossiers';
+mkdirSync(outDir, { recursive: true });
 const world = worldFingerprint(r);
-for (const d of ds) { d.frontmatter += `\nworld: ${world}`; writeFileSync(`build/dossiers/${d.id}.json`, JSON.stringify(d, null, 2)); }
+for (const d of ds) { d.frontmatter += `\nworld: ${world}`; writeFileSync(`${outDir}/${d.id}.json`, JSON.stringify(d, null, 2)); }
 const forms = new Map<string, number>();
 for (const d of ds) forms.set(d.form, (forms.get(d.form) ?? 0) + 1);
 console.log(`${ds.length} dossiers; forms: ${[...forms].map(([k, v]) => `${k}:${v}`).join(', ')}`);
