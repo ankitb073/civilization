@@ -80,8 +80,9 @@ function silverAt(cur: number, year: number): number {
   for (const [y, x] of h) if (y <= year) v = x;
   return v;
 }
-const GRAIN = N(one(`SELECT id FROM goods WHERE key = 'grain'`)?.id ?? 0);
-const priceExact = (t: number, y: number) => { const r = one('SELECT price FROM prices WHERE settlement = ? AND good = ? AND year = ?', t, GRAIN, y); return r ? N(r.price) : null; };
+let grain: number | null = null;
+const GRAIN = () => (grain ??= N(one(`SELECT id FROM goods WHERE key = 'grain'`)?.id ?? 0));
+const priceExact = (t: number, y: number) => { const r = one('SELECT price FROM prices WHERE settlement = ? AND good = ? AND year = ?', t, GRAIN(), y); return r ? N(r.price) : null; };
 function priceNear(t: number, year: number): number | null {
   for (let y = Math.floor(year / 10) * 10; y >= year - 60; y -= 10) { const p = priceExact(t, y); if (p !== null) return p; }
   return null;
