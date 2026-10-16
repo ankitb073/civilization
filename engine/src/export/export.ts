@@ -16,6 +16,13 @@ import { GOODS } from '../sim/economy.ts';
 import { Rng } from '../core/rng.ts';
 import { CONCEPTS } from '../lang/concepts.ts';
 import type { SimEvent } from '../sim/state.ts';
+import { Heraldry, deckJson } from './deck.ts';
+import { museumJson } from './museum.ts';
+import { BattleExport } from './battle.ts';
+import { figuresJson } from './figures.ts';
+import { riverJson } from './river.ts';
+import { citiesJson } from './cities.ts';
+import { scenariosJson } from './scenarios.ts';
 
 export const ENGINE_VERSION = '1.0.0';
 
@@ -131,6 +138,7 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
     routes: s.routes.map((rt) => ({ year: rt.year, edges: rt.edges.map(([x, y, v]) => [x, y, Math.round(v * 100) / 100] as [number, number, number]) })),
   };
   writeSized('timeline.json', timeline);
+  writeSized('cities.json', citiesJson(r, a)); // Cities in 3D, #/city/set:N
   log(`timeline: ${(sizes['timeline.json'][1] / 1024).toFixed(0)} KB gz`);
 
   // ---------------------------------------------------------------- graph (structural edges + ForceAtlas2)
@@ -188,6 +196,9 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
   writeSized('search.json', { entries } as SearchJson);
 
   // ---------------------------------------------------------------- page shards
+  const eras = computeEras(r, a);
+  const H = new Heraldry(r, a, eras);
+  let battles: BattleExport | undefined;
   const titleOf = (id: string) => a.pages.get(id)?.title ?? id;
   const shards: PageJson[][] = Array.from({ length: SHARD_COUNT }, () => []);
   let raw = 0;
@@ -202,14 +213,29 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
     for (const l of out.links) labels[l] = titleOf(l);
     for (const l of out.backlinks) labels[l] = titleOf(l);
     out.labels = labels;
+    // what the page's coat of arms or seal is drawn from (atlas/src/heraldry.ts)
+    const pre = pg.id.slice(0, 3), num = Number(pg.id.slice(4));
+    if (pre === 'pol') out.arms = H.polity(s.polities[num]);
+    else if (pre === 'set') out.arms = H.settlement(num);
+    else if (pre === 'mov') out.arms = H.movement(num);
+    else if (pre === 'per' && s.persons[num]) out.sigil = H.person(s.persons[num]);
+    else if (pre === 'evt' && pg.sub === 'battle') {
+      out.battle = (battles ??= new BattleExport(a, H)).of(s.events[num]);
+      for (const c of out.battle.claims) labels[c.art] ??= titleOf(c.art);
+    }
     shards[shardOf(pg.id)].push(out);
   }
   for (let i = 0; i < SHARD_COUNT; i++) raw += write(shardFile(i), { pages: shards[i] });
   log(`pages: ${a.pages.size} in ${SHARD_COUNT} shards, ${(raw / 1e6).toFixed(0)} MB raw`);
 
   // ---------------------------------------------------------------- collections & dynasties
-  writeSized('collections.json', collectionsJson(r, a));
+  const collections = collectionsJson(r, a);
+  writeSized('collections.json', collections);
+  writeSized('figures.json', figuresJson(a, collections, (n) => (s.persons[n] ? H.person(s.persons[n]) : undefined)));
   writeSized('game.json', gameJson(a));
+  writeSized('scenarios.json', scenariosJson(a, H)); // The Tablet House, #/tablet
+  writeSized('deck.json', deckJson(r, a, eras, H));
+  writeSized('museum.json', museumJson(r, a, H));
   writeSized('dynasties.json', dynastiesJson(r, a));
 
   // ---------------------------------------------------------------- languages & economy
@@ -228,10 +254,11 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
   writeSized('story.json', story(r, a));
 
   // ---------------------------------------------------------------- histomap
-  writeSized('histomap.json', histomap(r, a));
+  const hm = histomap(r, a);
+  writeSized('histomap.json', hm);
+  writeSized('river.json', riverJson(r, a, H, hm, eras)); // the River of Time, #/river
 
   // ---------------------------------------------------------------- meta
-  const eras = computeEras(r, a);
   const counts: Record<string, number> = {};
   for (const pg of a.pages.values()) counts[pg.kind] = (counts[pg.kind] ?? 0) + 1;
   counts.documents = a.artifacts.length;
@@ -354,6 +381,9 @@ function collectionsJson(r: SimResult, a: Archive): CollectionsJson {
   const subjectOf = (x: (typeof flag)[number]) => { const m = x.body.split('\n---\n').slice(-1)[0].match(/\[\[per:(\d+)\|/); return m ? s.persons[Number(m[1])] : undefined; };
   const KINDS = ['inventor', 'archaeologist', 'prophet', 'philosopher', 'envoy', 'priest', 'historian', 'scribe', 'merchant', 'rebel', 'usurper', 'president', 'chairman', 'ruler', 'regent', 'general'];
   const lifeNote = (x: (typeof flag)[number]) => { const p = subjectOf(x); if (!p) return `AY ${x.year}`; const k = KINDS.find((r) => p.roles.some((q) => q.role === r)); return `${k ? `${k[0].toUpperCase()}${k.slice(1)}, ` : ''}${p.born < 0 ? `AY −${-p.born} to ${p.died}` : `AY ${p.born}–${p.died}`}`; };
+  // Tales: modern short fiction, listed in the order of the moments they are set in
+  const setIn = (x: (typeof flag)[number]) => s.events[x.about?.[0] ?? -1];
+  add('tales', `Tales of ${worldNameOf(r, a)}`, 'Short stories by the world’s modern novelists, each set at a real moment of the record and checked against it: private lives in the gaps, never against the facts.', flag.filter((x) => fnum(x) >= 1001 && fnum(x) < 2000).sort((x, y) => (setIn(x)?.year ?? x.year) - (setIn(y)?.year ?? y.year) || fnum(x) - fnum(y)).map((x) => { const e = setIn(x); return { id: `art:${x.id}`, note: e ? `${a.T.title.get(`evt:${e.id}`) ?? ''}`.replace(/\s*\(AY [^)]*\)$/, '') : `AY ${x.year}`, year: e?.year ?? x.year }; }), 120);
   add('lives', 'Lives', 'Long-form biographies by the archive’s modern scholars: rulers and usurpers, generals, inventors, prophets and philosophers, merchants, rebels, regents, envoys, priests, chroniclers and an archaeologist.', flag.filter((x) => fnum(x) >= 600 && fnum(x) < 700).sort((x, y) => (subjectOf(x)?.born ?? 0) - (subjectOf(y)?.born ?? 0) || fnum(x) - fnum(y)).map((x) => ({ id: `art:${x.id}`, note: lifeNote(x), year: subjectOf(x)?.born ?? x.year })), 100);
   add('essays', 'Essays on the sources', 'Modern scholars weigh the chronicles against the record.', flag.filter((x) => /journal article|survey lecture|philological essay|biographical essay$/.test(form(x)) && fnum(x) < 600).sort((x, y) => x.title.localeCompare(y.title)).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
   return { collections: out };

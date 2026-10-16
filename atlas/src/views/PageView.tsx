@@ -12,19 +12,24 @@ import { Territory } from '../components/Territory.tsx';
 import { meta, titleOf } from '../store.ts';
 import { GENRE_HTML, sections, wordCount } from '../genres.ts';
 import { chapterCount, ensureCollections, hrefOf, markDone, markOpened, partName, placeOf, readerDownload, type Place } from '../book.ts';
+import { armsSvg, blazon, sigilBlazon, sigilSvg } from '../heraldry.ts';
+import '../styles/heraldry.css';
+import { FigureButton } from '../three/figure/FigureButton.tsx';
+import { View3DButton } from '../three/museum/ViewButton.tsx';
 
 const DOC_LABEL: Record<string, string> = {
   verse: 'Verse, in translation', diary: 'Entries, in translation', glossary: 'Word list', muster: 'Muster roll',
   will: 'Testament, in translation', exercise: 'Exercise, with the teacher’s corrections', graffito: 'Scratched on the stone',
   almanac: 'The year’s calendar', lawsuit: 'Case record, in translation', manifest: 'Harbour register',
   omen: 'Tablet, in translation', periplus: 'The route, in translation', tariff: 'Schedule of dues, in translation',
+  story: 'A tale of the modern age',
 };
 
 const MAP_SELECTABLE = new Set(['polity', 'settlement', 'event', 'culture', 'movement']);
 
 export function docStyle(sub: string): string {
   const s = sub.toLowerCase();
-  if (s === 'omen' || s === 'periplus' || s === 'tariff') return s;
+  if (s === 'omen' || s === 'periplus' || s === 'tariff' || s === 'story') return s;
   if (/glossary|word-?list|lexicon/.test(s)) return 'glossary';
   if (/muster/.test(s)) return 'muster';
   if (/\bwill\b|testament/.test(s)) return 'will';
@@ -130,9 +135,13 @@ function Page({ page }: { page: PageJson }) {
             <a class="btn btn--ghost" href={`#/graph?focus=${encodeURIComponent(page.id)}&y=${page.t0}`}>Graph</a>
             {page.accounts && page.accounts.sources.length > 0 && <a class="btn btn--accent" href={`#/compare/${page.id}`}>Compare accounts</a>}
             {a?.rival && <a class="btn btn--accent" href={`#/compare/${a.rival.eventId}`}>Compare with rival accounts</a>}
+            {page.battle && <a class="btn btn--accent" href={`#/battle/${page.id}`}>Watch this battle</a>}
             {(page.kind === 'currency' || (page.kind === 'artifact' && /ledger|market/.test(page.sub))) && <a class="btn btn--ghost" href="#/prices">Prices over 5,000 years</a>}
             {page.kind === 'language' && <a class="btn btn--ghost" href="#/languages">Tree of Tongues</a>}
             {page.kind === 'language' && <a class="btn btn--ghost" href={`#/words/water?l=${page.id}`}>Word Machine</a>}
+            {page.kind === 'person' && <FigureButton page={page} />}
+            {page.kind === 'settlement' && <a class="btn btn--ghost" href={`#/city/${page.id}`}>See this city in 3D</a>}
+            {a && <View3DButton page={page} />}
             {a && <CiteButton page={page} label={label} />}
             <ShareButton title={page.title} path={a?.permalink} />
           </div>
@@ -190,6 +199,7 @@ function Infobox({ page, label, inline: isInline = false }: { page: PageJson; la
   const rows = isInline && !open ? page.infobox.slice(0, 6) : page.infobox;
   return (
     <section class={`infobox${isInline ? ' infobox--inline' : ''}`} aria-label="Facts">
+      {(page.arms || page.sigil) && <Crest page={page} />}
       <dl class="kv">
         {rows.map(([k, v]) => (
           <>
@@ -202,6 +212,18 @@ function Infobox({ page, label, inline: isInline = false }: { page: PageJson; la
         <button class="linkish small infobox__more" onClick={() => setOpen(!open)}>{open ? 'Fewer facts' : `All ${page.infobox.length} facts`}</button>
       )}
     </section>
+  );
+}
+
+/** The coat of arms of a state, city or faith, or a person's seal, drawn from the record (atlas/src/heraldry.ts). */
+function Crest({ page }: { page: PageJson }) {
+  const h = useMemo(() => (page.arms ? { svg: armsSvg(page.arms, { uid: `ib${page.id}` }), text: blazon(page.arms) } : page.sigil ? { svg: sigilSvg(page.sigil, { uid: `ib${page.id}` }), text: sigilBlazon(page.sigil) } : null), [page]);
+  if (!h) return null;
+  return (
+    <div class={`infobox__crest${page.sigil ? ' is-seal' : ''}`}>
+      <span class="infobox__arms" dangerouslySetInnerHTML={{ __html: h.svg }} />
+      <span class="infobox__blazon">{h.text}</span>
+    </div>
   );
 }
 

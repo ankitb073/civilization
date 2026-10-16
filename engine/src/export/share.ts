@@ -106,6 +106,7 @@ export function writeSharePages(r: SimResult, a: Archive, dir: string, publicDir
     { name: `A History of ${world}`, docs: flag.filter(isHistory).sort((x, y) => fl(x) - fl(y)) },
     { name: 'Sources', docs: flag.filter((x) => !isHistory(x) && !isModern(x)).sort((x, y) => x.year - y.year || fl(x) - fl(y)) },
     { name: 'Lives', docs: flag.filter((x) => fl(x) >= 600 && fl(x) < 700).sort((x, y) => subjectBorn(x) - subjectBorn(y) || fl(x) - fl(y)) },
+    { name: 'Tales', docs: flag.filter((x) => fl(x) >= 1001 && fl(x) < 2000).sort((x, y) => (s.events[x.about?.[0] ?? -1]?.year ?? x.year) - (s.events[y.about?.[0] ?? -1]?.year ?? y.year) || fl(x) - fl(y)) },
   ];
   const placed = new Set(series.flatMap((z) => z.docs));
   series.push({ name: 'Essays', docs: flag.filter((x) => !placed.has(x)).sort((x, y) => fl(x) - fl(y)) });
@@ -212,6 +213,29 @@ ${top}
 ${foot}
 </body></html>
 `);
+  // Clash of the Ages: a card game drawn from the record, with its own page and card
+  const clashDesc = `You and the archive are each dealt seven cards from the record of ${world}, a world that never existed: rulers, generals, states, cities and faiths, every number checkable. Pick a stat and the higher number wins; four rounds take the match. A new deal every day.`;
+  manifest.push({ id: 'clash', kicker: 'A card game from the archive', title: 'Clash of the Ages', quote: 'Seven cards each, drawn from five thousand years of record: reigns, wars won, battles, hosts, populations. Pick a stat. The higher number wins.', map: 'og/ch12.jpg' });
+  writeFileSync(join(dir, 'cards.html'), `${head('Clash of the Ages', clashDesc, `${SITE}s/cards.html`, cards ? 's/card/clash.jpg' : 'og.png', 'website')}
+<meta http-equiv="refresh" content="0; url=../#/cards">
+</head><body>
+${top}
+<main class="toc"><h1>Clash of the Ages</h1><p>${esc(clashDesc)}</p><a class="cta" href="../#/cards">Play →</a></main>
+${foot}
+</body></html>
+`);
+  // The Tablet House: be the palace scribe of a city in the week it falls; a shared link (?c=sc-…) opens the same city
+  const tabletDesc = `You are the palace scribe of a city of ${world} in the week it falls or holds. Five days, one tablet, one king who wants smaller dead and bigger victories. In five thousand years your tablet is set beside the record, and the archaeologist decides what you were. Every figure comes from the simulated record.`;
+  manifest.push({ id: 'tablet', kicker: 'A game from the archive', title: 'The Tablet House', quote: 'The king wants smaller dead and bigger victories. What will you press into the clay? In five thousand years, someone will check it against the record.', map: 'og/ch09.jpg' });
+  writeFileSync(join(dir, 'tablet.html'), `${head('The Tablet House', tabletDesc, `${SITE}s/tablet.html`, cards ? 's/card/tablet.jpg' : 'og.png', 'website')}
+<script>(function(){var c=new URLSearchParams(location.search).get('c');if(c&&/^sc-[0-9]+$/.test(c))location.replace('../#/tablet/'+c);})();</script>
+<meta http-equiv="refresh" content="0; url=../#/tablet">
+</head><body>
+${top}
+<main class="toc"><h1>The Tablet House</h1><p>${esc(tabletDesc)}</p><a class="cta" href="../#/tablet">Take up the stylus →</a></main>
+${foot}
+</body></html>
+`);
   writeFileSync(join(dir, 'cards.json'), JSON.stringify({ world, cards: manifest }));
 
   // contents
@@ -232,7 +256,7 @@ ${foot}
 `);
 
   // sitemap: the atlas, the contents and every reading page
-  const urls = [SITE, `${SITE}s/`, `${SITE}s/game.html`, ...cols.map((c) => `${SITE}s/c/${c.id}.html`), ...series.flatMap((z) => z.docs.map((x) => `${SITE}s/${page(x)}`))];
+  const urls = [SITE, `${SITE}s/`, `${SITE}s/game.html`, `${SITE}s/cards.html`, `${SITE}s/tablet.html`, ...cols.map((c) => `${SITE}s/c/${c.id}.html`), ...series.flatMap((z) => z.docs.map((x) => `${SITE}s/${page(x)}`))];
   writeFileSync(join(publicDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `<url><loc>${esc(u)}</loc></url>`).join('\n')}

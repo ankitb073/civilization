@@ -78,6 +78,8 @@ export function BrowseView() {
         <h1 class="h-page">The archive</h1>
         <nav class="explore" aria-label="Explore">
           <a href="#/collections"><span>Collections</span>Queens, plagues, wars told twice…</a>
+          <a href="#/museum"><span>The Museum</span>Steles, tablets and coins in 3D</a>
+          <a href="#/cards"><span>Clash of the Ages</span>A card game drawn from the record</a>
           <a href="#/dynasties"><span>Dynasties</span>The great ruling houses</a>
           <a href="#/story"><span>Story</span>Five thousand years in seven chapters</a>
           <a href="#/histomap"><span>Histomap</span>Every state as a stream</a>

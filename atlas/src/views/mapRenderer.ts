@@ -60,7 +60,7 @@ function alpha(hex: string, a: number): string {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-const KICKERS = /^(City|City-state|Kingdom|Empire|Realm|Republic|Federation|Confederacy|Confederation|Principality|Duchy|Sultanate|Khanate|League|Union|Commonwealth|Dominion|Theocracy|Free City|Chiefdom|Tribes|Lands|Queendom|Hegemony|Despotate|Protectorate|Emirate|Grand Duchy|People's Republic|Kingdoms|United Provinces|Satrapy|State)\s+of\s+(?:the\s+)?(.+)$/i;
+export const KICKERS = /^(City|City-state|Kingdom|Empire|Realm|Republic|Federation|Confederacy|Confederation|Principality|Duchy|Sultanate|Khanate|League|Union|Commonwealth|Dominion|Theocracy|Free City|Chiefdom|Tribes|Lands|Queendom|Hegemony|Despotate|Protectorate|Emirate|Grand Duchy|People's Republic|Kingdoms|United Provinces|Satrapy|State)\s+of\s+(?:the\s+)?(.+)$/i;
 
 export class MapRenderer {
   readonly canvas: HTMLCanvasElement;

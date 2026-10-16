@@ -15,7 +15,16 @@
     "prepare-data": "node --disable-warning=ExperimentalWarning scripts/prepare-data.ts",
     "loadprobe": "node --disable-warning=ExperimentalWarning scripts/loadprobe.ts",
     "a11y": "node --disable-warning=ExperimentalWarning scripts/a11y.ts",
-    "cards": "node --disable-warning=ExperimentalWarning scripts/cards.ts"
+    "cards": "node --disable-warning=ExperimentalWarning scripts/cards.ts",
+    "tablet": "node --disable-warning=ExperimentalWarning scripts/tablet.ts",
+    "figures": "node --disable-warning=ExperimentalWarning scripts/figures.ts",
+    "shoot3d": "node --disable-warning=ExperimentalWarning scripts/shoot3d.ts",
+    "film": "node --disable-warning=ExperimentalWarning scripts/film.ts",
+    "shoot-backdrop": "node --disable-warning=ExperimentalWarning scripts/shoot-backdrop.ts",
+    "shoot-river": "node --disable-warning=ExperimentalWarning scripts/shoot-river.ts",
+    "shoot-city": "node --disable-warning=ExperimentalWarning scripts/shootcity.ts",
+    "shoot-museum": "node --disable-warning=ExperimentalWarning scripts/shoot-museum.ts",
+    "sound": "node --disable-warning=ExperimentalWarning scripts/sound-check.ts"
   },
   "dependencies": {
     "@fontsource-variable/eb-garamond": "5.2.5",
@@ -27,13 +36,15 @@
     "graphology": "0.26.0",
     "graphology-layout-forceatlas2": "0.10.1",
     "preact": "10.29.8",
-    "sigma": "3.0.3"
+    "sigma": "3.0.3",
+    "three": "0.185.1"
   },
   "devDependencies": {
     "@preact/preset-vite": "2.10.6",
     "@types/d3-delaunay": "6.0.4",
     "@types/d3-force": "3.0.10",
     "@types/node": "24.19.2",
+    "@types/three": "0.185.4",
     "axe-core": "4.10.3",
     "playwright": "1.64.1",
     "typescript": "7.0.2",

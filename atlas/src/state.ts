@@ -1,6 +1,6 @@
 import { signal, effect, computed } from '@preact/signals';
 
-export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap' | 'languages' | 'prices' | 'collections' | 'dynasties' | 'year' | 'today' | 'words' | 'game';
+export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap' | 'languages' | 'prices' | 'collections' | 'dynasties' | 'year' | 'today' | 'words' | 'game' | 'cards' | 'terrain' | 'play' | 'river' | 'battle' | 'figures' | 'city' | 'museum' | 'tablet';
 export type LayerName = 'political' | 'culture' | 'religion' | 'language';
 
 export interface Route {
@@ -21,7 +21,16 @@ function parseHash(): Route {
   if (head === 'year' && parts[1]) return { view: 'year', id: parts[1], params };
   if (head === 'today') return { view: 'today', id: parts[1] ?? null, params };
   if (head === 'words') return { view: 'words', id: parts[1] ?? null, params };
+  if (head === 'play') return { view: 'play', id: null, params };
   if (head === 'game') return { view: 'game', id: null, params };
+  if (head === 'cards') return { view: 'cards', id: parts[1] ?? null, params };
+  if (head === 'tablet') return { view: 'tablet', id: parts[1] ?? null, params };
+  if (head === '3d') return { view: 'terrain', id: null, params };
+  if (head === 'figures') return { view: 'figures', id: null, params };
+  if (head === 'battle' && parts[1]) return { view: 'battle', id: parts.slice(1).join('/'), params };
+  if (head === 'river') return { view: 'river', id: null, params };
+  if (head === 'city') return { view: 'city', id: parts.slice(1).join('/') || null, params };
+  if (head === 'museum') return { view: 'museum', id: parts.slice(1).join('/') || null, params };
   if (head === 'dynasties') return { view: 'dynasties', id: null, params };
   if (head === 'dynasty' && parts[1]) return { view: 'dynasties', id: parts.slice(1).join('/'), params };
   if (head === 'graph' || head === 'browse' || head === 'about' || head === 'search' || head === 'story' || head === 'histomap' || head === 'languages' || head === 'prices') return { view: head, id: null, params };
@@ -75,7 +84,7 @@ export function toggleTheme() {
 window.addEventListener('hashchange', () => {
   const r = parseHash();
   route.value = r;
-  if (r.view === 'map' || r.view === 'graph') {
+  if (r.view === 'map' || r.view === 'graph' || r.view === 'terrain') {
     if (r.params.has('y')) year.value = clampYear(Number(r.params.get('y')));
     const l = r.params.get('l');
     if (l === 'political' || l === 'culture' || l === 'religion' || l === 'language') layer.value = l;
@@ -109,7 +118,8 @@ effect(() => {
   const l = layer.value;
   const sel = selection.value;
   const routes = showRoutes.value;
-  if (r.view !== 'map' && r.view !== 'graph') return;
+  if (r.view !== 'map' && r.view !== 'graph' && r.view !== 'terrain') return;
+  if (r.params.get('cinema') === '1') return;
   clearTimeout(syncTimer);
   syncTimer = window.setTimeout(() => {
     const p = new URLSearchParams(r.params);
@@ -119,7 +129,7 @@ effect(() => {
       if (routes) p.set('routes', '1'); else p.delete('routes');
     }
     if (sel) p.set('sel', sel); else p.delete('sel');
-    const next = `#/${r.view}?${p.toString()}`;
+    const next = `#/${r.view === 'terrain' ? '3d' : r.view}?${p.toString()}`;
     if (location.hash !== next) {
       history.replaceState(null, '', next);
     }
@@ -148,5 +158,5 @@ export const SHEET_PEEK = 72;
 export const sheetSnap = signal<'peek' | 'half' | 'full'>('peek');
 
 /** True when the visitor arrived without a year in the URL (a fresh landing, not a shared permalink). */
-export const freshLanding = !/[?&]y=/.test(location.hash) && !/^#\/(p|compare|browse|about|search|graph|story|histomap|languages|prices|collections|dynast|year|today|words)/.test(location.hash);
+export const freshLanding = !/[?&]y=/.test(location.hash) && !/^#\/(p|compare|browse|about|search|graph|story|histomap|languages|prices|collections|dynast|year|today|words|3d|figures|river|battle|city|museum)/.test(location.hash);
 export const reducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;

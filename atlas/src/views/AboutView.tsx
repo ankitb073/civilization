@@ -36,6 +36,7 @@ export function AboutView() {
           {hist && <a class="btn btn--accent" href="#/collections/history">Read the History</a>}
           <a class={`btn${hist ? '' : ' btn--accent'}`} href="#/story">Read the story</a>
           <a class="btn" href={mapHref({ y: 0 })}>Start at year 0</a>
+          <a class="btn" href="#/3d">See it in 3D</a>
           <a class="btn" href="#/browse">Browse the archive</a>
           <a class="btn btn--ghost" href="https://github.com/ankitb073/civilization" target="_blank" rel="noopener">Source on GitHub</a>
         </div>
@@ -97,6 +98,7 @@ export function AboutView() {
         <nav class="explore explore--wide" aria-label="Explore">
           {hist && <a href="#/collections/history"><span>History</span>{hist.title}, in {hist.items.length} parts</a>}
           <a href="#/story"><span>Story</span>Five thousand years in seven chapters</a>
+          <a href="#/3d"><span>3D</span>{m.worldName} in relief: turn the land and watch five thousand years of borders rise and fall</a>
           <a href="#/collections"><span>Collections</span>Curated lists: queens, plagues, lost works, wars told twice</a>
           <a href="#/dynasties"><span>Dynasties</span>Family trees of the great ruling houses</a>
           <a href="#/languages"><span>Languages</span>The Tree of Tongues: every language and its descendants</a>

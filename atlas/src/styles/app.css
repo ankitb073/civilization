@@ -63,19 +63,21 @@ code,
   min-height: 100dvh;
 }
 .app--map,
-.app--graph {
+.app--graph,
+.app--terrain {
   height: 100dvh;
   display: grid;
   grid-template-rows: var(--topbar-h) minmax(0, 1fr) var(--tabbar-h);
   overflow: hidden;
 }
 .app--map .main,
-.app--graph .main {
+.app--graph .main,
+.app--terrain .main {
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
-.app:not(.app--map):not(.app--graph) .main {
+.app:not(.app--map):not(.app--graph):not(.app--terrain) .main {
   padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
 }
 
@@ -191,11 +193,13 @@ code,
     border-top: 1px solid var(--rule);
   }
   .app--map .tabbar,
-  .app--graph .tabbar {
+  .app--graph .tabbar,
+  .app--terrain .tabbar {
     position: static;
   }
   .app--map,
-  .app--graph {
+  .app--graph,
+  .app--terrain {
     grid-template-rows: var(--topbar-h) minmax(0, 1fr) calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   }
   .tabbar__a {
@@ -714,6 +718,12 @@ code,
   border: none;
   width: 34px;
   height: 34px;
+}
+.mapctl__3d {
+  text-decoration: none;
+  font: 700 11.5px/1 var(--font-ui);
+  letter-spacing: 0.02em;
+  color: var(--accent) !important;
 }
 .maptip {
   position: absolute;
@@ -1599,6 +1609,7 @@ code,
 /* keep long content (era blurbs, titles) from widening the app grid */
 .app--map,
 .app--graph,
+.app--terrain,
 .mapview,
 .graphview {
   grid-template-columns: minmax(0, 1fr);

@@ -21,6 +21,7 @@ A static web app (Vite, TypeScript, Preact) that reads the files defined in `eng
 | `#/dynasties`, `#/dynasty/<id>` | Family trees of ruling houses |
 | `#/year/<y>` | One year in detail |
 | `#/today[/YYYY-MM-DD]` | Redirects to the document of the day |
+| `#/3d?y=2310&sel=pol:12&cam=tx,tz,az,polar,dist` | The relief model in 3D (decision 0020); `#/3d?cinema=1` is the frame-stepped fly-through for video |
 
 Global state lives in the URL: year, layer, selection. A global search box in the top bar (lazy-loads `search.json`) works everywhere; typing "AY 2310" offers the year view.
 
@@ -153,6 +154,16 @@ About 7% of splits are respellings and 1.7% are different words.
 Links in: the Tree of Tongues header, every language page ("Word Machine"), and the explore rows on Browse and About. The nav highlights Languages.
 
 **Budget.** On the current export, the change added 0.6 KB gzip to the main bundle (routing, the lazy import and links). The view is an 8.4 KB gzip chunk, plus 3.1 KB of CSS and a 0.5 KB shared layout chunk.
+
+## 3D relief (`#/3d`)
+
+A lazy chunk on three.js (decision 0020): the world as a tabletop relief you can orbit, with the borders of the chosen year draped over it.
+- **Mesh** (`atlas/src/terrain/mesh.ts`): the Voronoi cells of `world.json`, each fanned from its site and subdivided (land 3×, sea 1×). Coasts sit exactly on sea level along land–sea cell edges, heights are smoothed, and land gets deterministic ridge noise. `heightAt(x, z)` returns the exact surface, for picking, rivers and labels.
+- **Year → colour only** (`atlas/src/terrain/scene.ts`): a per-cell float texture (owner id + colour) is read in the vertex shader. The fragment shader tints owned land over a neutral albedo and draws borders (ink), frontiers (the owner's colour, darkened), the coast and the selected state's outline, all with screen-space widths.
+- **Scene:** a sun with a static shadow map and a hemisphere fill; a matte translucent sea and the model's sides; river ribbons; cities as instanced towers (height ∝ ∛population, capitals gold); DOM labels for the largest states and cities, decluttered and occlusion-tested.
+- **UI:** the shared time slider and play button; Spin (idle auto-rotate, off under reduced motion); relief (×0.55, ×1, ×1.7); reset view; a link to the 2D map at the same year and selection; "Largest states" (desktop), which flies to a state. Click or tap selects a state (card with links); a mouse hover names it. The URL carries `y`, `sel` and the camera (`cam`).
+- **Links in:** the "3D" button on the map's zoom controls, and the About page.
+- **Tools:** `node atlas/scripts/shoot3d.ts` (desktop and phone screenshots, plus frame and update times while animating years) and `node atlas/scripts/film.ts` (renders the cinema mode to MP4 at 16:9, 1:1 and 9:16, with `--every=N --sheet` for a quick contact sheet).
 
 ## Compare
 

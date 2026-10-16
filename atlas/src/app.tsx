@@ -19,6 +19,15 @@ const YearView = lazy(() => import('./views/YearView.tsx').then((m) => ({ defaul
 const PricesView = lazy(() => import('./views/PricesView.tsx').then((m) => ({ default: m.PricesView })));
 const WordsView = lazy(() => import('./views/WordsView.tsx').then((m) => ({ default: m.WordsView })));
 const GameView = lazy(() => import('./views/GameView.tsx').then((m) => ({ default: m.GameView })));
+const PlayView = lazy(() => import('./views/PlayView.tsx').then((m) => ({ default: m.PlayView })));
+const CardsView = lazy(() => import('./views/CardsView.tsx').then((m) => ({ default: m.CardsView })));
+const TabletView = lazy(() => import('./game/tablet/TabletView.tsx').then((m) => ({ default: m.TabletView })));
+const TerrainView = lazy(() => import('./views/TerrainView.tsx').then((m) => ({ default: m.TerrainView })));
+const FiguresView = lazy(() => import('./three/figure/FiguresView.tsx').then((m) => ({ default: m.FiguresView })));
+const RiverView = lazy(() => import('./three/river/RiverView.tsx').then((m) => ({ default: m.RiverView })));
+const BattleView = lazy(() => import('./three/battle/BattleView.tsx').then((m) => ({ default: m.BattleView })));
+const CityView = lazy(() => import('./three/city/CityView.tsx').then((m) => ({ default: m.CityView })));
+const MuseumView = lazy(() => import('./three/museum/MuseumView.tsx').then((m) => ({ default: m.MuseumView })));
 const TodayRedirect = lazy(() => import('./components/Reading.tsx').then((m) => ({ default: m.TodayRedirect })));
 
 const NAV = [
@@ -28,6 +37,7 @@ const NAV = [
   { view: 'languages', label: 'Languages', href: () => '#/languages', icon: 'M4 12h5M9 12c3 0 3-6 7-6h4M9 12c3 0 3 6 7 6h4M14 6h0', desktopOnly: true },
   { view: 'graph', label: 'Graph', href: () => `#/graph?y=${year.value}`, icon: 'M6 6m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M18 8m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M10 18m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M8 7.5l7.5 0.8M7 8.2l2 7.5M16.3 10l-4.6 6' },
   { view: 'browse', label: 'Archive', href: () => '#/browse', icon: 'M4 5h16v4H4zM5 9v10h14V9M10 13h4' },
+  { view: 'play', label: 'Play', href: () => '#/play', icon: 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z' },
   { view: 'search', label: 'Search', href: () => '#/search', icon: 'M11 11m-6.5 0a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0M16 16l4.5 4.5', mobileOnly: true },
   { view: 'about', label: 'About', href: () => '#/about', icon: 'M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0-18 0M12 11v6M12 7.5v.5', desktopOnly: true },
 ];
@@ -46,12 +56,13 @@ export function App() {
   }, [r.view, m]);
   useEffect(() => { if (r.view !== 'map' && r.view !== 'graph') window.scrollTo(0, 0); }, [r.view, r.id]);
 
-  const active = r.view === 'page' || r.view === 'compare' || r.view === 'collections' || r.view === 'dynasties' || r.view === 'game' ? 'browse' : r.view === 'prices' ? 'about' : r.view === 'year' ? 'map' : r.view === 'words' ? 'languages' : r.view;
+  const active = r.view === 'page' || r.view === 'compare' || r.view === 'collections' || r.view === 'dynasties' || r.view === 'game' || r.view === 'cards' || r.view === 'battle' || r.view === 'figures' || r.view === 'city' || r.view === 'museum' ? 'browse' : r.view === 'prices' ? 'about' : r.view === 'year' || r.view === 'terrain' ? 'map' : r.view === 'words' ? 'languages' : r.view === 'river' ? 'histomap' : r.view === 'tablet' ? 'play' : r.view;
   const tabActive = active === 'languages' || r.view === 'prices' ? 'browse' : active;
   const clean = r.params.get('clean') === '1';
   const og = r.params.get('og') === '1' || r.params.get('frames') === '1';
+  const cinema = r.view === 'terrain' && r.params.get('cinema') === '1';
   return (
-    <div class={`app app--${r.view}${clean || og ? ' is-clean' : ''}${og ? ' is-og' : ''}${r.params.get('export') === '1' ? ' is-export' : ''}`}>
+    <div class={`app app--${r.view}${clean || og ? ' is-clean' : ''}${og ? ' is-og' : ''}${cinema ? ' is-cinema' : ''}${r.params.get('export') === '1' ? ' is-export' : ''}`}>
       <a class="skip" href="#main">Skip to content</a>
       <header class="topbar">
         <a class="brand" href={mapHref({})} aria-label={`${m?.title ?? 'Palimpsest'} — home`}>
@@ -103,9 +114,54 @@ export function App() {
             <WordsView concept={r.id} />
           </Suspense>
         )}
+        {r.view === 'play' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /></div>}>
+            <PlayView />
+          </Suspense>
+        )}
         {r.view === 'game' && (
           <Suspense fallback={<div class="center-load"><div class="spinner" /> Unrolling the chronicles…</div>}>
             <GameView />
+          </Suspense>
+        )}
+        {r.view === 'cards' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Shuffling the deck…</div>}>
+            <CardsView sub={r.id} />
+          </Suspense>
+        )}
+        {r.view === 'tablet' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Wetting the clay…</div>}>
+            <TabletView sub={r.id} />
+          </Suspense>
+        )}
+        {r.view === 'figures' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Setting out the pieces…</div>}>
+            <FiguresView />
+          </Suspense>
+        )}
+        {r.view === 'terrain' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Raising the mountains…</div>}>
+            <TerrainView />
+          </Suspense>
+        )}
+        {r.view === 'river' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Carving the valley…</div>}>
+            <RiverView />
+          </Suspense>
+        )}
+        {r.view === 'city' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Laying out the streets…</div>}>
+            <CityView id={r.id} />
+          </Suspense>
+        )}
+        {r.view === 'museum' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Opening the museum…</div>}>
+            <MuseumView id={r.id} />
+          </Suspense>
+        )}
+        {r.view === 'battle' && r.id && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Setting out the armies…</div>}>
+            <BattleView id={r.id} />
           </Suspense>
         )}
         {r.view === 'prices' && (

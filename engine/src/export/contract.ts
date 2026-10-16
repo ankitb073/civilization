@@ -201,9 +201,81 @@ export interface PageJson {
     daughters: string[];
     parent: string | null;
   };
+  /** A state's, city's or faith's coat of arms (drawn atlas-side by atlas/src/heraldry.ts). */
+  arms?: ArmsSpec;
+  /** A person's seal (atlas/src/heraldry.ts). */
+  sigil?: SigilSpec;
+  /** Battles: what the diorama (#/battle/evt:N) is drawn from. */
+  battle?: BattleJson;
 }
 
 export interface ShardJson { pages: PageJson[] }
+
+// ---------------------------------------------------------------- pages[].battle (engine/src/export/battle.ts)
+/** A battle as the diorama draws it. Pairs are [attacker, defender]. All of it is read from the record except
+ *  `claims`, which are read from the surviving documents' own text. */
+export interface BattleJson {
+  size: [number, number];
+  losses: [number, number];
+  won: 0 | 1;
+  decisive: number;          // 0..1, as recorded
+  fell: -1 | 0 | 1;          // whose commander was killed in the battle (-1: neither)
+  arms: [ArmsSpec, ArmsSpec];
+  seals: [SigilSpec | null, SigilSpec | null];   // the commanders'
+  /** The military techs each side knew that year: bit i set for BATTLE_KIT[i] (bronze, chariot, iron, cavalry,
+   *  crossbow, gunpowder, rifles, railway, combustion, aviation). */
+  kit: [number, number];
+  town: number;              // the nearest settlement's population that century (0: none)
+  claims: BattleClaim[];
+}
+/** What one surviving document says about one battle (null where it says nothing). */
+export interface BattleClaim {
+  art: string;
+  kind: 'chronicle' | 'stele' | 'telegram' | 'newspaper' | 'muster';
+  side: 0 | 1;               // whose document it is
+  size: [number | null, number | null];
+  losses: [number | null, number | null];
+  won: 0 | 1 | null;         // who it says won
+  arms?: [arm: string, men: number][];   // muster rolls: the men of each arm, as listed
+}
+/** The military techs a battle's `kit` bits stand for, in order of their coming. */
+export const BATTLE_KIT = ['bronze', 'chariot', 'iron', 'cavalry', 'crossbow', 'gunpowder', 'rifles', 'railway', 'combustion', 'aviation'] as const;
+
+// ---------------------------------------------------------------- heraldry (pages[].arms and .sigil, deck.json)
+/** What a coat of arms is drawn from, all of it read from the record: [page id, culture (sets the colour),
+ *  religion (sets the metal; -1 none), form (a state's main government; 'city' | 'port'; 'faith:<movement kind>'),
+ *  era index into meta.eras (sets the shield's shape), flags (ARMS_*)]. The drawing is a pure function of this. */
+export type ArmsSpec = [id: string, culture: number, religion: number, form: string, era: number, flags: number];
+export const ARMS_NAVAL = 1;      // founded colonies, or a merchant republic ruled from a port
+export const ARMS_INDUSTRIAL = 2; // took up the steam engine early in its life
+export const ARMS_COLONY = 4;
+export const ARMS_HORDE = 8;
+export const ARMS_REBEL = 16;
+/** What a person's seal is drawn from: [page id, sex, every role they held (comma-separated, in order), name,
+ *  era index of their prime (their first role), dynasty (-1 none), the culture and religion of the state they served
+ *  (its tinctures; their own culture and -1 when they served none), flags (ARMS_NAVAL when that state was a sea power)]. */
+export type SigilSpec = [id: string, sex: 'm' | 'f', roles: string, name: string, era: number, dynasty: number, culture: number, religion: number, flags: number];
+
+// ---------------------------------------------------------------- deck.json
+/** Clash of the Ages: a deck of cards drawn from the record. Every stat is a count or a maximum over the record
+ *  (roles, war and battle events, the territory log, the decadal polity survey), checkable against world.sqlite;
+ *  `how` says how each is counted. Higher always wins. */
+export type CardKind = 'ruler' | 'general' | 'state' | 'city' | 'faith';
+export interface DeckJson {
+  kinds: { id: CardKind; name: string; stats: { key: string; label: string; unit: string; how: string }[] }[];
+  cards: {
+    id: string;                // the page the card links to (per:N, pol:N, set:N, mov:N)
+    kind: CardKind;
+    name: string;              // the page title
+    role: string;              // "Ruler of Tallin", "General of Yida", "Jinru people · capital Taulin"
+    years: [number, number];   // the reign, the campaigns (first to last battle), or the life of the state, city or faith
+    era: number;               // index into meta.eras
+    rarity: 0 | 1 | 2 | 3;     // common, rare, epic, legendary: by significance within the kind
+    stats: number[];           // in the order of kinds[].stats
+    arms: ArmsSpec;            // the card's own arms, or (rulers, generals) the arms of the state they served
+    sigil?: SigilSpec;         // rulers and generals
+  }[];
+}
 
 // ---------------------------------------------------------------- story.json
 /** A guided reading of the five millennia: one chapter per era, each a handful of beats
@@ -295,6 +367,14 @@ export interface DynastiesJson {
   }[];
 }
 
+// ---------------------------------------------------------------- figures.json
+/** The subjects of the Lives as figurines (#/figures, atlas/src/three/figure): each Life (art:N) with its subject's
+ *  person page cut to what a figure is built from (the same rows the page carries, so a piece is identical everywhere). */
+export type FigurePage = Pick<PageJson, 'id' | 'title' | 'sub' | 't0' | 't1' | 'infobox' | 'sigil'>;
+export interface FiguresJson {
+  pieces: { life: string; page: FigurePage }[];
+}
+
 // ---------------------------------------------------------------- histomap.json
 /** A "Histomap": every state as a stream whose width is its share of the world's population.
  *  Streams are ordered west → east by capital, so neighbours flow side by side. */
@@ -311,3 +391,134 @@ export interface HistomapJson {
     share: number[];                     // 0..1 share of world population per sample year
   }[];
 }
+
+// ---------------------------------------------------------------- river.json
+/** The River of Time (#/river, a 3D Histomap). Its own streams: the Histomap's, plus every state that ever held 2.5%
+ *  of the world's people (so the early centuries are as full as the late), on histomap.json's sample years. Every
+ *  number is a decade survey (polity_years) at the sample year; stones are the record's great events. */
+export interface RiverJson {
+  years: number[];                       // == histomap.json years (every 20)
+  land: number;                          // land districts in the world (the districts share's denominator)
+  pop: number[];                         // people in all states, per sample (the people share's denominator)
+  army: number[];                        // soldiers under arms in all states, per sample
+  series: {
+    id: string;                          // pol:N, or 'other' (every lesser state together)
+    name: string;
+    color: string;                       // the state's colour, as on the map and the Histomap
+    order: number;                       // west → east by first capital
+    start: number;
+    end: number;
+    i0: number;                          // index into years of the first value below
+    share: number[];                     // share of the world's people (0..1), per sample from i0
+    cells: number[];                     // districts held, per sample from i0
+    army: number[];                      // soldiers, per sample from i0
+    arms?: ArmsSpec;                     // states only
+  }[];
+  stones: {
+    id: string;                          // the page (evt:N or cli:N)
+    year: number;
+    kind: 'war' | 'plague' | 'eruption' | 'contact' | 'writing' | 'trade' | 'famine';
+    title: string;
+    figure: string;                      // "1,654,464 fell", "VEI 7", …
+    mag: number;                         // 0..1 within its kind (sets the stone's height)
+  }[];
+}
+
+// ---------------------------------------------------------------- cities.json
+/** Cities in 3D (#/city/set:N, atlas/src/three/city): what a city's model needs beyond timeline.json and its page,
+ *  as change points read from the record (engine/src/export/cities.ts). Fetched only by the city view. */
+export interface CitiesJson {
+  owners: number[][];                    // per settlement idx: flat [year, polity idx (-1 none), …] from its founding (territory log at its cell)
+  cultures: number[][];                  // per settlement idx: flat [year, culture idx, …] from its founding (culture log at its cell)
+  sacks: number[][];                     // per settlement idx: the years it was sacked
+  port: number[];                        // per settlement idx: 1 if a port
+  states: number[][];                    // per polity idx: flat [year, state faith (movement idx, -1 none), technological age (index into meta.eras), …] (decadal survey)
+  faiths: [name: string, kind: string, parent: number][]; // per movement idx
+  peoples: string[];                     // per culture idx: its name
+}
+
+// ---------------------------------------------------------------- museum.json
+/** The Museum (#/museum): celebrated documents shown as 3D objects built from their records. Each is picked by a
+ *  rule over the extant archive (the oldest dated document, the biggest boast in stone, the first coin…; see
+ *  engine/src/export/museum.ts), oldest first. `page` is the document's page, trimmed (no link lists, the body cut at
+ *  a paragraph, the gloss without per-word tokens); `arms` are the coats of arms of the states it names (its issuer
+ *  first) and `sigil` its author's seal, for the emblems and seals the object carries. */
+export interface MuseumJson {
+  items: { id: string; why: string; page: PageJson; arms: Record<string, ArmsSpec>; sigil?: SigilSpec }[];
+}
+
+// ---------------------------------------------------------------- scenarios.json
+/** The Tablet House (#/tablet, docs/lld/tablet-house.md): the playable moments, built by engine/src/export/scenarios.ts
+ *  and recounted from world.sqlite by engine/test/scenarios.test.ts. Each is a siege or sack of a literate state's
+ *  capital and the battle of the same war that brought the enemy to its walls. "Ours" is always the besieged state (the
+ *  scribe's side), "theirs" the besieger. Names are the period forms the defender's own scribes wrote at the date (the
+ *  archive's naming, as the flagship dossiers' allowedLinks texts). Prices are grams of silver per measure of grain.
+ *  The fields after the first block of each object are additions to the design's shape (never removals). */
+export type ScenarioOutcome = 'sacked' | 'conquered' | 'treaty' | 'held';
+export interface Scenario {
+  id: string;                    // "sc-<eventId>"
+  event: number; year: number;   // the siege/sack event and its year
+  city: {
+    id: string; name: string; pop: number; cell: number; port: boolean;     // pop: the last century census at or before the year
+    region: string; people: string; peopleId: string;                      // the region, and the people whose names are in `names`
+    arms: ArmsSpec; sacked: number; founded: number;                       // earlier sacks of the city; its founding year
+  };
+  state: {
+    id: string; name: string; ruler: { id: string; name: string; sex: 'm' | 'f'; age: number;
+      title: string; since: number; died: number; deathCause: string };   // title as the state's documents style it (king, queen, great king, lord…)
+    faith: string; gods: { name: string; sex: 'm' | 'f'; role: string; id: string }[];   // role: the god's domain
+    coin: string | null; grain: number | null;                             // grain: grams of silver per measure at the city's market
+    faithId: string; faithKind: string; coinId: string | null; coinSilver: number | null; // grams of silver per coin at the date
+    grainCoin: number | null;                                              // the grain price in coins
+    gov: string; language: string; langId: number; arms: ArmsSpec;
+  };
+  enemy: { id: string; name: string; ruler: { id: string; name: string; sex: 'm' | 'f'; age: number; title: string }; arms: ArmsSpec };
+  medium: string;                // clay tablet / papyrus / parchment / paper / typescript: the palace scribe's material at that date
+  script: string;                // the script's name
+  scriptKind: string;            // logosyllabic | syllabary | abjad | alphabet
+  battle: {
+    id: string; place: string; ours: number; theirs: number; oursLost: number; theirsLost: number;
+    won: boolean; commander: { name: string; sex: 'm' | 'f'; isKing: boolean; id: string; age: number; killed: boolean };
+    year: number; name: string; placeId: string; decisive: number;
+    date: string;                // the day as the defender's scribes dated it
+    enemyCommander: { id: string; name: string; sex: 'm' | 'f'; killed: boolean } | null;
+  };
+  outcome: ScenarioOutcome;      // sacked: the sack; conquered: the realm annexed within two years; treaty: peace within two years; held: neither
+  burnedArchives: boolean;
+  treaty: {
+    id: string; ceded: number;   // districts the defender gave up
+    tribute: string | null;      // the yearly tribute the defender must pay, as its own money reckons it
+    truce: number | null;        // years
+    text: string | null;         // the surviving treaty document (links as plain text, without the editors' note and [AY] marks)
+    kind: 'treaty' | 'conquest'; name: string; year: number; signedAt: string | null; towns: string[];
+    indemnity: string | null; tributeKg: number | null; tributeYears: number | null; indemnityKg: number | null;
+    terms: string[];             // the kinds of every term, in order (cede, tribute, truce, annexation…)
+    catalog: string | null; doc: string | null;
+  } | null;
+  hardship: {
+    famine: boolean; plague: string | null; drought: boolean;
+    grainBefore: number | null;  // the price a decade or more before (the nearest earlier survey)
+    grainAfter: number | null;   // the first survey after the year (null: the market no longer reported)
+    famineId: string | null; plagueId: string | null; droughtId: string | null;
+  };
+  /** The defender side's surviving chronicle of the war. oursLost/theirsLost/claimsWon are what it says of THIS
+   *  battle, read from its surviving text (null when it passes over the battle); war* are its totals for the war. */
+  chronicle: {
+    catalog: string; author: string; year: number; oursLost: number | null; theirsLost: number | null;
+    outcomeWords: string | null; // its closing words on the war, verbatim after the date
+    quote: string | null;        // one verbatim sentence (this battle's tally when it tells it)
+    id: string; title: string; authorId: string | null; medium: string; condition: string;
+    tellsBattle: boolean; claimsWon: boolean | null;
+    warOursLost: number | null; warTheirsLost: number | null; outcomeClaim: string | null;
+  } | null;
+  names: { f: string[]; m: string[] }; // names in use among the city's people at the time (right sex)
+  /** Optional 3D framing in atlas/src/terrain scene units (SCALE 0.01, origin at the map's centre), looking north. */
+  camera: { x: number; y: number; z: number; target: [number, number, number] } | null;
+  sub: 'siege' | 'sack';
+  title: string;                 // the event page's title
+  date: string;                  // the day of the siege as the defender's scribes dated it
+  era: string; eraIndex: number; // the defender's technological era (Bronze Age … Post-industrial), 0..6
+  /** The whole war, from the record's battles (ours = the defender). */
+  war: { id: string; name: string; start: number; end: number; goal: string; battles: number; won: number; oursLost: number; theirsLost: number; outcome: 'won' | 'lost' | 'stalemate' | 'dissolved' };
+}
+export interface ScenariosJson { scenarios: Scenario[] }

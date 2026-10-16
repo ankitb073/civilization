@@ -109,7 +109,7 @@ export function HistomapView() {
           all the people in the world. Streams run west to east by capital, so neighbours flow side by side. The muted margins are
           lesser states and stateless peoples.
         </p>
-        {!exportMode && <p class="muted small">{mobile ? 'Tap' : 'Hover'} a stream for its story; {mobile ? 'tap again' : 'click'} to open its page.</p>}
+        {!exportMode && <p class="muted small">{mobile ? 'Tap' : 'Hover'} a stream for its story; {mobile ? 'tap again' : 'click'} to open its page. <a href="#/river">Walk it in 3D: the River of Time →</a></p>}
       </header>
       <div class="histomap__chart" ref={wrapRef} onPointerLeave={() => { if (!mobile) setHover(null); }}>
         {h && geo && w > 0 && (

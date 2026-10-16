@@ -59,6 +59,7 @@ export function GameView() {
           <button class="btn btn--accent" onClick={share}>{copied ? 'Copied' : 'Share your score'}</button>
           <button class="btn" onClick={() => { setKey(`${todayKey()}#${Math.floor(Math.random() * 1e9)}`); setI(0); setScores([]); setGuess(null); setLocked(false); }}>Play five more</button>
           <a class="btn btn--ghost" href="#/collections/spin">The most partisan chronicles</a>
+          <a class="btn btn--ghost" href="#/cards">Play Clash of the Ages</a>
         </div>
         <p class="game__note">Every war here was simulated, and both chronicles were generated from the record by scribes who lie in their own favour: they shrink their own dead, inflate the enemy's, and blame the other side. {data.rounds.length.toLocaleString('en-US')} wars in the archive are told by both sides.</p>
       </div>

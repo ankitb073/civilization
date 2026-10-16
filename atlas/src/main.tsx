@@ -10,6 +10,7 @@ import './styles/reader.css';
 import './styles/views2.css';
 import './styles/genres.css';
 import './styles/game.css';
+import './styles/play.css';
 import { App } from './app.tsx';
 
 render(<App />, document.getElementById('app')!);

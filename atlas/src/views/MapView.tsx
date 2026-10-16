@@ -239,6 +239,7 @@ export function MapView() {
           <button class="btn-icon" aria-label="Fit map" onClick={fit}>
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
           </button>
+          <a class="btn-icon mapctl__3d" href={`#/3d?y=${year.value}${selection.value?.startsWith('pol:') ? `&sel=${selection.value}` : ''}`} aria-label={`See AY ${year.value} in 3D relief`} title="3D relief">3D</a>
         </div>
         <TourOverlay />
         <Explainer docs={meta.value?.counts.artifact ?? 0} warId={meta.value?.featured.find((f) => f.id.startsWith('evt:'))?.id} world={meta.value?.worldName ?? 'This world'} />

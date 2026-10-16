@@ -1119,6 +1119,9 @@ a.colcard:hover {
   padding-top: 6px;
   font-size: 13px;
 }
+.colfilter {
+  margin: 4px 0 18px;
+}
 .colindex {
   list-style: none;
   margin: 0;

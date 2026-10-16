@@ -62,6 +62,12 @@ function CollectionPage({ c }: { c: Collection }) {
   const done = new Set(p?.done ?? []);
   const cont = hist ? continueAt(c, p) : null;
   const epub = hist ? readerDownload(meta.value) : undefined;
+  // the Lives can be narrowed to one kind of life (the note opens with it: "General, AY 3580–3646")
+  const kindOf = (note: string) => (/^([A-Z][a-z]+), AY /.exec(note)?.[1] ?? '');
+  const kinds = c.id === 'lives' ? [...c.items.reduce((m, it) => { const k = kindOf(it.note); return k ? m.set(k, (m.get(k) ?? 0) + 1) : m; }, new Map<string, number>())].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])) : [];
+  const [only, setOnly] = useState('');
+  useEffect(() => setOnly(''), [c.id]);
+  const plural = (k: string, n: number) => (n === 1 ? k : k === 'Archaeologist' ? 'Archaeologists' : k.endsWith('y') ? `${k.slice(0, -1)}ies` : `${k}s`);
   return (
     <div class="collections collections--one">
       <header class="collections__head">
@@ -76,8 +82,17 @@ function CollectionPage({ c }: { c: Collection }) {
           </div>
         )}
       </header>
+      {kinds.length > 1 && (
+        <div class="chips colfilter" role="radiogroup" aria-label="Kind of life">
+          <button role="radio" aria-checked={!only} class={`chip${!only ? ' is-on' : ''}`} onClick={() => setOnly('')}>All <span>{c.items.length}</span></button>
+          {kinds.map(([k, n]) => (
+            <button role="radio" aria-checked={only === k} class={`chip${only === k ? ' is-on' : ''}`} onClick={() => setOnly(only === k ? '' : k)}>{plural(k, n)} <span>{n}</span></button>
+          ))}
+        </div>
+      )}
       <ol class={`colindex${hist ? ' colindex--book' : ''}`}>
         {c.items.map((it, i) => {
+          if (only && kindOf(it.note) !== only) return null;
           const [part, span] = hist ? it.note.split(' · ') : [];
           return (
             <li class="colindex__row">

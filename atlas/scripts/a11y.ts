@@ -28,9 +28,12 @@ try { edLang = JSON.parse(readFileSync(join(ROOT, 'dist', 'data', 'words', 'inde
 if (edLang) extra.push(['words', '#/words'], ['word', `#/words/water?y=2112&l=${edLang}`], ['word-early', '#/words/king?y=-1500']);
 const views = [
   ['map', '#/map?y=2600'], ['story', '#/story'], ['histomap', '#/histomap'], ['languages', '#/languages'], ['graph', '#/graph?y=3000'],
-  ['browse', '#/browse'], ['about', '#/about'], ['collections', '#/collections'], ['year', '#/year/2310'], ['prices', '#/prices'],
+  ['3d', '#/3d?y=2400'], ['browse', '#/browse'], ['about', '#/about'], ['collections', '#/collections'], ['year', '#/year/2310'], ['prices', '#/prices'],
   ['war', `#/p/${meta.featured[0].id}`], ['compare', `#/compare/${meta.featured[0].id}`], ['polity', `#/p/${meta.featured.find((f: { id: string }) => f.id.startsWith('pol:'))?.id}`],
   ['inscription', `#/p/${meta.featured.find((f: { id: string; title: string }) => /inscription/i.test(f.title))?.id ?? meta.featured[0].id}`],
+  // the play hub and its experiences
+  ['play', '#/play'], ['tablet', '#/tablet'], ['cards', '#/cards'], ['game', '#/game'], ['river', '#/river'], ['figures', '#/figures'],
+  ['museum', '#/museum'], ['city', '#/city/set:7'], ['battle', '#/battle/evt:39484'], ['tales', '#/collections/tales'],
   ...extra,
 ];
 const browser = await chromium.launch();

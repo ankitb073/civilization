@@ -16,7 +16,8 @@
     "check": "node --disable-warning=ExperimentalWarning engine/src/cli/check.ts",
     "build": "npm run build:data && npm --prefix atlas run build",
     "dev": "npm --prefix atlas run dev",
-    "stats": "node --disable-warning=ExperimentalWarning engine/src/debug/stats.ts"
+    "stats": "node --disable-warning=ExperimentalWarning engine/src/debug/stats.ts",
+    "play": "zsh scripts/play.sh"
   },
   "dependencies": {
     "d3-delaunay": "^6.0.4",
