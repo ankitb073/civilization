@@ -448,7 +448,10 @@ export function buildHistoriography(a: Archive): Dossier[] {
   // 5. founders of faiths
   const founders = s.movements.filter((m) => m.founder !== null && (m.kind === 'religion' || m.kind === 'philosophy') && T.pageRefs.has(`per:${m.founder}`)).sort((x, y) => y.peak - x.peak).slice(0, 8);
   for (const m of founders) {
-    const facts = [stripLinks(a.pages.get(`mov:${m.id}`)?.summary ?? ''), `Teachings: ${tenetText(m.kind, m.tenets)}`, `Founder: ${T.title.get(`per:${m.founder}`)} (AY ${s.persons[m.founder!].born}–${s.persons[m.founder!].died})`];
+    // the page summary's peak is the faith's largest size ever, usually reached near AY 5000: an essayist writing earlier
+    // cannot know it, and the record keeps no yearly count of adherents
+    const size = m.died !== null ? `At its height it counted about ${m.peak.toLocaleString('en-US')} adherents, before it ended in AY ${m.died}.` : `The record keeps no yearly count of its adherents. Its largest size, about ${m.peak.toLocaleString('en-US')}, comes at the end of the record, after this essay's date: do not state it as known.`;
+    const facts = [stripLinks(a.pages.get(`mov:${m.id}`)?.summary ?? '').replace(/ At its height it counted about [^.]* adherents\./, ''), size, `Teachings: ${tenetText(m.kind, m.tenets)}`, `Founder: ${T.title.get(`per:${m.founder}`)} (AY ${s.persons[m.founder!].born}–${s.persons[m.founder!].died})`];
     make(k++, 'biographical essay', `per:${m.founder}`, `The historical ${T.short.get(`per:${m.founder}`)}`, facts, [`per:${m.founder}`, `mov:${m.id}`, ...(m.foundEvent !== null ? [`evt:${m.foundEvent}`] : []), ...s.movements.filter((x) => x.parent === m.id).map((x) => `mov:${x.id}`)], []);
   }
   void rng;
