@@ -158,7 +158,7 @@ function victoryStele(g: Gen, e: SimEvent, W: Polity, rng: Rng): void {
   lines.push('');
   lines.push('## Commentary');
   lines.push('');
-  lines.push(`The stele commemorates the ${d.title(`evt:${e.id}`)}, fought ${localDate(ctx, d, W, e.year)}. It claims ${fmt(claimed)} enemy dead. The ground-truth record of the battle gives ${fmt(trueDead)} losses for ${d.ed(`pol:${L.id}`)}, an overstatement of about ${Math.round(claimed / Math.max(1, trueDead))}×, typical of royal victory monuments. The battle belonged to the ${d.title(`evt:${e.data.war as number}`)}.`);
+  lines.push(`The stele commemorates the ${d.title(`evt:${e.id}`)}, fought ${localDate(ctx, d, W, e.year)}. It claims ${fmt(claimed)} enemy dead. The record of the battle gives ${fmt(trueDead)} losses for ${d.ed(`pol:${L.id}`)}, an overstatement of about ${Math.round(claimed / Math.max(1, trueDead))}×, typical of royal victory monuments. The battle belonged to the ${d.title(`evt:${e.data.war as number}`)}.`);
   g.add({
     sub: 'inscription', year, title: `Victory stele of ${g.T.short.get(`per:${ruler.id}`)}: ${g.T.short.get(`evt:${e.id}`)}`,
     author: ruler.id, polity: W.id, lang, script: script.id, medium, cell: findCell, settlement: near ? ctx.idNum(near) : null,

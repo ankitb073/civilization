@@ -228,7 +228,7 @@ function annals(g: Gen, p: Polity, from: number, to: number, evs: SimEvent[], rn
   let lastBattleKey = '';
   const his = (ref: string | undefined) => (ref && s.persons[ctx.idNum(ref)]?.sex === 'f' ? 'her' : 'his');
   for (const e of chosen) {
-    const when = cap(localDate(ctx, d, p, e.year, { key: `a${e.id}` }).replace(/ \[AY \d+\]$/, ''));
+    const when = cap(localDate(ctx, d, p, e.year, { key: `evt:${e.id}` }).replace(/ \[AY \d+\]$/, ''));
     const role = roleOf(e);
     let line = '';
     const other = (roles: string[]) => {
@@ -353,7 +353,7 @@ function census(g: Gen, p: Polity, year: number, row: (number | string | null)[]
   lines.push(`| **Total** | **${fmt(hh)}** | **${fmt(souls)}** |`);
   lines.push('');
   lines.push(`Men fit to bear arms: ${fmt(Number(row[3]) * MOBILIZATION[Number(row[13])] * (2.5 + rng.next() * 1.5))}. ${d.pick(['The scribes of the provinces swore to the count before the gods.', 'Fugitives and slaves are not counted.', 'Priests and their households are exempt.'])}`);
-  lines.push('', '---', '', `**Editorial note.** The ground-truth record gives ${fmt(total)} inhabitants for ${d.ed(`pol:${p.id}`)} in AY ${row[1]}; the census total differs by ${Math.round((souls / Math.max(1, total) - 1) * 100)}%, within the error typical of pre-modern counts.`);
+  lines.push('', '---', '', `**Editorial note.** The record gives ${fmt(total)} inhabitants for ${d.ed(`pol:${p.id}`)} in AY ${row[1]}; the census total differs by ${Math.round((souls / Math.max(1, total) - 1) * 100)}%, within the error typical of pre-modern counts.`);
   const m = medium(era, rng, 'soft');
   const capCity = ctx.capitalAt(p, year);
   g.add({

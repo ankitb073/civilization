@@ -14,7 +14,7 @@ import { cultureStep } from './culture.ts';
 import { religionStep } from './religion.ts';
 import type { ThoughtPresence } from './religion.ts';
 import { techStep, eraOf } from './tech.ts';
-import { routesStep, currencyStep, priceStep, housesStep, initEcon, dropDeadIssuers } from './economy.ts';
+import { routesStep, currencyStep, priceStep, housesStep, initEcon, dropDeadIssuers, extendCurrencyUse } from './economy.ts';
 import type { EconMemory } from './economy.ts';
 import { initContact, contactStep, colonizeYear } from './colonial.ts';
 
@@ -104,6 +104,7 @@ export function simulate(seed: number, yearEnd = 5000, hooks: SimHooks = {}): Si
     }
   }
   dropDeadIssuers(s);
+  extendCurrencyUse(s);
   result.simPersons = s.persons.length;
   result.simEvents = s.events.length;
   return result;

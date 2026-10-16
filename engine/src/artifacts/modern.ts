@@ -234,19 +234,26 @@ function genDebates(g: Gen): void {
     const st = ctx.statsAt(p.id, year);
     const army = st ? Math.round((st[3] as number) * MOBILIZATION[st[13] as number]) : 0; // headcount, not strength
     const ceded = ((e.data.terms as { kind: string; cells?: number[]; from?: number }[] | undefined) ?? []).find((t) => t.kind === 'cede');
+    // a victor's assembly argues over a won peace, not a lost one
+    const won = e.sub === 'treaty' && e.parts.some(([r, role]) => r === `pol:${p.id}` && role === 'victor');
+    const nCeded = ceded?.cells?.length ?? 0;
     const oppose = e.sub === 'war'
       ? ['Who will pay for this? The farmer, as always.', 'I speak for the provinces, which were not consulted.', 'The honourable member forgets the last war.', 'Let us count the cost before we count the glory.', ...(pastWars ? [`We have fought ${enemy} ${pastWars === 1 ? 'once' : `${pastWars} times`} before. What did it bring us?`] : []), 'Our credit abroad will not survive a long war.']
-      : ['This is not peace but surrender.', ...(ceded ? [`We give up ${ceded.cells?.length ?? 0} districts and call it statesmanship?`] : []), 'The dead deserved better terms.', 'The army was not beaten; the cabinet was.'];
+      : won
+        ? ['We won the war and the cabinet has lost the peace.', ...(ceded ? [`${nCeded} districts? The army gave us the means to ask for more.`] : []), `${enemy} will rebuild, and our sons will fight this war again.`, 'Who will govern the new provinces, and at whose cost?']
+        : ['This is not peace but surrender.', ...(ceded ? [`We give up ${nCeded} districts and call it statesmanship?`] : []), 'The dead deserved better terms.', 'The army was not beaten; the cabinet was.'];
     const support = e.sub === 'war'
       ? ['Hesitation now would be fatal.', ...(army ? [`The army stands at ${fmt(army)} men. Is this Assembly as ready as they are?`] : []), 'We owe it to our allies.', 'History will judge us by this vote.', `${enemy} has insulted the flag once too often.`]
-      : ['A bad peace is better than a good war.', 'The terms are hard, but the alternative is ruin.', 'Our sons come home. That is enough.', 'The treasury cannot bear another year of war.'];
+      : won
+        ? ['A victory is only as good as the peace that seals it.', 'Greed now would only make a new war.', 'Our sons come home. That is enough.', 'The treasury cannot bear another year of war.']
+        : ['A bad peace is better than a good war.', 'The terms are hard, but the alternative is ruin.', 'Our sons come home. That is enough.', 'The treasury cannot bear another year of war.'];
     const opp = rng.shuffle(oppose.slice());
     const sup = rng.shuffle(support.slice());
     const speakerLines = speakers.flatMap((n, i) => [`**${n}:** ${(i % 2 === 0 ? opp : sup)[Math.floor(i / 2) % (i % 2 === 0 ? opp.length : sup.length)]}`, '']);
     const interjections = rng.chance(0.5) ? [`*(${rng.pick(['Cries of "Shame!"', 'Uproar on the left benches.', 'Laughter.', 'Prolonged applause.'])})*`, ''] : [];
     speakerLines.splice(Math.min(2, speakerLines.length), 0, ...interjections);
     const lines = [
-      `*Official report of the Assembly of ${d.n(`pol:${p.id}`)}, ${localDate(ctx, d, p, year).replace(/ \[AY \d+\]$/, '')}.*`,
+      `*Official report of the Assembly of ${d.n(`pol:${p.id}`)}, ${localDate(ctx, d, p, year, e.sub === 'treaty' ? { key: `after:evt:${e.id}:${4 + (e.id % 17)}` } : {}).replace(/ \[AY \d+\]$/, '')}.*`,
       '', `**Motion:** ${motion}.`, '',
       ...(head ? [`**${d.n(`per:${head.person}`)}** (head of government): ${e.sub === 'war' ? d.pick(['The nation has been provoked beyond endurance.', 'We seek no territory, only security.', 'Every peaceful means has been exhausted.']) : d.pick(['This peace is the best that could be had.', 'The terms are hard, but the alternative is ruin.', 'This treaty secures our frontiers for a generation.'])}`, ''] : []),
       ...speakerLines,

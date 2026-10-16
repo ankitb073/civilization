@@ -102,6 +102,7 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
   const vHim = !enemyRuler ? 'them' : s.persons[enemyRuler.person].sex === 'f' ? 'her' : 'him';
   const king = (y: number) => {
     const r = ctx.rulerAt(own.id, y);
+    if (r && (r.role === 'president' || r.role === 'chairman')) return r.role; // a republic's chronicler does not crown its head
     return r && s.persons[r.person].sex === 'f' ? 'queen' : 'king';
   };
   lines.push(`${cap(startDate)}, ${d.pick([
@@ -131,7 +132,7 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
     const es = Math.round(Number(b.data[enemySizeKey]) * sizeInflate);
     reportedOwnLoss += ol;
     reportedEnemyLoss += el;
-    const when = cap(localDate(ctx, d, own, b.year, { key: `b${b.id}` }));
+    const when = cap(localDate(ctx, d, own, b.year, { key: `evt:${b.id}` }));
     const ourMan = ownCmd ? d.n(ownCmd) : d.pick(['our captain', 'the commander of the host', `the ${king(b.year)}’s general`]);
     const theirMan = enCmd ? d.n(enCmd) : 'the enemy';
     const theyCame = !enCmd ? 'they' : s.persons[ctx.idNum(enCmd)].sex === 'f' ? 'she' : 'he';
@@ -178,7 +179,7 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
   let outcomeClaim: string;
   let territoryClaim: string;
   lines.push('');
-  const peaceDate = localDate(ctx, d, own, t.war.end, { key: 'peace' });
+  const peaceDate = localDate(ctx, d, own, t.war.end, { key: t.treaty ? `evt:${t.treaty.id}` : 'peace' });
   const conquest = t.treaty && t.treaty.sub !== 'treaty';
   if (ownVictory) {
     outcomeClaim = `${g.T.short.get(`pol:${own.id}`)} victorious`;
@@ -225,7 +226,7 @@ function account(g: Gen, t: WarTruth, own: Polity, enemy: Polity, side: 'attacke
   lines.push('');
   lines.push('---');
   lines.push('');
-  lines.push(`**Editorial note.** This is the ${side === 'attacker' ? 'attacking' : 'defending'} side's account of the ${d.title(`evt:${t.war.id}`)}. ${lag > 20 ? `It was composed some ${lag} years after the events.` : 'It was composed within living memory of the events.'} Compare it with the ${other}'s account and with the ground truth in the comparison view.${reported < t.battles.length ? (reported === 0 ? ` The chronicle passes over all ${t.battles.length} recorded engagements.` : ` The chronicle passes over ${t.battles.length - reported} of the ${t.battles.length} recorded engagements.`) : ''}`);
+  lines.push(`**Editorial note.** This is the ${side === 'attacker' ? 'attacking' : 'defending'} side's account of the ${d.title(`evt:${t.war.id}`)}. ${lag > 20 ? `It was composed some ${lag} years after the events.` : 'It was composed within living memory of the events.'} Compare it with the ${other}'s account and with the record in the comparison view.${reported < t.battles.length ? (reported === 0 ? ` The chronicle passes over all ${t.battles.length} recorded engagements.` : ` The chronicle passes over ${t.battles.length - reported} of the ${t.battles.length} recorded engagements.`) : ''}`);
   const ownRulerName = ownRuler ? g.T.short.get(`per:${ownRuler.person}`) : null;
   void ownRulerName;
   const medium = era <= 1 ? 'clay tablet (copy)' : era <= 3 ? d.pick(['parchment codex', 'papyrus roll', 'paper codex']) : era === 4 ? 'printed book' : 'printed book';

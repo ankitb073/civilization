@@ -55,7 +55,7 @@ Logs are non-decreasing in `year`. To get the map at year *Y*, apply all rows wi
 
 | Table | Notes |
 |---|---|
-| `events` | `id, sub, year, end_year, cell, sig, data`; `sub` is the kind (war, battle, treaty, collapse, plague, eruption, conversion, …); `data` is JSON (treaty terms, battle sizes and losses, debasement before and after, …). An `invention` with `independent: false` is the world's first; `independent: true` is a later reinvention by a people with no contact to the earlier inventors (spread by contact is not an event: it shows only in the state's technology dates) |
+| `events` | `id, sub, year, end_year, cell, sig, data`; `sub` is the kind (war, battle, treaty, collapse, plague, eruption, conversion, …); `data` is JSON (treaty terms, battle sizes and losses, debasement before and after, …). An `expansion` (growth into unowned land; one event per state per century) runs from `year` to `end_year`, and the territory-log rows that cite it fall anywhere in that span. A `battle`'s attacker and defender (parts and `attackerSize`/`defenderSize`) are the two sides of its *war* (who declared it), not who attacked on the day: a war's attacker can be fighting on its own ground, even at its capital, once the war turns. An `invention` with `independent: false` is the world's first; `independent: true` is a later reinvention by a people with no contact to the earlier inventors (spread by contact is not an event: it shows only in the state's technology dates) |
 | `event_parts` | `event, ref, role`: who took part, and how |
 | `event_causes` | `event, cause`: every cause is recorded before its effect and dated no later |
 

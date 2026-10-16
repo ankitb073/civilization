@@ -82,8 +82,13 @@ export class Doc {
 
   private days = new Map<number | string, [number, number]>();
 
-  /** A stable (month index, day) for a given year within this document. */
+  /** A stable (month index, day) for a given year within this document; a key `evt:N` takes the event's own day,
+   *  the same in every document that dates it (#41). */
   dayOf(year: number, maxDay = 28, key = ''): [number, number] {
+    const ev = /^evt:(\d+)$/.exec(key);
+    if (ev) return eventDay(this.ctx, Number(ev[1]));
+    const after = /^after:evt:(\d+):(\d+)$/.exec(key); // a fixed number of days after an event (a ratification)
+    if (after) { const n = Math.min(335, dayNum(eventDay(this.ctx, Number(after[1]))) + Number(after[2])); return [Math.floor(n / 28), (n % 28) + 1]; }
     const k: number | string = key ? `${year}:${key}` : year;
     let v = this.days.get(k);
     if (!v) {
@@ -147,6 +152,29 @@ export function disambiguateRulers(body: string, T: Titles): string {
 /** A day-dated local date ("27 Nuernin 2278 of the …") needs "on" after a noun; regnal and era dates carry their own "in". */
 export function onDate(date: string): string {
   return /^\d/.test(date) ? `on ${date}` : date;
+}
+
+const eventDays = new WeakMap<Ctx, Map<number, [number, number]>>();
+const dayNum = ([m, d]: [number, number]) => m * 28 + d - 1;
+/** The (month index, day) on which an event happened: drawn once per event from the world seed, so every document
+ *  agrees. A peace falls on or after the last battle of its war in the same year. */
+export function eventDay(ctx: Ctx, id: number): [number, number] {
+  if (!eventDays.has(ctx)) eventDays.set(ctx, new Map());
+  const cache = eventDays.get(ctx)!;
+  const hit = cache.get(id);
+  if (hit) return hit;
+  const s = ctx.s;
+  const e = s.events[id];
+  const r = new Rng(s.seed).fork('event-day', id);
+  let v: [number, number] = [r.int(0, 11), r.int(1, 28)];
+  const war = e && e.sub !== 'battle' && typeof e.data?.war === 'number' ? e.data.war as number : null;
+  if (war !== null) {
+    let last = -1;
+    for (const i of ctx.eventsByRef.get(`evt:${war}`) ?? []) { const b = s.events[i]; if (b.sub === 'battle' && b.year === e.year && b.id !== id) last = Math.max(last, dayNum(eventDay(ctx, b.id))); }
+    if (last >= 0 && dayNum(v) <= last) { const n = Math.min(335, last + 1 + r.int(0, Math.max(0, Math.min(40, 335 - last - 1)))); v = [Math.floor(n / 28), (n % 28) + 1]; }
+  }
+  cache.set(id, v);
+  return v;
 }
 
 /** A local date for a document issued by polity `p` in `year`, plus the normalized year. */

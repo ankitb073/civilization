@@ -130,6 +130,20 @@ function issueYear(s: State, p: Polity, kind: Currency['kind'], year: number): n
 /** The currency step runs before the decade's political years, at a nominal year inside the decade, so the
  *  ruler it names can fall in battle, or be deposed, before that year. After the run, the record drops such a ruler; nothing
  *  in the simulation reads these parts, so no draw moves. */
+/** Record-only, at the end: a coin stays in circulation while any state still uses it (successor states keep their
+ *  parent's money), so its end is no earlier than the last decade survey that names it. */
+export function extendCurrencyUse(s: State): void {
+  const last = new Map<number, number>();
+  for (const row of s.polityYears) {
+    const c = row[12] as number;
+    if (c < 0) continue;
+    const p = s.polities[row[0] as number];
+    const y = Math.min((row[1] as number) + 9, p.died ?? Infinity);
+    if (y > (last.get(c) ?? -Infinity)) last.set(c, y);
+  }
+  for (const c of s.currencies) { const y = last.get(c.id); if (c.died !== null && y !== undefined && y > c.died) c.died = y; }
+}
+
 export function dropDeadIssuers(s: State): void {
   for (const e of s.events) {
     if (e.sub !== 'coinage' && e.sub !== 'weight-standard' && e.sub !== 'paper-money' && e.sub !== 'currency-reform') continue;

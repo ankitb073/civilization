@@ -50,7 +50,7 @@ function treaty(g: Gen, e: SimEvent, drafter: Polity, parties: Polity[]): void {
     const r = ruler(p);
     return titleOf(ctx.govAt(p, year), era, r ? s.persons[r.person].sex === 'f' : false);
   };
-  const date = localDate(ctx, d, drafter, year, { day: era >= 2 });
+  const date = localDate(ctx, d, drafter, year, { day: era >= 2, key: `evt:${e.id}` });
   const war = typeof e.data.war === 'number' ? e.data.war as number : null;
   const lines: string[] = [];
   const art = (n: number) => (era <= 1 ? `§${n}` : era <= 3 ? `Article ${n}.` : `Article ${ROMAN[n - 1] ?? n}.`);

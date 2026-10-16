@@ -318,7 +318,7 @@ function collectionsJson(r: SimResult, a: Archive): CollectionsJson {
   const boasts: { id: string; year: number; claimed: number; truth: number }[] = [];
   for (const x of a.artifacts) {
     if (x.status !== 'extant' || x.flagship || x.sub !== 'inscription') continue;
-    const m = x.body.match(/It claims ([\d,]+) enemy dead\. The ground-truth record of the battle gives ([\d,]+) losses/);
+    const m = x.body.match(/It claims ([\d,]+) enemy dead\. The record of the battle gives ([\d,]+) losses/);
     if (m) boasts.push({ id: `art:${x.id}`, year: x.year, claimed: num(m[1]), truth: num(m[2]) });
   }
   add('boasts', 'The biggest boasts', 'Victory steles that invent the most enemy dead, checked against the battle record.', boasts.sort((x, y) => (y.claimed - y.truth) - (x.claimed - x.truth)).map((b) => ({ id: b.id, note: `claims ${b.claimed.toLocaleString('en-US')} enemy dead; the record has ${b.truth.toLocaleString('en-US')} (×${(b.claimed / Math.max(1, b.truth)).toFixed(1)})`, year: b.year })));
@@ -350,7 +350,11 @@ function collectionsJson(r: SimResult, a: Archive): CollectionsJson {
   add('letters', 'Letters', 'Flagship letters: from the front, from hostages, refugees, merchants and kings.', flag.filter((x) => x.sub === 'letter').sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
   const form = (x: (typeof flag)[number]) => String(x.data?.form ?? '');
   add('voices', 'Voices from below', 'Farmers, apprentices, conscripts, market women and refugees: ordinary people living through famines, plagues, sacks and revolutions.', flag.filter((x) => fnum(x) >= 700 && fnum(x) < 900).sort((x, y) => x.year - y.year).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })), 120);
-  add('lives', 'Lives', 'Long-form biographies by the archive’s modern scholars.', flag.filter((x) => fnum(x) >= 600 && fnum(x) < 700).sort((x, y) => x.title.localeCompare(y.title)).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
+  // the Lives in their subjects' order of birth, each noted with what the subject was and when they lived
+  const subjectOf = (x: (typeof flag)[number]) => { const m = x.body.split('\n---\n').slice(-1)[0].match(/\[\[per:(\d+)\|/); return m ? s.persons[Number(m[1])] : undefined; };
+  const KINDS = ['inventor', 'archaeologist', 'prophet', 'philosopher', 'envoy', 'priest', 'historian', 'scribe', 'merchant', 'rebel', 'usurper', 'president', 'chairman', 'ruler', 'regent', 'general'];
+  const lifeNote = (x: (typeof flag)[number]) => { const p = subjectOf(x); if (!p) return `AY ${x.year}`; const k = KINDS.find((r) => p.roles.some((q) => q.role === r)); return `${k ? `${k[0].toUpperCase()}${k.slice(1)}, ` : ''}${p.born < 0 ? `AY −${-p.born} to ${p.died}` : `AY ${p.born}–${p.died}`}`; };
+  add('lives', 'Lives', 'Long-form biographies by the archive’s modern scholars: rulers and usurpers, generals, inventors, prophets and philosophers, merchants, rebels, regents, envoys, priests, chroniclers and an archaeologist.', flag.filter((x) => fnum(x) >= 600 && fnum(x) < 700).sort((x, y) => (subjectOf(x)?.born ?? 0) - (subjectOf(y)?.born ?? 0) || fnum(x) - fnum(y)).map((x) => ({ id: `art:${x.id}`, note: lifeNote(x), year: subjectOf(x)?.born ?? x.year })), 100);
   add('essays', 'Essays on the sources', 'Modern scholars weigh the chronicles against the record.', flag.filter((x) => /journal article|survey lecture|philological essay|biographical essay$/.test(form(x)) && fnum(x) < 600).sort((x, y) => x.title.localeCompare(y.title)).map((x) => ({ id: `art:${x.id}`, note: `AY ${x.year}`, year: x.year })));
   return { collections: out };
 }
