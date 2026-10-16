@@ -101,6 +101,8 @@ export function applySurvival(g: Gen): void {
     // translator: everything not in the editorial language
     if (a.lang !== ctx.editorialLang || a.year < 4600) {
       a.translator = g.scholarFor(a.lang, Math.max(a.foundYear ?? 4850, 4850), 'translator');
+      // a text written after its translator's death goes to a scholar active after it was written
+      if (ctx.s.persons[a.translator].died < a.year) a.translator = g.scholarFor(a.lang, a.year, 'translator');
       a.mentions.add(`per:${a.translator}`);
     }
   }

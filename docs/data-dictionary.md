@@ -55,7 +55,7 @@ Logs are non-decreasing in `year`. To get the map at year *Y*, apply all rows wi
 
 | Table | Notes |
 |---|---|
-| `events` | `id, sub, year, end_year, cell, sig, data`; `sub` is the kind (war, battle, treaty, collapse, plague, eruption, conversion, …); `data` is JSON (treaty terms, battle sizes and losses, debasement before and after, …) |
+| `events` | `id, sub, year, end_year, cell, sig, data`; `sub` is the kind (war, battle, treaty, collapse, plague, eruption, conversion, …); `data` is JSON (treaty terms, battle sizes and losses, debasement before and after, …). An `invention` with `independent: false` is the world's first; `independent: true` is a later reinvention by a people with no contact to the earlier inventors (spread by contact is not an event: it shows only in the state's technology dates) |
 | `event_parts` | `event, ref, role`: who took part, and how |
 | `event_causes` | `event, cause`: every cause is recorded before its effect and dated no later |
 

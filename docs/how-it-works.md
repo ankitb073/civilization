@@ -66,7 +66,7 @@ Fact-checker agents then compare every file with the database. The commonest sli
 
 ## 6. The checker
 
-The checker reads only `world.sqlite`. It shares no code with the simulation, so it is an independent audit. On the current build it verifies 17 invariants across about 1.95 million facts:
+The checker reads only `world.sqlite`. It shares no code with the simulation, so it is an independent audit. On the current build it verifies 18 invariants across about 1.97 million facts:
 
 | Invariant | Facts checked |
 |---|---|
@@ -79,7 +79,8 @@ The checker reads only `world.sqlite`. It shares no code with the simulation, so
 | Every author was alive and at least 12 | 14,415 |
 | Every document's language and script existed at its date | 18,471 |
 | Every ledger price is within 20% of the market | 13,002 |
-| Every document has its own catalogue number | 18,471 |
+| Every translator was alive after the text was written | 17,701 |
+| Every document has its own catalogue number | 18,519 |
 | Every catalogue number a document cites exists and predates the citation | 8,158 |
 | Every quotation placed before its citation is verbatim in the cited document | 86 |
 | Every link resolves, and backlink counts match | 1,053,411 |

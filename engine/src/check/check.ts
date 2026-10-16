@@ -246,6 +246,13 @@ export function runChecks(dbPath: string): CheckReport {
     }
   }
   {
+    const c = inv('translator-alive', 'A document\'s translator was alive after it was written');
+    for (const r of all('SELECT a.id, a.year, p.died FROM artifacts a JOIN persons p ON p.id = a.translator')) {
+      if (Number(r.died) < Number(r.year)) c.bad(`art:${r.id} (AY ${r.year}): translator died AY ${r.died}`);
+      else c.ok();
+    }
+  }
+  {
     const c = inv('catalogue-unique', 'Every document has its own catalogue number');
     const seen = new Map<string, number>();
     for (const r of all('SELECT id, catalog FROM artifacts')) {
