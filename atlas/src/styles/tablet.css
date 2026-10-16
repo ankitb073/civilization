@@ -138,7 +138,7 @@
 @keyframes tb-in { from { opacity: 0; transform: translateY(10px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
 
 /* ------------------------------------------------------------ intro */
-.tb-intro { min-height: calc(100dvh - var(--topbar-h) - var(--tabbar-h)); display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: clamp(40px, 9vh, 96px); }
+.tb-intro { text-shadow: 0 1px 14px rgba(12, 8, 5, 0.6); min-height: calc(100dvh - var(--topbar-h) - var(--tabbar-h)); display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: clamp(40px, 9vh, 96px); }
 .tb-intro__title { font: italic 400 26px/1.3 var(--tb-serif); color: var(--tb-gold-2); margin: -6px 0 16px; }
 .tb-intro__you { font: 400 22px/1.45 var(--tb-serif); color: var(--tb-ink); margin: 0 0 12px; }
 .tb-intro__you b { font-weight: 600; color: var(--tb-gold-2); }
@@ -324,6 +324,8 @@
   .tb-sound { width: 34px; height: 34px; }
   .tb-lede { font-size: 19px; }
   .tb-intro__you { font-size: 20px; }
+  /* the intro fills a phone: darken the sky behind its top lines too, so the kicker and title stay legible on any backdrop */
+  .tb--intro .tb-stage__veil { background: linear-gradient(180deg, rgba(12, 8, 5, 0.4) 0%, rgba(12, 8, 5, 0.62) 22%, rgba(12, 8, 5, 0.8) 55%, rgba(12, 8, 5, 0.93) 100%); }
   .tb-prose p { font-size: 19px; line-height: 1.58; }
   .tb-king { padding-left: 16px; }
   .tb-king p { font-size: 21px; }
