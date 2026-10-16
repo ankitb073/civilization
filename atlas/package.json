@@ -14,7 +14,8 @@
     "fixtures": "node --disable-warning=ExperimentalWarning scripts/fixture-flagships.ts",
     "prepare-data": "node --disable-warning=ExperimentalWarning scripts/prepare-data.ts",
     "loadprobe": "node --disable-warning=ExperimentalWarning scripts/loadprobe.ts",
-    "a11y": "node --disable-warning=ExperimentalWarning scripts/a11y.ts"
+    "a11y": "node --disable-warning=ExperimentalWarning scripts/a11y.ts",
+    "cards": "node --disable-warning=ExperimentalWarning scripts/cards.ts"
   },
   "dependencies": {
     "@fontsource-variable/eb-garamond": "5.2.5",

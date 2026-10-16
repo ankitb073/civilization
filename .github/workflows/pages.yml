@@ -37,8 +37,15 @@ jobs:
           npm run typecheck
       - name: Simulate, generate the archive, audit, export
         run: npm run build:data
+        env:
+          PAL_CARDS: '1' # reading pages point at the social cards rendered below
       - name: Build the atlas
         run: npm --prefix atlas run build
+      - name: Social cards for the reading pages
+        working-directory: atlas
+        run: |
+          npx playwright install --with-deps chromium
+          npm run cards
       - uses: actions/upload-pages-artifact@v3
         with:
           path: atlas/dist

@@ -76,9 +76,19 @@ export function writeSharePages(r: SimResult, a: Archive, dir: string, publicDir
   const form = (x: Artifact) => String((x.data as { form?: string } | undefined)?.form ?? x.sub);
   const isHistory = (x: Artifact) => fl(x) >= 900 && fl(x) <= 920;
   const isModern = (x: Artifact) => x.year >= 4800 && x.dateText === `AY ${x.year}`;
+  // a History chapter shows its own period, not the year it was written
+  // a modern essay or Life shows the age it is about (the median year of the events it links), not the year it was written
+  const subjectYear = (x: Artifact) => {
+    if (!isModern(x)) return x.year;
+    const ys = [...x.body.matchAll(/\[\[evt:(\d+)\|/g)].map((m) => s.events[Number(m[1])]?.year).filter((y): y is number => y !== undefined).sort((p, q) => p - q);
+    return ys.length ? ys[Math.floor(ys.length / 2)] : x.year;
+  };
+  const chOf = (x: Artifact) => String(isHistory(x) && fl(x) > 900 ? fl(x) - 900 : Math.min(20, Math.max(1, Math.floor(subjectYear(x) / 250) + 1))).padStart(2, '0');
+  // PAL_CARDS=1 (the deploy) promises a card per flagship, rendered after the atlas build by atlas/scripts/cards.ts
+  const cards = process.env.PAL_CARDS === '1';
   const image = (x: Artifact) => {
-    // a History chapter shows its own period, not the year it was written
-    const ch = String(isHistory(x) && fl(x) > 900 ? fl(x) - 900 : Math.min(20, Math.floor(x.year / 250) + 1)).padStart(2, '0');
+    if (cards) return `s/card/${String(x.data?.flagshipId ?? `art-${x.id}`)}.jpg`;
+    const ch = chOf(x);
     return existsSync(join(publicDir, 'og', `ch${ch}.jpg`)) ? `og/ch${ch}.jpg` : 'og.png';
   };
   const titleOf = (x: Artifact) => isHistory(x) ? `${x.title} · A History of ${world}`
@@ -125,6 +135,7 @@ export function writeSharePages(r: SimResult, a: Archive, dir: string, publicDir
   const foot = `<footer><p>Palimpsest is a simulated history of five thousand years: every state, war, price and word comes from one seeded simulation, and every document is checked against its record. <a href="./">All sources and essays</a> · <a href="../">The atlas</a> · <a href="https://github.com/ankitb073/civilization/blob/main/docs/how-it-works.md">How it works</a></p></footer>`;
 
   let n = 0;
+  const manifest: { id: string; kicker: string; title: string; quote: string; map: string }[] = [];
   for (const z of series) {
     z.docs.forEach((x, k) => {
       const title = titleOf(x);
@@ -135,6 +146,7 @@ export function writeSharePages(r: SimResult, a: Archive, dir: string, publicDir
       const author = x.author !== null ? T.short.get(`per:${x.author}`) ?? '' : '';
       const date = plainDate(x);
       const kicker = [form(x).replace(/^./, (c) => c.toUpperCase()), date, author ? `by ${author}` : '', x.catalog].filter(Boolean).map(esc).join(' · ');
+      manifest.push({ id: String(x.data?.flagshipId ?? `art-${x.id}`), kicker: [form(x).replace(/^./, (c) => c.toUpperCase()), date].join(' · '), title: x.title, quote: lede(x.body.replace(/^(\s*(\*\[[^\]]{1,40}\]\*|\[[^\]]{1,40}\]))+\s*/, ''), 270), map: `og/ch${chOf(x)}.jpg` });
       const prev = z.docs[k - 1], next = z.docs[k + 1];
       const pn = prev || next ? `<nav class="pn" aria-label="${esc(z.name)}">${prev ? `<a class="prev" href="${page(prev)}"><small>← ${esc(z.name)}</small>${esc(prev.title)}</a>` : ''}${next ? `<a class="next" href="${page(next)}"><small>${esc(z.name)} →</small>${esc(next.title)}</a>` : ''}</nav>` : '';
       const ld = { '@context': 'https://schema.org', '@type': 'CreativeWork', name: x.title, genre: form(x), inLanguage: 'en', url, image: SITE + image(x), isPartOf: { '@type': 'CreativeWorkSeries', name: `Palimpsest: ${z.name}`, url: `${SITE}s/` }, description: desc };
@@ -184,6 +196,8 @@ ${foot.replace(/href="\.\/"/, 'href="../"').replace('href="../">The atlas', 'hre
 </body></html>
 `);
   }
+
+  writeFileSync(join(dir, 'cards.json'), JSON.stringify({ world, cards: manifest }));
 
   // contents
   const desc = `The literary sources, Lives, essays and the narrative History of ${world}: ${n} documents from a five-thousand-year archive of a world that never existed.`;
