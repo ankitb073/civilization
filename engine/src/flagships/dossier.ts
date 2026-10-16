@@ -562,7 +562,7 @@ export function buildLives(a: Archive, exclude: Set<string>): Dossier[] {
       author: { id: `per:${who}`, name: T.short.get(`per:${who}`) ?? '', role: `${s.persons[who].sex === 'f' ? 'woman' : 'man'}; ${s.persons[who].roles.map((r) => r.role).join(', ')}`, polity: T.short.get(`pol:${ed.id}`) ?? null, born: s.persons[who].born, died: s.persons[who].died, stance: 'a modern biographer: humane, sceptical of court propaganda, interested in how ordinary lives were shaped' },
       subject: { id: `per:${pid}`, title: `The life of ${T.short.get(`per:${pid}`)}`, summary: stripLinks(pg?.summary ?? ''), facts },
       context: [], allowedLinks: allowed,
-      guidance: GUIDANCE.replace('Do not mention "simulation", "AY", "dossier" or the modern editors (except in the modern editorial essays, which are written by those editors and may use AY dates).', 'This is modern scholarship: you MAY use AY dates. Never mention "simulation", "dossier" or "ground truth" — call it "the record". Do not link documents; name sources by title in plain text.').replace('Length: 350–750 words.', 'Length: 900–1,400 words, with 3–5 short section headings.'),
+      guidance: GUIDANCE.replace('Do not mention "simulation", "AY", "dossier" or the modern editors (except in the modern editorial essays, which are written by those editors and may use AY dates).', 'This is modern scholarship: you MAY use AY dates. Never mention "simulation", "dossier" or "ground truth" — call it "the record". Do not link documents; name sources by title in plain text.').replace('Write ONE primary source in English translation, as it would appear in a modern scholarly edition.', 'Write ONE long-form biographical essay of modern scholarship (not a primary source).').replace('Length: 350–750 words.', 'Length: 900–1,400 words, with 3–5 short section headings.'),
       frontmatter: [`id: ${id}`, `subject: per:${pid}`, `form: biographical essay`, `year: ${year}`, `author: per:${who}`, `polity: pol:${ed.id}`, `lang: ${lang}`, `script: ${ctx.scriptOf(ed, year)}`, `medium: book chapter`].join('\n'),
     });
   });
@@ -605,6 +605,7 @@ export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
   const kinds: { kind: string; n: number; pick: (id: number) => boolean; rank: (id: number) => number }[] = [
     { kind: 'general', n: 11, pick: (id) => !rulers.has(id) && commands(id) >= 4, rank: (id) => commands(id) * 2 + rich(id) },
     { kind: 'inventor', n: 6, pick: (id) => has(id, 'invention/inventor'), rank: rich },
+    // reform leaders share this quota (the selection the written Lives II came from); their label says what they did
     { kind: 'founder of a faith or school', n: 6, pick: (id) => has(id, 'movement-founding/founder') || has(id, 'schism/founder') || has(id, 'reform/leader'), rank: rich },
     { kind: 'merchant', n: 5, pick: (id) => has(id, 'house-founding/founder') && !rulers.has(id), rank: (id) => rich(id) + Math.max(0, ...s.houses.filter((h) => h.founder === id).map((h) => ((h.died ?? 5000) - h.born) / 20)) },
     { kind: 'rebel or revolutionary', n: 7, pick: (id) => has(id, 'revolt/leader') || has(id, 'civil-war/claimant') || has(id, 'revolution/leader'), rank: rich },
@@ -626,7 +627,7 @@ export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
       if (centuries.has(c)) continue;
       centuries.add(c);
       taken.add(id);
-      chosen.push({ pid: id, kind: k.kind });
+      chosen.push({ pid: id, kind: k.kind === 'founder of a faith or school' && !has(id, 'movement-founding/founder') && !has(id, 'schism/founder') ? 'reformer of government' : k.kind });
     }
   }
   chosen.sort((x, y) => s.persons[x.pid].born - s.persons[y.pid].born);
@@ -642,7 +643,8 @@ export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
     const shown = evs.length > 40 ? evs.filter((e) => e.sig >= 0.25 || e.sub !== 'battle').slice(0, 40) : evs;
     const facts = [stripLinks(pg?.summary ?? ''), `Kind of life: ${kind}`, `Sex: ${p.sex === 'f' ? 'woman (she/her)' : 'man (he/him)'}`, ...(pg?.infobox ?? []).map(([k2, v]) => `${k2}: ${stripLinks(v)}`)];
     if (evs.length > shown.length) facts.push(`(${evs.length} events name this person; the ${shown.length} most significant are listed.)`);
-    facts.push(...shown.map((e) => `${T.title.get(`evt:${e.id}`)} (AY ${e.year}): ${stripLinks(a.pages.get(`evt:${e.id}`)?.summary ?? '')}`));
+    // events without a page (e.g. elections) have no title: describe them by kind
+    facts.push(...shown.map((e) => `${T.title.get(`evt:${e.id}`) ?? `${e.sub.replace(/-/g, ' ')} (no page)`} (AY ${e.year}): ${stripLinks(a.pages.get(`evt:${e.id}`)?.summary ?? '')}`));
     for (const h of s.houses.filter((h) => h.founder === pid)) facts.push(`Founded ${T.title.get(`hou:${h.id}`) ?? 'a house'} (${h.kind}) at ${T.short.get(`set:${h.settlement}`) ?? '?'} in AY ${h.born}; it ${h.died !== null ? `ended in AY ${h.died}` : 'outlived the record'}; goods ${h.goods.map((x) => GOODS[x]?.name ?? x).join(', ')}; partners ${h.partners.slice(0, 5).map((x) => T.short.get(`set:${x}`)).join(', ')}; loans to ${h.loans.slice(0, 4).map((l) => `${T.short.get(`pol:${l.polity}`)} (${Math.round(l.amount)} kg, AY ${l.year})`).join(', ') || 'none recorded'}.`);
     for (const m of s.movements.filter((m) => m.founder === pid)) facts.push(`Founded ${T.title.get(`mov:${m.id}`)} (${m.kind}, AY ${m.born}). Teachings: ${tenetText(m.kind, m.tenets)}${m.died !== null ? ` It ended in AY ${m.died}.` : ''} (The record keeps no yearly count of adherents: do not state its size.)`);
     const docs = (docsBy.get(pid) ?? []).sort((x, y) => x.year - y.year);
@@ -708,7 +710,7 @@ export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
       author: { id: `per:${who}`, name: T.short.get(`per:${who}`) ?? '', role: `${s.persons[who].sex === 'f' ? 'woman' : 'man'}; ${s.persons[who].roles.map((r) => r.role).join(', ')}`, polity: T.short.get(`pol:${ed.id}`) ?? null, born: s.persons[who].born, died: s.persons[who].died, stance: 'a modern biographer: humane, sceptical of court propaganda, interested in how ordinary lives were shaped' },
       subject: { id: `per:${pid}`, title: `The life of ${T.short.get(`per:${pid}`)}`, summary: stripLinks(pg?.summary ?? ''), facts },
       context, allowedLinks: allowed,
-      guidance: GUIDANCE.replace('Do not mention "simulation", "AY", "dossier" or the modern editors (except in the modern editorial essays, which are written by those editors and may use AY dates).', 'This is modern scholarship: you MAY use AY dates. Never mention "simulation", "dossier" or "ground truth" — call it "the record". Do not link documents; name sources by title in plain text, or cite them by catalogue number.').replace('Length: 350–750 words.', thin ? 'Length: 650–1,000 words, with 3–4 short section headings. The record of this life is thin: say so where it is silent, set the person in their world from the context lines, and never invent events, relatives or figures.' : 'Length: 900–1,400 words, with 3–5 short section headings.'),
+      guidance: GUIDANCE.replace('Do not mention "simulation", "AY", "dossier" or the modern editors (except in the modern editorial essays, which are written by those editors and may use AY dates).', 'This is modern scholarship: you MAY use AY dates. Never mention "simulation", "dossier" or "ground truth" — call it "the record". Do not link documents; name sources by title in plain text, or cite them by catalogue number.').replace('Write ONE primary source in English translation, as it would appear in a modern scholarly edition.', 'Write ONE long-form biographical essay of modern scholarship (not a primary source).').replace('Length: 350–750 words.', thin ? 'Length: 650–1,000 words, with 3–4 short section headings. The record of this life is thin: say so where it is silent, set the person in their world from the context lines, and never invent events, relatives or figures.' : 'Length: 900–1,400 words, with 3–5 short section headings.'),
       frontmatter: [`id: ${id}`, `subject: per:${pid}`, `form: biographical essay`, `year: ${year}`, `author: per:${who}`, `polity: pol:${ed.id}`, `lang: ${lang}`, `script: ${ctx.scriptOf(ed, year)}`, `medium: book chapter`].join('\n'),
     });
   });
