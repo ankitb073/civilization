@@ -127,9 +127,6 @@ function issueYear(s: State, p: Polity, kind: Currency['kind'], year: number): n
   return year;
 }
 
-/** The currency step runs before the decade's political years, at a nominal year inside the decade, so the
- *  ruler it names can fall in battle, or be deposed, before that year. After the run, the record drops such a ruler; nothing
- *  in the simulation reads these parts, so no draw moves. */
 /** Record-only, at the end: a coin stays in circulation while any state still uses it (successor states keep their
  *  parent's money), so its end is no earlier than the last decade survey that names it. */
 export function extendCurrencyUse(s: State): void {
@@ -144,6 +141,9 @@ export function extendCurrencyUse(s: State): void {
   for (const c of s.currencies) { const y = last.get(c.id); if (c.died !== null && y !== undefined && y > c.died) c.died = y; }
 }
 
+/** The currency step runs before the decade's political years, at a nominal year inside the decade, so the
+ *  ruler it names can fall in battle, or be deposed, before that year. After the run, the record drops such a ruler; nothing
+ *  in the simulation reads these parts, so no draw moves. */
 export function dropDeadIssuers(s: State): void {
   for (const e of s.events) {
     if (e.sub !== 'coinage' && e.sub !== 'weight-standard' && e.sub !== 'paper-money' && e.sub !== 'currency-reform') continue;
