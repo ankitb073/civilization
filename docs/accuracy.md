@@ -38,6 +38,8 @@ That is about one error per 70 checked claims, and 0.07 major errors per file. H
 
 **Outside the History, a follow-up sweep** checked every statistic in the 23 modern essays and lectures. It found 16 minor errors in 8 of them. All but one were the old decade-row trap: a row labelled 450 describes the 450s, not the year 450. The other was a word-replacement date that the essay had taken from the atlas, where the date was wrong (#28, fixed).
 
+A last sweep of the biographical essays on the founders of faiths found 7 minor errors of a new kind. Essays written in AY 4950 gave a faith's size "at its height", but that height comes near AY 5000, after their date, because the fact sheet passed on the end-of-record peak. The essays now give the size at their own date, taken from a rerun of the canonical simulation. The fact sheet now keeps a peak only for faiths that had already ended.
+
 The audit also turned up two oddities in the record itself, both filed: merchant houses trading iron before iron smelting (#27), and a famine listing a state that had just ended (#18).
 
 ## Caveats

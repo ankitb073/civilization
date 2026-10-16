@@ -262,6 +262,8 @@ function dossier(a: Archive, c: { kind: string; e: SimEvent | null; p?: Polity; 
     const pg = a.pages.get(`per:${p.id}`);
     subject = { id: `per:${p.id}`, title: T.title.get(`per:${p.id}`) ?? '', summary: stripLinks(pg?.summary ?? ''), facts };
     for (const [k, v] of pg?.infobox ?? []) facts.push(`${k}: ${stripLinks(v)}`);
+    // the page knows the whole life; a document written during the reign must not
+    if (p.died > year) facts.push(`The author writes in AY ${year}, while ${T.short.get(`per:${p.id}`)} is alive and reigning: the death (AY ${p.died}) and everything after AY ${year} in these facts are unknown to the author and must not be mentioned or hinted.`);
     const evs = (ctx.eventsByRef.get(`pol:${polity!.id}`) ?? []).map((i) => s.events[i]).filter((x) => x.year <= year && x.year >= (ctx.reigns.get(polity!.id) ?? []).find((r) => r.person === p.id)!.start && x.sig >= 0.2 && T.pageRefs.has(`evt:${x.id}`)).slice(-14);
     for (const x of evs) { allow(`evt:${x.id}`, 'an event of the reign'); facts.push(`${T.title.get(`evt:${x.id}`)} (AY ${x.year})`); }
     if (p.father !== null) allow(`per:${p.father}`, 'father');
