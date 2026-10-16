@@ -53,7 +53,13 @@ Or play it: five wars a day, two lying scribes each, guess the real death toll. 
 
 > "The market is full of goats and nobody is buying, so a goat brings half what it brought and barley costs twice. You can do that sum in your head."
 
-**8/** The checker reads only the database. It verifies 19 invariants across ~1.97M facts:
+**8/** And a hundred Lives, not only of kings. A general of Tsey whose own chronicle names him only on the days he won. An envoy whose whole surviving voice is the last line of five treaties: "Drafted by Onivish." The man who built the first printing press. A merchant house that lasted 284 years, longer than any other in the record.
+
+Each is checked claim by claim against the record. An independent audit of a random third found 2 minor errors in about 1,200 claims.
+
+ankitb073.github.io/civilization/s/c/lives.html
+
+**9/** The checker reads only the database. It verifies 19 invariants across ~1.97M facts:
 - no document mentions anything that didn't exist yet
 - every ceded district changes hands on the treaty date
 - every author was alive and of age
@@ -62,11 +68,11 @@ Or play it: five wars a day, two lying scribes each, guess the real death toll. 
 
 Zero violations. CI fails the build otherwise.
 
-**9/** 5,000 years of power on one page: a Histomap, in the spirit of the famous 1931 chart.
+**10/** 5,000 years of power on one page: a Histomap, in the spirit of the famous 1931 chart.
 
 [image: docs/img/histomap.png]
 
-**10/** The atlas: [ankitb073.github.io/civilization](https://ankitb073.github.io/civilization)
+**11/** The atlas: [ankitb073.github.io/civilization](https://ankitb073.github.io/civilization)
 
 It has a map with a time slider, a year view for any year, a graph of every entity and event, and a reader for every document. Take the whole book with you as an EPUB, or download the SQLite database or an Obsidian vault.
 
