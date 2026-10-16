@@ -187,7 +187,7 @@ export function buildPages(ctx: Ctx, T: Titles, artifacts: Artifact[]): Map<stri
       { label: 'Population', unit: 'people', points: stats.map((r) => [r[1] as number, r[3] as number]) },
       { label: 'Army', unit: 'soldiers', points: stats.map((r) => [r[1] as number, r[6] as number]) },
       { label: 'Stability', unit: '0–1', points: stats.map((r) => [r[1] as number, r[7] as number]) },
-    ].map((x) => ({ ...x, points: thin(x.points as [number, number][], 120) }));
+    ].map((x) => ({ ...x, points: thin(x.points as [number, number][], 120), decadal: true }));
     pg.names = nameHistory(ctx, p.nameId, () => s.cultures[p.culture].lang, p.born, p.died ?? 5000, exoLangs(s.settlements[p.capital].cell));
     pages.set(ref, pg);
   }

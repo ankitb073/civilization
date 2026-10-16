@@ -170,7 +170,8 @@ export interface PageJson {
   /** Name of this entity through time and across languages. */
   names?: { year: number; lang: string; form: string; scholarly: string }[];
   /** Small multiples for sparklines (area, population, prices, adherents...). */
-  series?: { label: string; unit: string; points: [number, number][] }[];
+  /** `decadal`: each point is a decade survey (x = decade start; the state at its end), shown as "1650s". */
+  series?: { label: string; unit: string; points: [number, number][]; decadal?: boolean }[];
   artifact?: {
     catalog: string;           // "PAL·TR·00347"
     date: string;              // as written, in the local calendar

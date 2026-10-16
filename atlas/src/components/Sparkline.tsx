@@ -2,7 +2,8 @@ import { useState } from 'preact/hooks';
 import { fmtCompact } from '../format.ts';
 import { year as yearSig } from '../state.ts';
 
-export function Sparkline({ series, height = 54 }: { series: { label: string; unit: string; points: [number, number][] }; height?: number }) {
+export function Sparkline({ series, height = 54 }: { series: { label: string; unit: string; points: [number, number][]; decadal?: boolean }; height?: number }) {
+  const when = (x: number) => (series.decadal ? `${x}s` : String(x));
   const [hover, setHover] = useState<number | null>(null);
   const pts = series.points;
   if (pts.length < 2) {
@@ -35,10 +36,10 @@ export function Sparkline({ series, height = 54 }: { series: { label: string; un
     <figure class="spark">
       <figcaption class="spark__head">
         <span class="spark__label">{series.label}</span>
-        <span class="spark__val">{fmtCompact(hy)} <small>{series.unit}</small> <span class="muted">· {hx}</span></span>
+        <span class="spark__val">{fmtCompact(hy)} <small>{series.unit}</small> <span class="muted">· {when(hx)}</span></span>
       </figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" class="spark__svg" onPointerMove={onMove} onPointerLeave={() => setHover(null)} role="img"
-        aria-label={`${series.label}: from ${fmtCompact(pts[0][1])} in ${pts[0][0]} to ${fmtCompact(pts[pts.length - 1][1])} in ${pts[pts.length - 1][0]}`}>
+        aria-label={`${series.label}: from ${fmtCompact(pts[0][1])} in ${when(pts[0][0])} to ${fmtCompact(pts[pts.length - 1][1])} in ${when(pts[pts.length - 1][0])}`}>
         <path d={area} class="spark__area" />
         <path d={line} class="spark__line" vector-effect="non-scaling-stroke" />
         {showCur && <line x1={sx(cur)} x2={sx(cur)} y1={0} y2={H} class="spark__now" vector-effect="non-scaling-stroke" />}
