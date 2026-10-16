@@ -575,9 +575,9 @@ const GENRE_PLURAL: Record<string, string> = {
   treatise: 'treatises', newspaper: 'newspapers', telegram: 'telegrams', debate: 'debates', market: 'exchange reports',
   yearbook: 'yearbooks', pamphlet: 'pamphlets', patent: 'patents', excavation: 'excavation reports', paper: 'papers',
   poem: 'poems', diary: 'diaries', lawsuit: 'lawsuits', will: 'wills', muster: 'muster rolls', manifest: 'port registers',
-  glossary: 'glossaries', exercise: 'school exercises', almanac: 'almanacs', graffito: 'graffiti', omen: 'omen collections', periplus: 'itineraries', tariff: 'customs tariffs',
+  glossary: 'glossaries', exercise: 'school exercises', almanac: 'almanacs', graffito: 'graffiti', omen: 'omen collections', periplus: 'itineraries', tariff: 'customs tariffs', story: 'stories',
 };
-const GENRE_ONE: Record<string, string> = { annals: 'annals', graffito: 'graffito', diary: 'diary', treaty: 'treaty', census: 'census', glossary: 'glossary', market: 'exchange report', excavation: 'excavation report', muster: 'muster roll', manifest: 'port register', exercise: 'school exercise', omen: 'omen collection', periplus: 'itinerary', tariff: 'customs tariff' };
+const GENRE_ONE: Record<string, string> = { annals: 'annals', graffito: 'graffito', diary: 'diary', treaty: 'treaty', census: 'census', glossary: 'glossary', market: 'exchange report', excavation: 'excavation report', muster: 'muster roll', manifest: 'port register', exercise: 'school exercise', omen: 'omen collection', periplus: 'itinerary', tariff: 'customs tariff', story: 'story' };
 
 function genreName(sub: string, n: number): string {
   if (n === 1) return GENRE_ONE[sub] ?? sub;

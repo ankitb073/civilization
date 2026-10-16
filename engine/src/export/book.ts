@@ -145,7 +145,10 @@ export function writeReader(r: SimResult, a: Archive, path: string, opts: { cove
   const history = flag.filter((x) => num(x) >= 900 && num(x) < 1000);
   const lives = flag.filter((x) => num(x) >= 600 && num(x) < 700).sort((x, y) => s.persons[Number(fid2subject(x))]?.born - s.persons[Number(fid2subject(y))]?.born || num(x) - num(y));
   const scholars = flag.filter((x) => num(x) >= 200 && num(x) < 300);
-  const sources = flag.filter((x) => !history.includes(x) && !lives.includes(x) && !scholars.includes(x)).sort((x, y) => x.year - y.year || num(x) - num(y));
+  // Tales: modern fiction, read in the order of the moments they are set in
+  const setIn = (x: Artifact) => s.events[x.about?.[0] ?? -1]?.year ?? x.year;
+  const tales = flag.filter((x) => num(x) >= 1001 && num(x) < 2000).sort((x, y) => setIn(x) - setIn(y) || num(x) - num(y));
+  const sources = flag.filter((x) => !history.includes(x) && !lives.includes(x) && !scholars.includes(x) && !tales.includes(x)).sort((x, y) => x.year - y.year || num(x) - num(y));
   function fid2subject(x: Artifact): string {
     // Lives are about one person; their subject is the first person linked in the editorial note
     const m = x.body.split('\n---\n').slice(-1)[0].match(/\[\[per:(\d+)\|/);
@@ -222,6 +225,14 @@ ${rest.length ? `<div class="apparatus">${render(rest.join('\n---\n'), false, 3)
     for (let k = 0; k < lives.length; k += chunk) {
       const xs = lives.slice(k, k + chunk);
       entries.push({ file: `lives${k / chunk + 1}.xhtml`, title: `Lives ${k + 1}–${k + xs.length}`, toc: xs.map((x) => ({ id: `d${x.id}`, title: x.title })), html: page('Lives', xs.map((x) => docHtml(x)).join('\n')) });
+    }
+  }
+  if (tales.length) {
+    part(`Tales of ${world}`, `${tales.length} short stories by the world's modern novelists, each set at a real moment of the record, in the order of the moments they tell.`);
+    const chunk = 8;
+    for (let k = 0; k < tales.length; k += chunk) {
+      const xs = tales.slice(k, k + chunk);
+      entries.push({ file: `tales${k / chunk + 1}.xhtml`, title: `Tales ${k + 1}–${k + xs.length}`, toc: xs.map((x) => ({ id: `d${x.id}`, title: x.title })), html: page('Tales', xs.map((x) => docHtml(x)).join('\n')) });
     }
   }
   if (scholars.length) {

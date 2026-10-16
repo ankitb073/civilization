@@ -732,6 +732,90 @@ export function buildLives2(a: Archive, exclude: Set<string>, kindsFor?: (h: Lif
   return out;
 }
 
+/** Tales (fl-1001+, wave 8): short historical fiction by the world's own modern novelists, each set at one moment
+ *  of the record. The public facts are the record's; private lives, talk and ordinary people are the author's. */
+export function buildTales(a: Archive, exclude: Set<string>): Dossier[] {
+  const ctx = a.ctx;
+  const s = ctx.s;
+  const T = a.T;
+  const rng = new Rng(s.seed).fork('tales');
+  const simPersons = a.ctx.r.simPersons ?? s.persons.length;
+  const simEvents = a.ctx.r.simEvents ?? s.events.length;
+  const isSim = (ref: string) => !ref.startsWith('per:') || ctx.idNum(ref) < simPersons;
+  const ed = s.polities[ctx.editorialPolity];
+  const lang = ctx.editorialLang;
+  const quotas: [string, number, ((e: SimEvent) => boolean)?][] = [
+    ['sack', 14], ['siege', 10], ['battle', 10, (e) => Number(e.data.attackerSize) + Number(e.data.defenderSize) > 2000], ['plague', 8], ['famine', 6], ['eruption', 4],
+    ['drought', 3], ['cold-period', 2], ['revolution', 6], ['usurpation', 10], ['civil-war', 5], ['revolt', 5], ['conversion', 6],
+    ['persecution', 5], ['movement-founding', 3], ['schism', 2], ['first-contact', 1], ['colonization', 2], ['migration', 2],
+    ['invention', 5], ['collapse', 9], ['marriage', 3], ['debasement', 2], ['hyperinflation', 1],
+    ['script-invention', 1], ['succession', 5], ['treaty', 3], ['excavation', 1],
+  ];
+  const out: Dossier[] = [];
+  for (const [sub, n, f] of quotas) {
+    if (out.length >= 100) break;
+    const evs = s.events.filter((e) => e.id < simEvents && e.sub === sub && T.pageRefs.has(`evt:${e.id}`) && !exclude.has(`evt:${e.id}`) && e.cell >= 0 && (!f || f(e)))
+      .sort((x, y) => y.sig - x.sig || x.id - y.id);
+    const picked: SimEvent[] = [];
+    for (const e of evs) {
+      if (picked.length >= n) break;
+      if (picked.some((p) => Math.abs(p.year - e.year) < 5000 / (n * 1.6))) continue;
+      picked.push(e);
+    }
+    for (const e of picked) {
+      if (out.length >= 100) break;
+      const r = rng.fork(e.id);
+      const d0 = dossier(a, { kind: sub, e }, 1000 + out.length, r, isSim);
+      if (!d0) continue;
+      const year = 4990 + (out.length % 10);
+      // names in use among the people of the place at the time, for the author's invented characters
+      const own = ctx.ownerAt(e.cell, e.year);
+      const cands = [ctx.cultureAt(e.cell, e.year), own >= 0 ? s.polities[own].culture : -1].filter((c, k, xs) => c >= 0 && xs.indexOf(c) === k); // the people there AT the time
+      const names: string[] = [];
+      let cu = cands[0] ?? -1;
+      for (const c of cands) {
+        const cl = s.cultures[c].lang;
+        for (const sex of ['f', 'm'] as const) {
+          const seen = new Set<string>();
+          for (const p of s.persons) {
+            if (p.culture !== c || p.sex !== sex || p.born > e.year + 20 || p.born < e.year - 200) continue;
+            if (s.lang.nameKind(p.nameId) !== (sex === 'f' ? 'person-f' : 'person-m')) continue; // #44
+            const nm = ctx.name(p.nameId, cl, e.year);
+            if (seen.has(nm)) continue;
+            seen.add(nm);
+            const mean = s.lang.nameMeaning(p.nameId);
+            names.push(`${nm} (${sex === 'f' ? 'woman' : 'man'}${mean ? `, “${mean}”` : ''})`);
+            if (seen.size >= 10) break;
+          }
+        }
+        if (names.length) { cu = c; break; }
+      }
+      d0.context.push(names.length ? `Personal names in use among the ${T.short.get(`cul:${cu}`) ?? 'people of the place'} at the time (for invented characters; use a name for the sex it belongs to): ${names.join('; ')}.` : 'No personal names of the local people survive from the time: leave invented characters unnamed, or name them by trade or kin ("the potter", "her brother").');
+      d0.form = 'short story';
+      d0.register = 'Modern literary fiction by a novelist of the world, AY 4990s: historical fiction set at the moment of the subject event, written for readers who know the record.';
+      d0.year = year;
+      d0.localDate = `AY ${year}`;
+      d0.language = T.short.get(`lan:${lang}`) ?? '';
+      d0.medium = 'book';
+      d0.author = { id: null, name: 'a novelist of the modern age', role: `a modern novelist of ${T.short.get(`pol:${ed.id}`) ?? 'the age'} (the record does not name living novelists)`, polity: T.short.get(`pol:${ed.id}`) ?? null, born: null, died: null, stance: 'a novelist: imagines the private lives the record leaves out, but keeps every public fact the record holds' };
+      d0.guidance = TALE_GUIDANCE;
+      d0.frontmatter = [`id: ${d0.id}`, `subject: evt:${e.id}`, `form: short story`, `year: ${year}`, `author: null`, `polity: pol:${ed.id}`, `lang: ${lang}`, `script: ${ctx.scriptOf(ed, year)}`, `medium: book`].join('\n');
+      out.push(d0);
+    }
+  }
+  return out;
+}
+
+const TALE_GUIDANCE = `Write ONE short story: literary historical fiction by a modern novelist of the world, set at the moment of the subject event.
+
+Rules (the archive is machine-checked; breaking them gets the story rejected):
+- Every PUBLIC fact must be the record's: who ruled, who commanded, who won and lost, dates, places, numbers, treaty terms, who died and how, sex and age of every real person, the faith and gods of each people, the money and prices. If you give a figure, it is the record's figure. The record's real people may appear; their private words and thoughts are yours, their public acts are the record's.
+- PRIVATE life is yours: the protagonist may be an ordinary invented person (a potter, a scribe's daughter, a deserter, a midwife) or a minor real one. Invented people get a plain first name from the context's name list (matching sex) or stay unnamed. Never invent rulers, generals, battles, treaties, states, gods, inventions or documents, and never give an invented person an office or a deed the record would have to contain.
+- Nothing anachronistic: no technology, coin, faith, state, place or word for something that did not yet exist at the story's moment (see the technology line). Use the period's own names for places, peoples and gods (the allowedLinks texts).
+- Links: [[id|text]] only for ids in allowedLinks, each at most twice, about 6–15 in all. Never link documents.
+- Form: a title (not "The …ing of X" cliché; make it particular), then the story: 1,500–2,500 words, in scenes, with dialogue where natural; section breaks as a line with three asterisks (* * *); no headings. Third person or first person of a character who was there. End with a short "Author's note" (40–100 words, after a line "---"), in the modern novelist's voice, naming which documents of the archive the story drew on, cited by catalogue number (PAL·XX·NNNNN, each dated no later than the story's year) and what the record says that the story does not.
+- Quote a period document only verbatim (from its surviving text). Never mention "simulation", "dossier" or "ground truth"; say "the record".`;
+
 const VOICES: Record<string, string[]> = {
   famine: ['diary of a farmer’s wife in the hungry year', 'petition of villagers to the governor', 'song of the empty granary', 'prayer scratched on a potsherd'],
   plague: ['letter of an apprentice to his mother', 'lullaby sung in the plague year', 'list of the dead kept by a gravedigger, with his notes', 'vow made by a widow at a shrine'],

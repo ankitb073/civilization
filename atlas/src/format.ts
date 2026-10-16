@@ -34,7 +34,7 @@ export function cap(s: string): string {
 /** Display names for sub-types whose raw key reads badly ("muster", "periplus"). Keyed "kind:sub" where the
  *  same key means different things in different kinds (a currency's "paper" vs an essay). */
 const SUB_LABEL: Record<string, string> = {
-  omen: 'Omen collection', periplus: 'Itinerary', tariff: 'Customs tariff', muster: 'Muster roll',
+  omen: 'Omen collection', periplus: 'Itinerary', tariff: 'Customs tariff', muster: 'Muster roll', story: 'Short story',
   exercise: 'School exercise', 'artifact:excavation': 'Excavation report', manifest: 'Harbour register', record: 'Record of calamity',
   market: 'Market report', debate: 'Assembly debate', yearbook: 'Statistical yearbook', 'artifact:paper': 'Essay',
   'artifact:coin': 'Coin issue', 'currency:paper': 'Paper money', 'currency:fiat': 'Fiat money', 'currency:weight': 'Weight standard',
