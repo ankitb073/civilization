@@ -1,0 +1,252 @@
+/* #/streets — the Streets movement spike (loaded with its lazy chunk). Full-bleed: the atlas's bars step aside and the
+   game fills the screen; a small back button and the city's name sit top left. Same look in both themes (it is a
+   lit scene, not a page). */
+.app--streets {
+  height: 100dvh;
+  overflow: hidden;
+  background: #1b1612;
+}
+.app--streets .topbar,
+.app--streets .tabbar {
+  display: none;
+}
+.app--streets .main {
+  padding: 0 !important;
+  min-height: 0;
+}
+
+.st {
+  --st-ink: #fbf3e2;
+  --st-ink-2: #e5d6ba;
+  --st-panel: rgb(24 18 13 / 0.72);
+  --st-line: rgb(255 236 200 / 0.2);
+  --st-gold: #f0c987;
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  background: #ddcdb0;
+  color: var(--st-ink);
+  font-family: var(--font-ui);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.st__stage {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  outline: none;
+}
+.st__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+/* ------------------------------------------------------------ top left: back and where */
+.st-hud {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  left: max(12px, env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  max-width: calc(100% - 24px);
+}
+.st-hud > * { pointer-events: auto; }
+.st-hud__back {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--st-panel);
+  border: 1px solid var(--st-line);
+  color: var(--st-ink);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.st-hud__back:hover { background: rgb(40 30 20 / 0.86); }
+.st-hud__back:focus-visible { outline: 2px solid var(--st-gold); outline-offset: 2px; }
+.st-hud__where {
+  margin: 0;
+  padding: 6px 12px 7px;
+  border-radius: 12px;
+  background: var(--st-panel);
+  border: 1px solid var(--st-line);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  line-height: 1.2;
+  min-width: 0;
+}
+.st-hud__city {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-hud__when {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--st-ink-2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-stats {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font: 12px/1.3 var(--font-mono);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------ touch: stick and jump */
+.st-joy,
+.st-jump { display: none; }
+.st--touch .st-joy {
+  display: block;
+  position: absolute;
+  left: calc(env(safe-area-inset-left, 0px) + 84px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
+  width: 112px;
+  height: 112px;
+  margin-left: -56px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 245 225 / 0.45);
+  background: rgb(20 14 10 / 0.22);
+  pointer-events: none;
+  opacity: 0.7;
+  transition: opacity 0.2s, border-color 0.15s;
+}
+.st--touch .st-joy.is-on {
+  margin-top: -56px;
+  opacity: 1;
+}
+.st--touch .st-joy.is-run { border-color: var(--st-gold); }
+.st-joy__knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 50px;
+  height: 50px;
+  margin: -25px 0 0 -25px;
+  border-radius: 50%;
+  background: rgb(255 248 235 / 0.85);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+.st--touch .st-jump {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  right: calc(env(safe-area-inset-right, 0px) + 28px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 245 225 / 0.6);
+  background: rgb(24 18 13 / 0.55);
+  color: var(--st-ink);
+  touch-action: none;
+}
+.st--touch .st-jump:active { background: rgb(240 201 135 / 0.5); }
+.st-jump:focus-visible { outline: 2px solid var(--st-gold); outline-offset: 3px; }
+
+/* ------------------------------------------------------------ first-time hint, tip, loading */
+.st-hint {
+  position: absolute;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 32px));
+  padding: 14px 16px 14px;
+  border-radius: 14px;
+  background: var(--st-panel);
+  border: 1px solid var(--st-line);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.3);
+}
+.st--touch .st-hint { bottom: auto; top: 76px; }
+.st-hint__t {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.st-hint__keys {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.86rem;
+  line-height: 1.9;
+  color: var(--st-ink-2);
+}
+.st-hint__keys b { color: var(--st-ink); font-weight: 600; }
+.st-hint kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-right: 3px;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid var(--st-line);
+  background: rgb(255 240 210 / 0.1);
+  color: var(--st-ink);
+  font: 600 0.78rem/1.5 var(--font-ui);
+  text-align: center;
+}
+.st-hint__ok {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--st-gold);
+  color: #1d130b;
+  font: 600 0.88rem var(--font-ui);
+  cursor: pointer;
+}
+.st-hint__ok:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.st-tip {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--st-panel);
+  color: var(--st-ink);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+.st-load {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  background: radial-gradient(ellipse at 50% 60%, #3a2c20, #17110c);
+  color: var(--st-ink);
+  font-size: 0.95rem;
+  text-align: center;
+}
+.st-load--err a { color: var(--st-gold); margin-left: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .st-joy { transition: none; }
+}

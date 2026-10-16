@@ -1,6 +1,6 @@
 import { signal, effect, computed } from '@preact/signals';
 
-export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap' | 'languages' | 'prices' | 'collections' | 'dynasties' | 'year' | 'today' | 'words' | 'game' | 'cards' | 'terrain' | 'play' | 'river' | 'battle' | 'figures' | 'city' | 'museum' | 'tablet';
+export type View = 'map' | 'graph' | 'page' | 'compare' | 'browse' | 'about' | 'search' | 'story' | 'histomap' | 'languages' | 'prices' | 'collections' | 'dynasties' | 'year' | 'today' | 'words' | 'game' | 'cards' | 'terrain' | 'play' | 'river' | 'battle' | 'figures' | 'city' | 'museum' | 'tablet' | 'streets';
 export type LayerName = 'political' | 'culture' | 'religion' | 'language';
 
 export interface Route {
@@ -25,6 +25,7 @@ function parseHash(): Route {
   if (head === 'game') return { view: 'game', id: null, params };
   if (head === 'cards') return { view: 'cards', id: parts[1] ?? null, params };
   if (head === 'tablet') return { view: 'tablet', id: parts[1] ?? null, params };
+  if (head === 'streets') return { view: 'streets', id: null, params };
   if (head === '3d') return { view: 'terrain', id: null, params };
   if (head === 'figures') return { view: 'figures', id: null, params };
   if (head === 'battle' && parts[1]) return { view: 'battle', id: parts.slice(1).join('/'), params };

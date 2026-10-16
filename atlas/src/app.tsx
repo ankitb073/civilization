@@ -22,6 +22,7 @@ const GameView = lazy(() => import('./views/GameView.tsx').then((m) => ({ defaul
 const PlayView = lazy(() => import('./views/PlayView.tsx').then((m) => ({ default: m.PlayView })));
 const CardsView = lazy(() => import('./views/CardsView.tsx').then((m) => ({ default: m.CardsView })));
 const TabletView = lazy(() => import('./game/tablet/TabletView.tsx').then((m) => ({ default: m.TabletView })));
+const StreetsView = lazy(() => import('./game/streets/StreetsView.tsx').then((m) => ({ default: m.StreetsView })));
 const TerrainView = lazy(() => import('./views/TerrainView.tsx').then((m) => ({ default: m.TerrainView })));
 const FiguresView = lazy(() => import('./three/figure/FiguresView.tsx').then((m) => ({ default: m.FiguresView })));
 const RiverView = lazy(() => import('./three/river/RiverView.tsx').then((m) => ({ default: m.RiverView })));
@@ -56,7 +57,7 @@ export function App() {
   }, [r.view, m]);
   useEffect(() => { if (r.view !== 'map' && r.view !== 'graph') window.scrollTo(0, 0); }, [r.view, r.id]);
 
-  const active = r.view === 'page' || r.view === 'compare' || r.view === 'collections' || r.view === 'dynasties' || r.view === 'game' || r.view === 'cards' || r.view === 'battle' || r.view === 'figures' || r.view === 'city' || r.view === 'museum' ? 'browse' : r.view === 'prices' ? 'about' : r.view === 'year' || r.view === 'terrain' ? 'map' : r.view === 'words' ? 'languages' : r.view === 'river' ? 'histomap' : r.view === 'tablet' ? 'play' : r.view;
+  const active = r.view === 'page' || r.view === 'compare' || r.view === 'collections' || r.view === 'dynasties' || r.view === 'game' || r.view === 'cards' || r.view === 'battle' || r.view === 'figures' || r.view === 'city' || r.view === 'museum' ? 'browse' : r.view === 'prices' ? 'about' : r.view === 'year' || r.view === 'terrain' ? 'map' : r.view === 'words' ? 'languages' : r.view === 'river' ? 'histomap' : r.view === 'tablet' || r.view === 'streets' ? 'play' : r.view;
   const tabActive = active === 'languages' || r.view === 'prices' ? 'browse' : active;
   const clean = r.params.get('clean') === '1';
   const og = r.params.get('og') === '1' || r.params.get('frames') === '1';
@@ -132,6 +133,11 @@ export function App() {
         {r.view === 'tablet' && (
           <Suspense fallback={<div class="center-load"><div class="spinner" /> Wetting the clay…</div>}>
             <TabletView sub={r.id} />
+          </Suspense>
+        )}
+        {r.view === 'streets' && (
+          <Suspense fallback={<div class="center-load"><div class="spinner" /> Opening the city gate…</div>}>
+            <StreetsView />
           </Suspense>
         )}
         {r.view === 'figures' && (

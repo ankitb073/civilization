@@ -24,9 +24,11 @@
     "shoot-river": "node --disable-warning=ExperimentalWarning scripts/shoot-river.ts",
     "shoot-city": "node --disable-warning=ExperimentalWarning scripts/shootcity.ts",
     "shoot-museum": "node --disable-warning=ExperimentalWarning scripts/shoot-museum.ts",
-    "sound": "node --disable-warning=ExperimentalWarning scripts/sound-check.ts"
+    "sound": "node --disable-warning=ExperimentalWarning scripts/sound-check.ts",
+    "streets": "node --disable-warning=ExperimentalWarning scripts/streets.ts"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "0.19.3",
     "@fontsource-variable/eb-garamond": "5.2.5",
     "@fontsource-variable/inter": "5.2.5",
     "@fontsource/caveat": "5.2.8",
