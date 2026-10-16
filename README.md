@@ -85,7 +85,7 @@ seed → worldgen → simulate (50 centuries × 10 decades, yearly politics) →
             checker (reads the DB only)   vault (Obsidian)   atlas data → static site
 ```
 
-For the method in plain words, with examples, read [docs/how-it-works.md](docs/how-it-works.md). Design documents live in `docs/`:
+For the method in plain words, with examples, read [docs/how-it-works.md](docs/how-it-works.md). For how accurate the agent-written sources turned out when audited at random, read [docs/accuracy.md](docs/accuracy.md). Design documents live in `docs/`:
 
 - [`prfaq.md`](docs/prfaq.md): why the project exists.
 - [`hld.md`](docs/hld.md): architecture.

@@ -88,7 +88,7 @@ Continuous integration runs the checker on every push, and any violation fails t
 
 ## 7. What it doesn't do
 
-- **Prose is not fully checked.** Unlinked text in a flagship could still mention something too early. Dossiers, fact-checkers and the technology line in each dossier make this rare, not impossible.
+- **Prose is not fully checked.** Unlinked text in a flagship could still mention something too early, or get a figure wrong. Dossiers, fact-checkers and the technology line in each dossier make this rare, not impossible. A random audit of 30 flagships found about one error per 70 checked claims, two of them major ([accuracy.md](accuracy.md)).
 - **The simulation has known simplifications,** filed as issues. Rebels almost never win, and a third of all wars are declared on states less than ten years old. A second edition of the simulation fixes both (decision 0015), but it changes the world, so every flagship would have to be rewritten.
 - **It is one world.** Other seeds build and pass the checker, but only seed 5 has the agent-written literature, because flagships are tied to that world's ids.
 
