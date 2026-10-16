@@ -58,6 +58,7 @@ The year readout is large and tabular-numeral. The era name shows beside it.
 ## Graph
 
 - Sigma.js (WebGL) and graphology with precomputed ForceAtlas2 positions from `graph.json`. Nodes are colored by kind and sized by `size`.
+- Mounting a level never blocks the main thread for long. The graphology graph is built in 12 ms slices. The renderer (`graph/chunkedSigma.ts`) indexes graphs above 20,000 nodes plus edges in slices too, then draws once (decision 0019).
 - The time filter shows nodes with `t0 ≤ Y` (and dims those with `t1 < Y`).
 - Kind toggles, a "live physics" button (FA2 web worker) and search-to-focus.
 - Clicking a node highlights its neighborhood and shows the page card.

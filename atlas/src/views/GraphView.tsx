@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { effect } from '@preact/signals';
 import Graph from 'graphology';
-import Sigma from 'sigma';
+import type Sigma from 'sigma';
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type SimulationLinkDatum, type SimulationNodeDatum } from 'd3-force';
 import type { EntityKind } from '../../../engine/src/export/contract.ts';
@@ -10,6 +10,7 @@ import { KIND_LABEL, KINDS, kindColors } from '../kinds.ts';
 import { isMobile, panelCollapsed, reducedMotion, route, selection, setRouteParam, sheetSnap, SHEET_PEEK, theme, year } from '../state.ts';
 import { ensureMapData, ensureSearch, searchIndex } from '../store.ts';
 import { DEFAULT_KINDS, budget, graphError, loadGraphData, selectSubset, type GraphData } from '../graph/store.ts';
+import { ChunkedSigma } from '../graph/chunkedSigma.ts';
 import { TimeSlider } from './TimeSlider.tsx';
 import { Sheet } from '../components/Sheet.tsx';
 import { PageCard } from '../components/PageCard.tsx';
@@ -142,7 +143,7 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
     const sizeScale = Math.max(0.45, Math.min(1, el.clientWidth / 1100)) * Math.max(0.28, Math.min(1, Math.sqrt(2200 / Math.max(1, sub.nodes.length))));
     const N = sub.nodes.length, M = sub.edges.length / 2;
     let ni = 0, ei = 0;
-    let renderer: Sigma | null = null;
+    let renderer: ChunkedSigma | null = null;
     let disposeEffect: (() => void) | null = null;
     let refreshTimer = 0;
 
@@ -176,14 +177,10 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
       graphPerf.buildMs = performance.now() - t0;
       graphPerf.nodes = N;
       graphPerf.edges = M;
-      // the renderer indexes the whole graph in one go (a few hundred ms on the biggest level): say so, and let
-      // that paint before the main thread is busy
+      // the renderer indexes the graph in slices (ChunkedSigma) and draws once it is done; the status says
+      // "Drawing…" until then
       setProgress(1);
-      requestAnimationFrame(() => setTimeout(() => {
-        if (cancelled) return;
-        mount();
-        setProgress(null);
-      }, 0));
+      setTimeout(() => { if (!cancelled) mount(); }, 0);
     };
 
     const mount = () => {
@@ -201,7 +198,9 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
       };
       computeHi();
       const m0 = performance.now();
-      renderer = new Sigma(graph, el, {
+      // what the first indexation's reducers see; a change while it runs means one more refresh at the end
+      const y0 = year.peek(), sel0 = selection.peek();
+      renderer = new ChunkedSigma(graph, el, {
         renderEdgeLabels: false,
         hideEdgesOnMove: true,
         hideLabelsOnMove: true,
@@ -257,46 +256,53 @@ function GlobalGraph({ g, kinds, level }: { g: GraphData; kinds: Set<EntityKind>
           return { ...data, hidden: true };
         },
       });
-      graphPerf.mountMs = performance.now() - m0;
-      sigmaRef.current = renderer;
-      graphRef.current = graph;
       const r = renderer;
-      r.on('clickNode', ({ node }) => {
-        if (selection.peek() === node) setRouteParam('focus', node);
-        else selection.value = node;
-      });
-      r.on('clickStage', () => { selection.value = null; });
-      r.on('enterNode', ({ node }) => { if (!isMobile.peek()) { hover = node; computeHi(); r.refresh({ skipIndexation: true }); el.style.cursor = 'pointer'; } });
-      r.on('leaveNode', () => { hover = null; computeHi(); r.refresh({ skipIndexation: true }); el.style.cursor = ''; });
-      // year/selection changes: throttle full refreshes so scrubbing stays smooth on big graphs
-      let last = 0;
-      const doRefresh = () => {
+      r.whenIndexed(() => {
         if (cancelled) return;
-        const s = performance.now();
-        computeHi();
-        r.refresh({ skipIndexation: true });
-        const ms = performance.now() - s;
-        graphPerf.refreshMs!.push(ms);
-        if (graphPerf.refreshMs!.length > 200) graphPerf.refreshMs!.shift();
-        last = performance.now();
-      };
-      const gap = N > 20000 ? 160 : N > 6000 ? 90 : 40;
-      disposeEffect = effect(() => {
-        year.value;
-        selection.value;
-        clearTimeout(refreshTimer);
-        const wait = gap - (performance.now() - last);
-        if (wait <= 0) doRefresh();
-        else refreshTimer = window.setTimeout(doRefresh, wait);
-      });
-      const s0 = selection.peek();
-      if (s0 && graph.hasNode(s0)) {
-        requestAnimationFrame(() => {
-          if (cancelled) return;
-          const d = r.getNodeDisplayData(s0);
-          if (d) r.getCamera().animate({ x: d.x, y: d.y, ratio: 0.3 }, { duration: reducedMotion ? 0 : 500 });
+        // construction to first full draw, wall time (the indexation itself is sliced)
+        graphPerf.mountMs = performance.now() - m0;
+        sigmaRef.current = r;
+        graphRef.current = graph;
+        r.on('clickNode', ({ node }) => {
+          if (selection.peek() === node) setRouteParam('focus', node);
+          else selection.value = node;
         });
-      }
+        r.on('clickStage', () => { selection.value = null; });
+        r.on('enterNode', ({ node }) => { if (!isMobile.peek()) { hover = node; computeHi(); r.refresh({ skipIndexation: true }); el.style.cursor = 'pointer'; } });
+        r.on('leaveNode', () => { hover = null; computeHi(); r.refresh({ skipIndexation: true }); el.style.cursor = ''; });
+        // year/selection changes: throttle full refreshes so scrubbing stays smooth on big graphs
+        let last = 0;
+        const doRefresh = () => {
+          if (cancelled) return;
+          const s = performance.now();
+          computeHi();
+          r.refresh({ skipIndexation: true });
+          const ms = performance.now() - s;
+          graphPerf.refreshMs!.push(ms);
+          if (graphPerf.refreshMs!.length > 200) graphPerf.refreshMs!.shift();
+          last = performance.now();
+        };
+        const gap = N > 20000 ? 160 : N > 6000 ? 90 : 40;
+        let first = true;
+        disposeEffect = effect(() => {
+          const y = year.value, sel = selection.value;
+          // the first indexation already drew this year and selection: don't index everything a second time
+          if (first) { first = false; if (y === y0 && sel === sel0) return; }
+          clearTimeout(refreshTimer);
+          const wait = gap - (performance.now() - last);
+          if (wait <= 0) doRefresh();
+          else refreshTimer = window.setTimeout(doRefresh, wait);
+        });
+        const s0 = selection.peek();
+        if (s0 && graph.hasNode(s0)) {
+          requestAnimationFrame(() => {
+            if (cancelled) return;
+            const d = r.getNodeDisplayData(s0);
+            if (d) r.getCamera().animate({ x: d.x, y: d.y, ratio: 0.3 }, { duration: reducedMotion ? 0 : 500 });
+          });
+        }
+        setProgress(null);
+      });
     };
 
     setTimeout(step, 0);
