@@ -1,0 +1,237 @@
+/* Clash of the Ages (#/cards): the duel, the playing cards and the deck. Cards stay parchment in both themes. */
+.clash { max-width: 880px; margin: 0 auto; padding: 22px 16px 64px; }
+.clash__kicker { font: 600 12px/1.4 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+.clash__kicker a { color: inherit; text-decoration: none; }
+.clash__title { font-family: var(--font-display); font-weight: 500; font-size: clamp(30px, 6vw, 44px); line-height: 1.08; margin: 0 0 10px; }
+.clash__title span { color: var(--muted); font-size: .72em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.clash__lede { font-family: var(--font-display); font-size: 19px; line-height: 1.5; color: var(--ink-2); margin: 0 0 18px; max-width: 40em; }
+.clash__h2 { font: 600 12px/1.4 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 34px 0 10px; }
+
+/* the scoreboard: your wins, the seven rounds, the archive's wins */
+.clash__score { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; max-width: 620px; margin: 0 auto 18px; }
+.clash__side { display: flex; align-items: center; gap: 8px; font: 600 11.5px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+.clash__side b { font: 600 30px/1 var(--font-display); letter-spacing: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+.clash__track { display: flex; justify-content: center; gap: 6px; flex-wrap: nowrap; }
+.clash--end .clash__track { justify-content: flex-start; margin: 4px 0 6px; }
+.clash__slot { --era: var(--faint); flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 600 12px var(--font-ui); color: var(--muted); background: var(--surface); border: 1.5px solid var(--rule); transition: background .25s, border-color .25s, color .25s; }
+.clash__slot.is-now { color: var(--ink); border-color: var(--era); box-shadow: 0 0 0 3px color-mix(in srgb, var(--era) 28%, transparent); }
+.clash__slot.is-win { background: var(--ok); border-color: var(--ok); color: #fff; animation: clash-pop .4s .55s both; }
+.clash__slot.is-loss { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); animation: clash-pop .4s .55s both; }
+.clash__slot.is-tie { background: var(--faint); border-color: var(--faint); color: var(--bg); animation: clash-pop .4s .55s both; }
+.clash__slot.is-unplayed { opacity: .35; }
+.clash--end .clash__slot { width: 34px; height: 34px; font-size: 14px; animation: none; }
+
+/* the table: two cards and a seal between them */
+.clash__table { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(10px, 5vw, 60px); max-width: 660px; margin: 0 auto; }
+.clash__seat { min-width: 0; display: flex; justify-content: center; align-items: stretch; animation: clash-deal .5s cubic-bezier(.2, .8, .2, 1) both; }
+.clash__seat--them { animation-name: clash-deal-r; animation-delay: .09s; }
+.clash__seat > .pc { width: 100%; max-width: 290px; }
+.clash__vsbadge { position: absolute; left: 50%; top: 92px; z-index: 3; width: 40px; height: 40px; margin: -20px 0 0 -20px; display: grid; place-items: center; border-radius: 50%; background: #2a211a; color: #f3e6c4; font: italic 600 17px/1 var(--font-display); border: 2px solid #c9a446; box-shadow: 0 4px 14px rgb(30 20 10 / .35); pointer-events: none; }
+.clash__say { max-width: 660px; min-height: 104px; margin: 18px auto 0; text-align: center; }
+.clash__say .btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.clash__say .actions { justify-content: center; animation: clash-up .35s .65s both; }
+.clash__prompt { font-family: var(--font-display); font-size: 18px; line-height: 1.45; color: var(--ink-2); margin: 0; }
+.clash__prompt b { color: var(--ink); font-weight: 600; }
+.clash__verdict { margin: 0; font: 600 21px/1.3 var(--font-display); animation: clash-up .35s .55s both; }
+.clash__verdict span { display: block; font-weight: 400; font-size: 16.5px; color: var(--ink-2); margin-top: 2px; }
+.clash__verdict--win { color: var(--ok); }
+.clash__decided { display: block; font-style: italic; font-weight: 500; font-size: 16px; color: var(--ink); margin-top: 4px; }
+.clash__more { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 14px 0 0; font: 500 14px var(--font-ui); }
+.clash__more a { color: var(--link); text-decoration: none; }
+.clash__more a:hover { text-decoration: underline; }
+.clash__verdict--loss { color: var(--accent); }
+
+/* ------------------------------------------------------------ the playing card */
+.pc {
+  --era: #6b5a44;
+  --paper: #f4ead2; --paper-2: #e6d4ad; --cink: #261d14; --cink-2: #5d4c38;
+  position: relative; perspective: 1400px; color: var(--cink); font-family: var(--font-ui); text-align: left;
+}
+.pc { display: flex; }
+.pc__inner { flex: 1; display: flex; flex-direction: column; position: relative; transform-style: preserve-3d; transition: transform .62s cubic-bezier(.3, .75, .25, 1); }
+.pc.is-down .pc__inner { transform: rotateY(180deg); }
+.pc__face { backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 14px; }
+.pc__front {
+  position: relative; flex: 1; display: flex; flex-direction: column; padding: 8px 8px 10px; overflow: hidden;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgb(255 252 240 / .9), transparent 70%),
+    radial-gradient(90% 70% at 100% 100%, rgb(150 110 50 / .16), transparent 60%),
+    radial-gradient(70% 60% at 0% 90%, rgb(150 110 50 / .1), transparent 60%),
+    linear-gradient(180deg, var(--paper), var(--paper-2));
+  border: 1px solid #b59d6e;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .6), 0 1px 2px rgb(50 30 10 / .12), 0 10px 28px rgb(50 30 10 / .18);
+}
+.pc__front::before { content: ''; position: absolute; inset: 4px; border: 1px solid color-mix(in srgb, var(--era) 40%, transparent); border-radius: 11px; pointer-events: none; }
+.pc__band { position: relative; display: flex; justify-content: space-between; gap: 6px; padding: 5px 8px 4px; border-radius: 8px 8px 4px 4px; background: var(--era); color: #fbf2da; font: 700 9.5px/1.15 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; box-shadow: inset 0 -1px 0 rgb(0 0 0 / .18); }
+.pc__band span:last-child { opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc__crest { position: relative; display: flex; justify-content: center; align-items: center; height: 82px; margin: 10px 0 4px; }
+.pc__crest svg { display: block; filter: drop-shadow(0 2px 2px rgb(60 40 10 / .28)); }
+.pc__arms svg { width: 64px; height: 77px; }
+.pc__crest--person .pc__sigil svg { width: 76px; height: 76px; }
+.pc__crest--person .pc__arms { position: absolute; left: calc(50% + 30px); bottom: -3px; }
+.pc__crest--person .pc__arms svg { width: 31px; height: 37px; }
+.pc__name { margin: 3px 2px 3px; text-align: center; font: 600 20px/1.12 var(--font-display); letter-spacing: -.005em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.pc__name a { color: inherit; text-decoration: none; }
+.pc__name a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.pc__role { margin: 0 2px 10px; text-align: center; font: 500 10.5px/1.35 var(--font-ui); color: var(--cink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pc__role span { white-space: nowrap; }
+.pc__stats { list-style: none; margin: auto 0 0; padding: 0; display: grid; gap: 4px; }
+.pc__stat {
+  width: 100%; min-height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 5px 8px;
+  border-radius: 7px; border: 1px solid color-mix(in srgb, var(--era) 20%, transparent); background: rgb(255 255 255 / .4);
+  font: inherit; color: inherit; text-align: left;
+}
+button.pc__stat { cursor: pointer; transition: background .15s, border-color .15s, transform .15s; -webkit-tap-highlight-color: transparent; }
+button.pc__stat:hover { background: #fffaee; border-color: var(--era); transform: translateX(2px); }
+button.pc__stat:active { transform: scale(.98); }
+button.pc__stat:focus-visible { outline: 2px solid var(--era); outline-offset: 1px; }
+.pc__label { font: 650 9.5px/1.15 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--cink-2); }
+.pc__val { font: 600 20px/1 var(--font-display); font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+.pc__val small { margin-left: 2px; font: 650 8.5px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--cink-2); }
+.pc__stat.is-picked { background: #fff5d8; border-color: var(--era); }
+.pc__stat.is-win { animation: clash-win .5s .55s both; }
+.pc__stat.is-lose { animation: clash-lose .5s .55s both; }
+.pc__stat.is-tie { animation: clash-tie .5s .55s both; }
+.pc__foot { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 8px; padding: 0 4px; font: 650 8.5px/1 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--cink-2); }
+.pc__gem { display: inline-flex; align-items: center; gap: 5px; color: #8b7f6b; letter-spacing: .05em; }
+.pc__gem b { font-weight: 650; letter-spacing: .12em; color: var(--cink-2); }
+.pc--r1 .pc__gem { color: #7d8b99; }
+.pc--r2 .pc__gem { color: #b2821f; }
+.pc--r3 .pc__gem { color: #c4561f; }
+
+/* rarity: silver, gold, and a gold foil that catches the light */
+.pc--r1 .pc__front { border-color: #8e9aa6; box-shadow: inset 0 0 0 2px rgb(160 172 184 / .55), inset 0 1px 0 rgb(255 255 255 / .6), 0 10px 28px rgb(50 30 10 / .18); }
+.pc--r2 .pc__front { border: 1.5px solid #b98d2c; box-shadow: inset 0 0 0 2px rgb(214 170 70 / .55), 0 10px 28px rgb(70 45 10 / .22); }
+.pc--r3 .pc__front { border: 2px solid #b8862a; box-shadow: inset 0 0 0 2px rgb(240 200 100 / .7), 0 0 0 1px rgb(255 230 160 / .5), 0 12px 32px rgb(110 70 10 / .3); }
+.pc--r3 .pc__front::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; mix-blend-mode: soft-light;
+  background: linear-gradient(115deg, transparent 25%, rgb(255 255 255 / .75) 42%, rgb(255 214 120 / .6) 50%, rgb(255 255 255 / .2) 58%, transparent 72%) 0 0 / 260% 100% no-repeat;
+  animation: clash-foil 5s ease-in-out infinite;
+}
+
+/* the back: the era's colour, a lattice and the archive's mark */
+.pc__back {
+  position: absolute; inset: 0; transform: rotateY(180deg); display: grid; place-items: center; overflow: hidden;
+  border: 1px solid rgb(0 0 0 / .35);
+  background:
+    radial-gradient(circle at 50% 46%, rgb(255 236 180 / .22) 0 26%, transparent 27%),
+    repeating-linear-gradient(45deg, rgb(255 240 200 / .1) 0 1.5px, transparent 1.5px 11px),
+    repeating-linear-gradient(-45deg, rgb(255 240 200 / .1) 0 1.5px, transparent 1.5px 11px),
+    radial-gradient(120% 90% at 50% 30%, color-mix(in srgb, var(--era) 80%, #fff), var(--era) 60%, color-mix(in srgb, var(--era) 70%, #000));
+  box-shadow: inset 0 0 0 5px rgb(0 0 0 / .12), inset 0 0 0 6px rgb(230 195 110 / .7), 0 10px 28px rgb(50 30 10 / .25);
+}
+.pc__backart { display: grid; justify-items: center; gap: 8px; color: #f6e7c0; text-align: center; padding: 12px; }
+.pc__backmark { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; border: 2px solid #e2c06e; box-shadow: 0 0 0 4px rgb(0 0 0 / .15), inset 0 0 0 3px rgb(226 192 110 / .35); font: 500 38px/1 var(--font-display); color: #f3d98f; }
+.pc__backkind { font: 700 11px/1 var(--font-ui); letter-spacing: .22em; text-transform: uppercase; }
+.pc__backera { font: italic 400 15px/1.2 var(--font-display); opacity: .9; }
+
+/* the round's outcome */
+.pc.is-winner { animation: clash-lift .55s .55s both; }
+.pc.is-loser .pc__front { animation: clash-dim .5s .6s both; }
+
+@keyframes clash-deal { from { opacity: 0; transform: translateY(22px) rotate(-2deg); } to { opacity: 1; transform: none; } }
+@keyframes clash-deal-r { from { opacity: 0; transform: translateY(22px) rotate(2deg); } to { opacity: 1; transform: none; } }
+@keyframes clash-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes clash-pop { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes clash-win { from { background: #fff5d8; } to { background: #dcebcc; border-color: #3b6430; box-shadow: 0 0 0 2px rgb(59 100 48 / .4), 0 0 14px rgb(120 170 80 / .45); } }
+@keyframes clash-lose { from { background: #fff5d8; } to { background: #f3d9d0; border-color: #a5392a; } }
+@keyframes clash-tie { from { background: #fff5d8; } to { background: #e9e2d2; border-color: #8e8370; } }
+@keyframes clash-lift { from { transform: none; } to { transform: translateY(-7px); } }
+@keyframes clash-dim { to { filter: saturate(.6) brightness(.93); } }
+@keyframes clash-foil { 0%, 100% { background-position: 110% 0; } 50% { background-position: -10% 0; } }
+
+/* ------------------------------------------------------------ the hands: small cards, face down until played */
+.clash__hands { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 40px; max-width: 660px; margin: 14px auto 0; padding-top: 16px; border-top: 1px solid var(--rule-2); }
+.clash__hand { min-width: 0; }
+.clash__handlabel { display: block; margin-bottom: 8px; font: 600 10.5px/1 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.clash__hand ol { list-style: none; margin: 0; padding: 0; display: flex; gap: 5px; }
+.clash__hand li { flex: 1 1 0; min-width: 0; max-width: 42px; }
+.mini {
+  --era: #6b5a44; position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 5 / 7; border-radius: 5px;
+  background: linear-gradient(180deg, #f6eed9, #e5d3ac); border: 1px solid #b59d6e; box-shadow: inset 0 3px 0 var(--era), 0 1px 3px rgb(40 25 10 / .2);
+  transition: transform .25s, opacity .25s;
+}
+.mini__crest { line-height: 0; width: 74%; }
+.mini__crest svg { width: 100%; height: auto; display: block; }
+.mini.is-down { border-color: rgb(0 0 0 / .3); background: repeating-linear-gradient(45deg, rgb(255 240 200 / .12) 0 1px, transparent 1px 5px), var(--era); box-shadow: inset 0 0 0 2px rgb(230 195 110 / .55), 0 1px 3px rgb(40 25 10 / .25); }
+.mini.is-now { transform: translateY(-4px); box-shadow: inset 0 3px 0 var(--era), 0 0 0 2px var(--era), 0 4px 10px rgb(40 25 10 / .25); }
+.mini.is-down.is-now { box-shadow: inset 0 0 0 2px rgb(230 195 110 / .7), 0 0 0 2px var(--ink), 0 4px 10px rgb(40 25 10 / .3); }
+.mini.is-win, .mini.is-loss, .mini.is-tie { opacity: .92; }
+.mini__mark { position: absolute; right: -5px; bottom: -5px; width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; font: 700 9.5px/1 var(--font-ui); color: #fff; background: var(--faint); border: 1.5px solid var(--bg); }
+.mini.is-win .mini__mark { background: var(--ok); }
+.mini.is-loss .mini__mark { background: var(--accent); color: var(--accent-ink); }
+
+/* ------------------------------------------------------------ end of match, notes, the deck */
+.clash__recap { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-width: 640px; }
+.clash__recap li { display: flex; gap: 12px; align-items: center; padding: 9px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); font-family: var(--font-display); font-size: 17px; line-height: 1.35; }
+.clash__recap .mini { flex: none; width: 36px; }
+.clash__recaptext { flex: 1; min-width: 0; }
+.clash__recap small { display: block; font: 500 12.5px/1.4 var(--font-ui); color: var(--muted); margin-top: 2px; }
+.clash__mark { flex: none; width: 22px; height: 22px; display: inline-grid; place-items: center; border-radius: 50%; font: 700 12px var(--font-ui); color: #fff; background: var(--faint); transform: translateY(2px); }
+.clash__recap .is-win .clash__mark { background: var(--ok); }
+.clash__recap .is-loss .clash__mark { background: var(--accent); color: var(--accent-ink); }
+.clash__how { max-width: 640px; margin: 34px auto 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+.clash--end .clash__how { margin-left: 0; }
+.clash__how summary { cursor: pointer; font: 600 13px var(--font-ui); color: var(--muted); }
+.clash__how dl { margin: 10px 0 0; }
+.clash__how dt { font: 600 12px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
+.clash__how dd { margin: 3px 0 0; }
+.clash__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+.clash__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(206px, 1fr)); gap: 0 2px; margin: 0 -6px; }
+.clash__cell { position: relative; display: flex; padding: 8px 6px 20px; }
+.clash__cell > .pc { flex: 1; }
+.clash__cell.is-met::after { content: 'Met'; position: absolute; top: 2px; right: 2px; z-index: 2; padding: 3px 7px; border-radius: 999px; background: var(--ok); color: #fff; font: 700 9.5px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; box-shadow: var(--shadow); }
+.clash--deck .actions { margin-top: 28px; }
+
+/* phones: two cards side by side, a little tighter */
+@media (max-width: 600px) {
+  .clash { padding-top: 14px; }
+  .clash__kicker { margin-bottom: 10px; font-size: 11px; }
+  .clash__score { gap: 6px; margin-bottom: 14px; }
+  .clash__side { font-size: 10px; gap: 5px; }
+  .clash__side b { font-size: 25px; }
+  .clash__track { gap: 4px; }
+  .clash__slot { width: 23px; height: 23px; font-size: 10.5px; }
+  .clash__table { gap: 10px; }
+  .clash__vsbadge { top: 66px; width: 32px; height: 32px; margin: -16px 0 0 -16px; font-size: 14px; }
+  .pc__front { padding: 6px 6px 8px; border-radius: 12px; }
+  .pc__face { border-radius: 12px; }
+  .pc__front::before { inset: 3px; border-radius: 10px; }
+  .pc__band { padding: 4px 6px 3px; font-size: 8.5px; letter-spacing: .1em; }
+  .pc__crest { height: 60px; margin: 7px 0 2px; }
+  .pc__arms svg { width: 48px; height: 58px; }
+  .pc__crest--person .pc__sigil svg { width: 56px; height: 56px; }
+  .pc__crest--person .pc__arms { left: calc(50% + 21px); }
+  .pc__crest--person .pc__arms svg { width: 24px; height: 29px; }
+  .pc__name { font-size: 16px; }
+  .pc__role { font-size: 9.5px; margin-bottom: 7px; }
+  .pc__stats { gap: 3px; }
+  .pc__stat { min-height: 38px; padding: 4px 6px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; }
+  .pc__label { font-size: 8.5px; letter-spacing: .06em; }
+  .pc__val { font-size: 17px; }
+  .pc__foot { font-size: 7.5px; margin-top: 5px; }
+  .pc__gem b { display: none; }
+  .pc__backmark { width: 50px; height: 50px; font-size: 30px; }
+  .pc__backera { font-size: 13px; }
+  .clash__say { min-height: 120px; margin-top: 14px; }
+  .clash__prompt { font-size: 16.5px; }
+  .clash__verdict { font-size: 18.5px; }
+  .clash__verdict span { font-size: 15px; }
+  .clash__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 0 -5px; }
+  .clash__cell { padding: 6px 5px 16px; }
+  .clash__hands { grid-template-columns: 1fr; gap: 12px; margin-top: 8px; padding-top: 12px; }
+  .clash__hand { display: grid; grid-template-columns: 82px minmax(0, 1fr); align-items: center; }
+  .clash__handlabel { margin: 0; font-size: 9.5px; line-height: 1.3; }
+  .clash__hand li { max-width: 34px; }
+  .clash__recap li { font-size: 15.5px; gap: 9px; padding: 8px 10px; }
+  .clash__recap .mini { width: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc__inner, button.pc__stat, .clash__slot, .mini { transition: none; }
+  .clash__seat, .clash__say .actions, .clash__verdict, .clash__slot, .clash__slot.is-win, .clash__slot.is-loss, .clash__slot.is-tie, .pc.is-winner, .pc.is-loser .pc__front { animation: none; }
+  .pc.is-loser .pc__front { filter: saturate(.6) brightness(.93); }
+  .pc__stat.is-win, .pc__stat.is-lose, .pc__stat.is-tie { animation-duration: .01s; animation-delay: 0s; }
+  .pc--r3 .pc__front::after { animation: none; background-position: 50% 0; }
+  button.pc__stat:hover { transform: none; }
+}

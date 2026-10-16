@@ -1,0 +1,19 @@
+# 0024: Cities in 3D, every settlement as a diorama of any year
+
+**Context.** A city's page lists its population, masters, sacks and harbour, but a reader cannot see what the place was like in a given century, or how it changed. A picture must not invent what the record contradicts, so it has to be generated from the record and be the same wherever it appears.
+
+**Decision.**
+- **`#/city/set:N?y=Y`** (`atlas/src/three/city/`, lazy). A round plinth with the town, its fields, roads, river and sea. Below it is a life bar: the population survey (log scale), the years it was a capital (gold) and every sack (red). Play runs its whole life in about 40 seconds. "Read from the record" lists what each part of the model comes from, with links. "See this city in 3D" is on every settlement page; `#/city` lists the largest cities.
+- **What drives what.**
+  - **Population** (the page's survey, interpolated between centuries) sets the number of buildings, sub-linearly: 1.4·pop^0.54, at most 6,000. Lots the city filled in the last 150 years but has lost stand empty and roofless.
+  - **The master's technological age** (its decadal survey, not the world's era) sets materials and forms: mud-brick and reed huts, then stone and thatch with roundhouses, then dressed stone and tile, then timber and plaster with steep roofs, then brick with mansards and star forts, then industrial brick and slate with works, chimneys, a railway and steamships, then concrete and glass towers. Each lot lags a change by its own few decades, so old quarters linger.
+  - **The people of the city's ground** set the roof colour (their heraldic tincture, the same hash as their arms) and the street pattern of each district they lay out: a grid, rings and spokes, winding lanes or courtyard blocks. A district keeps the pattern of the people who built it.
+  - **The state faith** sets the main temple: a ziggurat, a domed temple, a spire, a pagoda, a colonnade or a stupa. The form comes from the root of the faith's family, so sects build like their parent. Philosophies and ideologies raise halls. The faith's heraldic metal gilds or whitens it.
+  - **Capital** status adds a palace flying the state's colour, and walls. Walls stand two centuries after the city stops being a capital, until the age of engines replaces them with a ring of trees.
+  - **Port** adds quays, piers, a breakwater and lighthouse, warehouses, cranes and boats of the age. **River** adds bridges where the roads cross.
+  - **A sack in the last 20 years** leaves burnt shells toward where the attackers broke in, breached walls and lost roofs, all fading as the city rebuilds. Smoke and embers show in the first two years. **Abandonment** leaves ruins that thin and green over the centuries.
+- **Layout.** The plan is laid out once per city from hashes of its id, in four-lot districts reached as the town grows. Every lot has a growth key, so the city at any year is a prefix of the same plan: AY 2000 contains AY 1000's core. The plinth grows in steps up to about 78 lots, and a great city then runs off its edges.
+- **Data.** `cities.json` (`engine/src/export/cities.ts`, about 47 KB gzipped, fetched only by this view) adds what the atlas lacked, all as change points. Per settlement: the territory and culture logs at its cell, its sacks and its port flag. Per state: the decadal survey's faith and technological age. Also faith names, kinds and parents, and people's names.
+- **Reuse.** `buildCity(record, year)` in `atlas/src/three/city/index.ts` returns a `THREE.Group` in lots, with `userData.radius` and `userData.model`. `model.setYear(y)` regenerates it in place.
+
+**Why.** Every visible choice traces to a row of the record, so the model can be checked, and the same city at the same year looks the same everywhere. Instancing (about ten draw calls for a city of 6,000 buildings) keeps phones under a 16 ms frame budget.

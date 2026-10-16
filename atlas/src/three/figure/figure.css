@@ -1,0 +1,172 @@
+/* Figurines: #/figures (the shelf) and the "View as a figure" dialog. Loaded with their lazy chunk. */
+.figs,
+.figm {
+  --fig-bg-0: #fbf7ee;
+  --fig-bg-1: #efe6d3;
+  --fig-bg-2: #ddcfb4;
+  --fig-lab: #2a1e14;
+  --fig-halo: rgb(251 248 241 / 0.86);
+}
+:root[data-theme='dark'] .figs,
+:root[data-theme='dark'] .figm {
+  --fig-bg-0: #262d36;
+  --fig-bg-1: #161b22;
+  --fig-bg-2: #0b0e12;
+  --fig-lab: #efe6d2;
+  --fig-halo: rgb(14 17 22 / 0.82);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .figs,
+  :root:not([data-theme='light']) .figm {
+    --fig-bg-0: #262d36;
+    --fig-bg-1: #161b22;
+    --fig-bg-2: #0b0e12;
+    --fig-lab: #efe6d2;
+    --fig-halo: rgb(14 17 22 / 0.82);
+  }
+}
+
+/* ---------------------------------------------------------------- the shelf */
+.figs {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 20px 24px calc(28px + var(--tabbar-h));
+  min-width: 0;
+}
+.figs__head { max-width: 760px; }
+.figs__head .h-page { margin-bottom: 8px; }
+.figs__lede { color: var(--ink-2); font-size: 16px; line-height: 1.5; margin: 0 0 14px; }
+.figs__back { margin: 0 0 12px; font-size: 14px; }
+.figs__eras {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 0 12px;
+  margin: 0 -24px;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+.figs__eras::-webkit-scrollbar { display: none; }
+.figs__eras .chip { flex: none; cursor: pointer; font: 500 13px/1 var(--font-ui); border: 1px solid var(--rule); background: var(--surface); color: var(--ink); }
+.figs__eras .chip.is-on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.figs__stage {
+  position: relative;
+  height: clamp(380px, 62vh, 640px);
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 38%, var(--fig-bg-0) 0%, var(--fig-bg-1) 60%, var(--fig-bg-2) 100%);
+  box-shadow: inset 0 0 0 1px var(--rule-2);
+  outline: none;
+  touch-action: pan-y;
+}
+.figs__stage:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.figs__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+.figs__canvas:active { cursor: grabbing; }
+.figs__labels { position: absolute; inset: 0; pointer-events: none; }
+.figs__lab {
+  position: absolute;
+  transform: translate(-50%, 6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  max-width: 168px;
+  padding: 3px 8px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--fig-halo);
+  color: var(--fig-lab);
+  pointer-events: auto;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.figs__lab-n { font: 500 15px/1.12 var(--font-display); max-width: 100%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-wrap: balance; }
+.figs__lab-r { font: 500 10.5px/1.2 var(--font-ui); color: var(--muted); letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.figs__lab.is-on { box-shadow: 0 0 0 1.5px var(--accent); }
+.figs__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  font-size: 24px;
+  line-height: 1;
+  background: var(--fig-halo);
+  border-color: var(--rule);
+  color: var(--ink);
+  z-index: 2;
+}
+.figs__nav--l { left: 10px; }
+.figs__nav--r { right: 10px; }
+.figs__card {
+  margin-top: 16px;
+  max-width: 760px;
+  min-height: 120px;
+}
+.figs__name { font: 500 30px/1.1 var(--font-display); margin: 6px 0 4px; }
+.figs__name a { color: inherit; text-decoration: none; }
+.figs__name a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.figs__tip { margin: 6px 2px; }
+
+/* ---------------------------------------------------------------- the dialog */
+.figm {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(20 14 8 / 0.42);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.figm--loading { gap: 10px; color: #fff; display: flex; align-items: center; justify-content: center; }
+.figm__box {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  width: min(980px, 100%);
+  height: min(680px, calc(100dvh - 48px));
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+.figm__stage {
+  position: relative;
+  min-height: 0;
+  background: radial-gradient(ellipse 85% 75% at 50% 42%, var(--fig-bg-0) 0%, var(--fig-bg-1) 62%, var(--fig-bg-2) 100%);
+  touch-action: none;
+}
+.figm__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+.figm__canvas:active { cursor: grabbing; }
+.figm__hint { position: absolute; left: 0; right: 0; top: 14px; text-align: center; font: 500 12px/1 var(--font-ui); color: var(--muted); pointer-events: none; }
+.figm__fail { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; color: var(--muted); text-align: center; }
+.figm__side { position: relative; padding: 26px 26px 22px; overflow-y: auto; border-left: 1px solid var(--rule-2); }
+.figm__x { position: absolute; top: 12px; right: 12px; }
+.figm__name { font: 500 32px/1.08 var(--font-display); margin: 8px 36px 6px 0; }
+.figm__role { font: 600 14px/1.35 var(--font-ui); color: var(--ink-2); }
+.figm__life { font: 400 14px/1.35 var(--font-ui); color: var(--muted); margin-top: 2px; }
+.figm__notes { margin: 14px 0 16px; padding: 0 0 0 18px; color: var(--ink-2); font-size: 15px; line-height: 1.45; }
+.figm__notes li { margin: 0 0 6px; }
+.figm__notes li::marker { color: var(--faint); }
+.figm__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.figm__small { margin: 16px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+
+@media (max-width: 767px) {
+  .figs { padding: 14px 16px calc(24px + var(--tabbar-h)); }
+  .figs__eras { margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+  .figs__stage { height: clamp(360px, 58vh, 520px); margin: 0 -16px; border-radius: 0; box-shadow: none; }
+  .figs__nav { width: 34px; height: 34px; font-size: 20px; }
+  .figs__lab-n { font-size: 13.5px; }
+  .figs__lab { max-width: 120px; padding: 2px 6px 3px; }
+  .figs__name { font-size: 26px; }
+  .figm { padding: 0; place-items: stretch; }
+  .figm__box { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.25fr) auto; width: 100%; height: 100dvh; border-radius: 0; }
+  .figm__side { border-left: 0; border-top: 1px solid var(--rule-2); padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); max-height: 46dvh; }
+  .figm__name { font-size: 26px; }
+  .figm__notes { font-size: 14px; margin: 10px 0 12px; }
+  .figm__small { display: none; }
+}

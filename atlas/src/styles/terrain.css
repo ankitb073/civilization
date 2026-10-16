@@ -1,0 +1,523 @@
+/* #/3d — the relief model (loaded with its lazy chunk) */
+.t3d {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  --t3d-bg-0: #f8f3e8;
+  --t3d-bg-1: #e9e0cd;
+  --t3d-bg-2: #d8ccb2;
+  --t3d-halo: rgb(251 248 241 / 0.92);
+  --t3d-lab: #241a12;
+}
+:root[data-theme='dark'] .t3d {
+  --t3d-bg-0: #1d242d;
+  --t3d-bg-1: #11161c;
+  --t3d-bg-2: #080b0f;
+  --t3d-halo: rgb(10 13 18 / 0.88);
+  --t3d-lab: #f1e8d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .t3d {
+    --t3d-bg-0: #1d242d;
+    --t3d-bg-1: #11161c;
+    --t3d-bg-2: #080b0f;
+    --t3d-halo: rgb(10 13 18 / 0.88);
+    --t3d-lab: #f1e8d6;
+  }
+}
+.t3d__stage {
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+  background:
+    radial-gradient(ellipse 75% 65% at 50% 46%, var(--t3d-bg-0) 0%, var(--t3d-bg-1) 62%, var(--t3d-bg-2) 100%);
+}
+.t3d__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+  outline: none;
+}
+.t3d__canvas:active {
+  cursor: grabbing;
+}
+.t3d__canvas:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+.t3d__labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+.t3d-lab {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  color: var(--t3d-lab);
+  will-change: transform, opacity;
+  text-align: center;
+  line-height: 1.05;
+}
+.t3d-lab--state {
+  font: 600 14px/1.05 var(--font-display);
+  letter-spacing: 0.13em;
+  text-shadow: 0 0 3px var(--t3d-halo), 0 0 6px var(--t3d-halo), 0 0 1px var(--t3d-halo);
+}
+.t3d-lab--state .t3d-lab__k {
+  display: block;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  font-size: 0.6em;
+  margin-bottom: 1px;
+}
+.t3d-lab--city,
+.t3d-lab--capital {
+  font: 500 12.5px/1.1 var(--font-display);
+  padding: 1px 6px 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+.t3d-lab--capital {
+  font-weight: 650;
+}
+.t3d-lab--capital::before {
+  content: '★';
+  font-size: 0.78em;
+  margin-right: 3px;
+  color: #b8862e;
+  vertical-align: 0.08em;
+}
+
+.t3d__plate {
+  position: absolute;
+  z-index: 4;
+  left: 16px;
+  top: 14px;
+  pointer-events: none;
+  max-width: min(60%, 420px);
+}
+.t3d__kicker {
+  font: 600 11px/1.3 var(--font-ui);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.t3d__title {
+  font: 500 30px/1.05 var(--font-display);
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin-top: 3px;
+  text-shadow: 0 0 12px var(--t3d-halo);
+}
+.t3d__title em {
+  font-style: italic;
+  color: var(--ink-2);
+}
+.t3d__hint {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 6px;
+  transition: opacity 0.6s;
+}
+.is-touched .t3d__hint {
+  opacity: 0;
+}
+.t3d__ctl {
+  top: 12px;
+  right: 12px;
+  align-items: center;
+}
+.t3d__ctl .seg:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.t3d__2d {
+  text-decoration: none;
+  border-left: 1px solid var(--rule);
+  border-radius: 0 999px 999px 0;
+  margin-left: 2px;
+  padding-left: 12px;
+  font-weight: 600;
+}
+.t3d__states {
+  position: absolute;
+  z-index: 4;
+  left: 12px;
+  bottom: 12px;
+  width: 248px;
+  padding: 10px 8px 6px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.t3d__states-h {
+  font: 600 10.5px/1.3 var(--font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 6px 6px;
+}
+.t3d__states ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.t3d__states button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 5px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  min-height: 30px;
+}
+.t3d__states button:hover,
+.t3d__states button.is-on {
+  background: var(--bg-2);
+}
+.t3d__sw {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+  display: inline-block;
+}
+.t3d__sn {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 15px/1.2 var(--font-display);
+}
+.t3d__sp {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.t3d__card {
+  position: absolute;
+  z-index: 5;
+  right: 12px;
+  bottom: 12px;
+  width: min(320px, calc(100% - 24px));
+  padding: 12px 14px 12px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+.t3d__x {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+}
+.t3d__card-k {
+  font: 600 10.5px/1.3 var(--font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-right: 28px;
+}
+.t3d__card-t {
+  font: 500 21px/1.2 var(--font-display);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.t3d__card-t .t3d__sw {
+  width: 13px;
+  height: 13px;
+}
+.t3d__card-s {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.t3d__card-a {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.t3d__loading,
+.t3d__fail {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: var(--muted);
+  text-align: center;
+  padding: 16px;
+}
+.t3d__loading {
+  grid-auto-flow: column;
+  align-items: center;
+}
+
+/* the app shell around it */
+@media (max-width: 767px) {
+  .t3d__plate {
+    left: 12px;
+    top: 10px;
+    max-width: calc(100% - 150px);
+  }
+  .t3d__kicker {
+    font-size: 10px;
+  }
+  .t3d__title {
+    font-size: 22px;
+  }
+  .t3d__hint {
+    font-size: 11.5px;
+    max-width: 180px;
+  }
+  .t3d__ctl {
+    top: 10px;
+    right: 8px;
+    flex-direction: column;
+    border-radius: 18px;
+    gap: 2px;
+  }
+  .t3d__ctl .seg {
+    width: 40px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .t3d__ctl-l {
+    display: none;
+  }
+  .t3d__2d {
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+    border-radius: 0 0 14px 14px;
+    margin: 2px 0 0;
+    font-size: 12px;
+  }
+  .t3d__card {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+  }
+  .t3d-lab--city,
+  .t3d-lab--capital {
+    font-size: 11.5px;
+  }
+}
+
+/* ---------------------------------------------------------------- cinema (#/3d?cinema=1) */
+.is-cinema.app {
+  height: 100dvh;
+  display: block;
+  overflow: hidden;
+}
+.is-cinema .topbar,
+.is-cinema .tabbar,
+.is-cinema .skip {
+  display: none !important;
+}
+.is-cinema .main {
+  position: fixed;
+  inset: 0;
+  padding: 0 !important;
+  display: block;
+}
+.t3d--cinema {
+  position: fixed;
+  inset: 0;
+  display: block;
+  --t3d-bg-0: #1e2731;
+  --t3d-bg-1: #10151b;
+  --t3d-bg-2: #06080b;
+  --t3d-halo: rgb(8 10 14 / 0.85);
+  --t3d-lab: #f3ead8;
+}
+.t3d--cinema .t3d__stage {
+  position: absolute;
+  inset: 0;
+}
+.t3d--cinema .t3d-lab--state {
+  letter-spacing: 0.16em;
+}
+.t3d--cinema .t3d-lab--city,
+.t3d--cinema .t3d-lab--capital {
+  font-size: 1.55vmin;
+  background: rgb(14 18 24 / 0.6);
+  color: #f3ead8;
+  box-shadow: none;
+}
+.t3c {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  color: #f4ecdb;
+  font-family: var(--font-display);
+}
+.t3c__black {
+  position: absolute;
+  inset: 0;
+  background: #05070a;
+}
+.t3c__veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgb(6 8 11 / 0.55), rgb(6 8 11 / 0.9));
+  opacity: 0;
+}
+.t3c__chrome {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    linear-gradient(180deg, rgb(6 8 11 / 0.55) 0%, rgb(6 8 11 / 0) 18%),
+    linear-gradient(0deg, rgb(6 8 11 / 0.7) 0%, rgb(6 8 11 / 0) 30%);
+}
+.t3c__brand {
+  position: absolute;
+  left: 4.2vmin;
+  top: 3.6vmin;
+  display: flex;
+  align-items: baseline;
+  gap: 1.4vmin;
+}
+.t3c__brand .wordmark {
+  font-size: 3.4vmin;
+  color: #f4ecdb;
+}
+.t3c__world {
+  font-style: italic;
+  font-size: 2.2vmin;
+  color: rgb(244 236 219 / 0.7);
+}
+.t3c__when {
+  position: absolute;
+  left: 4.2vmin;
+  bottom: 4vmin;
+}
+.t3c__year {
+  font-weight: 500;
+  font-size: 11vmin;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.t3c__year small {
+  font: 600 2.2vmin/1 var(--font-ui);
+  letter-spacing: 0.18em;
+  margin-left: 1.2vmin;
+  color: rgb(244 236 219 / 0.75);
+  vertical-align: 0.2em;
+}
+.t3c__eras {
+  position: relative;
+  height: 4.4vmin;
+  margin-top: 1.2vmin;
+}
+.t3c__era {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-style: italic;
+  font-size: 3.6vmin;
+  line-height: 1.1;
+  color: #e9c98f;
+}
+.t3c__card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 8vmin;
+  opacity: 0;
+}
+.t3c__big {
+  font-size: 13vmin;
+  color: #f6eedd;
+  line-height: 0.95;
+}
+.t3c__rule {
+  width: 16vmin;
+  height: 1px;
+  background: rgb(233 201 143 / 0.8);
+  margin: 3.2vmin 0 2.8vmin;
+}
+.t3c__sub {
+  font-style: italic;
+  font-size: 4.2vmin;
+  line-height: 1.25;
+  max-width: 34ch;
+  color: #f1e6cf;
+}
+.t3c__meta,
+.t3c__url {
+  font: 600 2vmin/1.3 var(--font-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 3.4vmin;
+  color: #e9c98f;
+}
+.t3c__url {
+  text-transform: none;
+  letter-spacing: 0.06em;
+  font-size: 2.8vmin;
+}
+@media (max-aspect-ratio: 4/5) {
+  .t3c__year {
+    font-size: 13vmin;
+  }
+  .t3c__when {
+    bottom: 7vmin;
+  }
+  .t3c__brand {
+    top: 6vmin;
+    flex-direction: column;
+    gap: 0.6vmin;
+  }
+  .t3c__brand .wordmark {
+    font-size: 5vmin;
+  }
+  .t3c__world {
+    font-size: 3.2vmin;
+  }
+  .t3c__era {
+    font-size: 4.4vmin;
+  }
+  .t3c__eras {
+    height: 5.4vmin;
+  }
+  .t3c__sub {
+    font-size: 5.6vmin;
+  }
+}

@@ -1,0 +1,7 @@
+/* A coat of arms or a seal at the head of a page's infobox (PageView), drawn by atlas/src/heraldry.ts. */
+.infobox__crest { display: flex; align-items: center; gap: 12px; margin: 14px 0 2px; padding-bottom: 12px; border-bottom: 1px solid var(--rule-2); }
+.infobox__arms { flex: none; line-height: 0; }
+.infobox__arms svg { width: 40px; height: 48px; filter: drop-shadow(0 1px 1.5px rgb(40 25 10 / .25)); }
+.infobox__crest.is-seal .infobox__arms svg { width: 48px; height: 48px; }
+.infobox__blazon { font: italic 400 14px/1.35 var(--font-display); color: var(--muted); }
+.infobox--inline .infobox__crest { margin-top: 12px; padding-bottom: 10px; }

@@ -1,0 +1,22 @@
+# 0025: Battle dioramas, every battle replayed from the record against what its sources claimed
+
+**Context.** A battle page gives two strengths, two losses and a victor in an infobox. The archive's best material, the victory steles, rival chronicles, telegrams and newspapers that lie about those numbers, lives on other pages. A reader has no way to see the gap between them. A picture of the battle must not invent anything the record contradicts.
+
+**Decision.**
+- **`#/battle/evt:N`** (`atlas/src/three/battle/`, lazy, about 24 KB gzipped plus the shared three.js chunk). The view is a tabletop diorama on a wooden plinth with a brass plaque. Battle pages link to it with "Watch this battle". `?t=0..1` opens it at a moment of the replay, `?ghost=i|none` picks a claim, and `?still=1` stops the autoplay.
+- **The ground.** The battle's district and its neighbours come from `world.json`. Each Voronoi cell's elevation and biome colour is Gaussian-blended onto a heightfield, the big rivers are carved in, and the sea is drawn. Forests, reeds and rocks follow each cell's biome. The battlefield is levelled so the armies can stand on it. The board is turned so the nearest settlement stands across the field from the viewer. A brass compass shows north. The town is drawn as a block of houses: its population that century sets their number, and the age sets how they are built and whether it has walls.
+- **The armies.** Instanced low-poly figures, one draw per troop type per side.
+  - **Scale.** The larger army's figure count grows with the log of its size (from about 80 figures for 400 men to 460 for millions). That fixes the men per figure, and both armies, the casualties and every ghost use the same rate. Within a battle the drawing is therefore honest: twice the men, twice the figures.
+  - **Troops.** Troop types come from the military techs each side knew that year: spears, slings and chariots; iron, cavalry and crossbows; pike and shot with cannon; rifles, field guns and tanks. Where a muster roll survives, its listed arms give that side's mix instead.
+  - **Colours.** Tunics, banners and the commander's standard are in each state's tinctures, read off its arms via `atlas/src/heraldry.ts`. The banners carry the arms and the standard carries the commander's seal. When both sides share a colour, the defender wears its metal.
+- **The replay** is driven only by the record. The armies advance. The lines meet nearer the defender if the defender won, and the winner's line holds. Each side loses exactly round(figures × losses / strength) figures, front ranks first, chosen by a hash of the battle id. Its counter ticks to exactly the recorded losses. The loser falls back, scattering further the more decisive the result, and a fallen commander's standard topples. Under reduced motion it opens on the final state.
+- **The claims.** Battle pages carry `battle` (contract `BattleJson`, `engine/src/export/battle.ts`, about 370 bytes per battle). It holds the record's numbers, both arms and seals, a tech bitmask and the town's population. It also holds `claims`, each read from a surviving document's own text, sentence by sentence:
+  - a victory stele's "It claims N enemy dead"
+  - a commander's telegram
+  - a newspaper's victory report
+  - a muster roll's total and arms
+  - each paragraph of a rival chronicle, matched to the war's battles by its year, its place and who it says won, never out of order. Quoted passages from other works are skipped.
+
+  A figure lost to a lacuna is therefore not claimed. Ghosts are pale figures at the same scale: a claimed host stands beyond the real army and marches with it, and claimed dead lie behind the record's own dead. A dashed outline marks the whole claim, so understatements show too. In seed 5, 8,290 of 16,429 battles have at least one claim (7,711 chronicle paragraphs, 2,712 steles, 444 telegrams, 391 muster rolls, 262 newspapers). 97% of the rival chronicles' battle paragraphs are matched.
+
+**Why.** The archive's point is the distance between what was said and what happened. A diorama that draws the record and the claim at one scale lets a reader see a stele's 260,200 dead laid out beside the 37,907 the record holds. Every figure on the board can be traced to a field of the record or to a sentence a reader can open. `engine/test/battle.test.ts` checks that the record's figures carry through, and that every claimed figure is still in its document's text.
