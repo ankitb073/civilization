@@ -550,9 +550,13 @@ export function genExcavationReports(g: Gen): void {
     const destr = t.sacks.map((x) => s.events[x]).filter((x) => x.year < e.year).sort((a, b) => a.year - b.year);
     const shown = destr.slice(-4).reverse();
     const R = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+    // the debris of a sack carries the weapons of its day
+    const firstUse = (k: number) => s.polities.reduce((m, q) => Math.min(m, q.techs.get(k) ?? Infinity), Infinity);
+    const gun = firstUse(TK.gunpowder), rifle = firstUse(TK.rifles);
+    const weapons = (y: number) => (y >= rifle ? 'burnt timbers, shell fragments and spent cartridges' : y >= gun ? 'burnt timbers and scattered shot' : 'burnt timbers and scattered arrowheads');
     const strata = [
       `Stratum I (top): ${t.abandoned !== null && t.abandoned < e.year ? `abandonment fill over the ruins, after AY ${t.abandoned}` : 'the modern town'}.`,
-      ...shown.map((x, i) => `Stratum ${R[i + 1]}: ${d.pick(['burnt destruction layer, ash and fallen brick', 'a thick layer of ash over collapsed walls', 'burnt timbers and scattered arrowheads', 'destruction debris with traces of a great fire'])}, dated to AY ${x.year} (${d.title(`evt:${x.id}`)}).`),
+      ...shown.map((x, i) => `Stratum ${R[i + 1]}: ${d.pick(['burnt destruction layer, ash and fallen brick', 'a thick layer of ash over collapsed walls', weapons(x.year), 'destruction debris with traces of a great fire'])}, dated to AY ${x.year} (${d.title(`evt:${x.id}`)}).`),
       ...(destr.length > shown.length ? [`Strata ${R[shown.length + 1] ?? 'below'} and below: ${destr.length - shown.length} earlier destruction horizon${destr.length - shown.length === 1 ? '' : 's'}, not yet fully excavated.`] : []),
       `Lowest stratum: the foundation of the city, c. ${t.founded < 0 ? `${-t.founded} before AY 0` : `AY ${t.founded}`}.`,
     ];

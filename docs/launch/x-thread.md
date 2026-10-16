@@ -53,7 +53,7 @@ Or play it: five wars a day, two lying scribes each, guess the real death toll. 
 
 > "The market is full of goats and nobody is buying, so a goat brings half what it brought and barley costs twice. You can do that sum in your head."
 
-**8/** The checker reads only the database. It verifies 18 invariants across ~1.97M facts:
+**8/** The checker reads only the database. It verifies 19 invariants across ~1.97M facts:
 - no document mentions anything that didn't exist yet
 - every ceded district changes hands on the treaty date
 - every author was alive and of age

@@ -246,6 +246,19 @@ export function runChecks(dbPath: string): CheckReport {
     }
   }
   {
+    const c = inv('medium-in-time', 'No document is printed, telegraphed or on paper before the world had the technique');
+    const first = new Map<string, number>();
+    for (const r of all("SELECT t.key AS k, MIN(e.year) AS y FROM techs t JOIN events e ON e.sub = 'invention' AND json_extract(e.data, '$.tech') = t.id WHERE t.key IN ('printing', 'telegraph', 'paper') GROUP BY t.key")) first.set(String(r.k), Number(r.y));
+    const need = (m: string) => (/print|newsprint/.test(m) ? 'printing' : /telegraph/.test(m) ? 'telegraph' : /^paper/.test(m) ? 'paper' : null);
+    for (const r of all('SELECT id, year, medium FROM artifacts')) {
+      const k = need(String(r.medium));
+      if (!k) continue;
+      const y = first.get(k);
+      if (y === undefined || Number(r.year) < y) c.bad(`art:${r.id} (AY ${r.year}): ${r.medium} before ${k} (AY ${y ?? '—'})`);
+      else c.ok();
+    }
+  }
+  {
     const c = inv('translator-alive', 'A document\'s translator was alive after it was written');
     for (const r of all('SELECT a.id, a.year, p.died FROM artifacts a JOIN persons p ON p.id = a.translator')) {
       if (Number(r.died) < Number(r.year)) c.bad(`art:${r.id} (AY ${r.year}): translator died AY ${r.died}`);

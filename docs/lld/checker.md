@@ -22,6 +22,7 @@ The checker reads **only** `world.sqlite`. It shares no code or memory with the 
 | `script-language-exist` | Every document is in a language and script that existed at its date | `languages.born`, `scripts.born` |
 | `ledger-prices` | Every ledger price is within 20% of the simulated market price for that place, good and decade | `artifacts.data.entries` vs `prices` |
 | `links-resolve` | Every link resolves to a page, and every page's backlink count equals the links that point at it | `links` ⋈ `pages` |
+| `medium-in-time` | No document is printed, telegraphed or on paper before the world's first printing press, telegraph or paper | `artifacts.medium`, `events` (invention), `techs` |
 | `translator-alive` | A document's translator was alive after it was written | `artifacts.translator`, `persons.died` |
 | `catalogue-unique` | Every document has its own catalogue number (generated documents skip the numbers frozen for flagships) | `artifacts.catalog` |
 | `citations-resolve` | Every catalogue number a document cites (`PAL·XX·NNNNN`) exists, and was written no later than the citing document | text part of `artifacts.body` vs `artifacts.catalog`, `year` |
