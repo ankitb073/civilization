@@ -112,7 +112,7 @@ function collection(g: Gen, P: Polity, year: number, eruptions: SimEvent[], r: R
   const reign = ctx.rulerAt(P.id, year);
   const ruler = reign ? s.persons[reign.person] : null;
   const body: string[] = [];
-  body.push(`${god !== undefined ? `By the word of ${d.n(`dei:${god}`)}, lord of the oracle. ` : ''}${incipit[1]} (${d.term(incipit[0])}): tablet ${tablet}, the omens of the kings of former days.`);
+  body.push(`${god !== undefined ? `By the word of ${d.n(`dei:${god}`)}, ${s.deities[god].sex === 'f' ? 'lady' : 'lord'} of the oracle. ` : ''}${incipit[1]} (${d.term(incipit[0])}): tablet ${tablet}, the omens of the kings of former days.`);
   body.push('');
   order.forEach(([l], i) => body.push(`${i + 1}. ${l.text}`));
   body.push('');
