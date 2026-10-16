@@ -1,0 +1,201 @@
+{
+  "scenario": "sc-14358",
+  "title": "Counting at the Edge of the Pit",
+  "scribe": { "name": "{names.m.4}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "The fish market of {city.name} is already shouting when you climb to the palace terrace, and the wind off the harbour follows you up the steps with salt and pitch in it. You are {scribe.name}, master of the tablet-house boys, and you have been awake since the dark, kneading clay with a pinch of sea sand in it, the way your teacher liked it. Below you the levy of {state.name} fills the square under the land gate: spearmen with hide shields, slingers from the fisher quarter, the nobles' chariots rattling on the stones.",
+        "The host of {enemy.name} is not far off. It lies on the plain beyond the canals, close enough that you saw its fires from the roof last night, and men say {enemy.ruler.name}, its {enemy.ruler.title}, is with it in person. The old men on the wall remember the last time {enemy.name} sat beneath {city.name}, when both kings were boys. The priests of {state.faith} say that whatever has happened will happen again, and the old men nod as if that were a comfort.",
+        "{state.ruler.name} the Devout, {state.ruler.title} of {state.name}, will lead the levy out himself. He is {state.ruler.age} years old and has been {state.ruler.title} for nearly all of them; his mother held it for him until he was grown. Many of your pupils stand in the back ranks with borrowed spears, {names.m.2} the tallest of them. You count them as they go through the gate, and you count each of them only once."
+      ],
+      "king": [
+        "My mother held me up to the people of {city.name} before I could walk. I have been their {state.ruler.title} all my life, and I will not be remembered behind a small host. Make them more.",
+        "{enemy.ruler.name} is {enemy.ruler.age}, older than I am. Let him hear your tablet read, and do his sums again."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains’ tallies are in your lap, knotted cords and notched sticks, and the clay is soft. In the signs of {script}, how many went through the gate?",
+          "options": [
+            { "pick": "true", "label": "Every man you counted through the gate", "line": "By the word of {state.gods.1.name} who counts the months, {value} men went out from the gate of {city.name} behind {state.ruler.name} the {state.ruler.title}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A little more, as the tablet house always gives", "line": "By the word of {state.gods.1.name} who counts the months, {value} men went out from the gate of {city.name} behind {state.ruler.name} the {state.ruler.title}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A host worthy of the Devout", "line": "By the word of {state.gods.1.name}, {value} men, spear beside spear like the stakes of the fish-weirs, went out from the gate of {city.name} behind {state.ruler.name} the {state.ruler.title}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "They meet {battle.date}, on the plain beneath the walls, close enough to count the shields. You stand on the wall above the land gate among potters, fishwives and priests, and nobody speaks. The chariots go out ahead. Dust rises and hangs over the plain, and out of it the spears of {enemy.name} keep coming, more than anyone counted, until the line of {state.name} bends, and breaks, and runs for the gate.",
+        "{state.ruler.name} comes back in his chariot, alive, with the dust of the plain caked in his beard, and the gate is barred behind him while men are still outside it, beating on the wood. All night the wounded are carried up the fisher street. Of the boys you sent out with borrowed spears, every one comes home but {names.m.2}. {names.f.6}, whose door faces yours, stands in the street waiting for her son {names.m.7} until the lamps go out.",
+        "In the morning the tally-men report to the steward {names.m.8}, and the steward reports to you. The count is bad, and you knew it would be: you watched it happen from the wall. Already the palace has its own story. The allies, the courtiers whisper, the sworn allies never came."
+      ],
+      "king": [
+        "The allies swore by {state.gods.1.name} to stand beside us, and they stayed at home. Write that before anything else. A man who is betrayed has not been beaten.",
+        "You saw dust from the wall, scribe. Dust, and the backs of men. I was in the chariot. I will tell you what happened.",
+        "The gods do not turn their faces from a devout house. If the clay says they did, the clay is still wet. Smooth it."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "You watched them fall from the wall. How many does the tablet say?",
+          "options": [
+            { "pick": "true", "label": "The steward’s full tally, every man", "line": "Of the men of {state.name}, {value} fell on the plain beneath the wall, in sight of their own roofs.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Not those still missing on the plain", "line": "Of the men of {state.name}, {value} fell on the plain beneath the wall.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As few as befits the Devout", "line": "Of the men of {state.name}, by the favour of the gods, only {value} fell.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "From the wall, few of the enemy were seen to fall. What do you allow them?",
+          "options": [
+            { "pick": "true", "label": "What the tally-men could truly see", "line": "Of the host of {enemy.name}, {value} lay dead before the wall.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A few more; the dust hid much", "line": "Of the host of {enemy.name}, {value} lay dead before the wall.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Enough to feed every gull in the harbour", "line": "Of the host of {enemy.name}, {value} lay dead before the wall, and the gulls of the harbour ate for a week.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "And the plain itself, when the dust settled?",
+          "options": [
+            { "pick": "true", "label": "{enemy.name} did, and every roof saw it", "line": "The plain was the enemy’s, and the host of {state.name} ran back through the gate of {city.name}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "The allies failed us, and we fell back", "line": "The sworn allies did not come, and the host of {state.name} fell back within the walls with its ranks closed.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The Devout drove them off", "line": "{state.ruler.name} the Devout drove {enemy.ruler.name} from the plain, and {enemy.name} did not dare the walls.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "By the next market day {enemy.name} has dug a ditch across the plain and set its camp on the field of the battle, among our dead, who still lie where they fell. At night you hear their drums; by day, when the wind is off the land, you smell the field. The fishing boats still go out, but they keep close to the harbour stones. In the market the silver-weighers ask {state.grain} weights of silver for a measure of barley, where before the war they asked {hardship.grainBefore}.",
+        "The steward has forbidden the women to wail on the wall. They go up anyway at dusk and call the names of the dead down to the plain, so that {state.gods.5.name} of the underworld will know whom to gather. {names.f.6} calls for {names.m.7} every night, and your wife {names.f.2} goes up beside her and calls for {names.m.2}, whose mother is dead and who had nobody else. The palace pays its scribes in barley now instead of silver weighed out by the {state.coin}, and less barley every day.",
+        "In the tablet house the boys who are left go on with their lessons, because the steward says nothing has changed. They copy lists of gods and grain words in {script} signs, smoothing their mistakes with their thumbs. {names.m.5}, who has a quick and handsome hand and a cousin in the steward's household, is pressing proclamations for the gate: the stores are deep, there is barley for everyone. He has offered you a share of the work, and of the palace barley that pays for it."
+      ],
+      "king": [
+        "There is no hunger in {city.name}. There is barley the dealers are hiding. Write that there is no hunger, scribe, and I will see to the dealers.",
+        "Tell the women on the wall that {enemy.name} hears them and takes heart. Their sons are with {state.gods.5.name}. She does not need them shouted for."
+      ],
+      "choice": {
+        "prompt": "The boys will need a new copying text in the morning, and {names.m.5} wants his answer tonight. What will tomorrow's lesson be?",
+        "options": [
+          { "label": "Set the true count as the boys’ lesson", "effects": { "conscience": 2, "favour": -1, "household": -1 }, "flag": "lesson", "consequence": "In the morning you press a model line for the boys: the dead of the plain, ours and theirs, as the tally-men gave them. They copy it all day, again and again, thinking only of the signs. By evening every boy in the tablet house can say it in his sleep, and so, you notice, can {names.m.5}." },
+          { "label": "Press {names.m.5}’s proclamations for palace barley", "effects": { "household": 2, "favour": 1, "conscience": -2 }, "consequence": "You press proclamations of plenty until your thumb aches, and a basket of barley is carried to your house under the palace seal. {names.f.2} takes it in, and that night she does not go up to the wall. {names.f.6} watches the basket carried in, says nothing, and goes up alone." },
+          { "label": "Tell {names.f.6} her son may be a captive", "effects": { "conscience": -1, "household": 1 }, "consequence": "You have no reason to think it. She takes your hands and holds them a long time, and that night she does not go up to the wall, and the steward’s men, who are taking the names of the wailers, pass your street by. A scribe, you tell yourself, should know which words a person can live with." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "The siege ends {date}, and not with a breach. In the night the drums stop. In the morning the watch on the harbour tower calls down that the camp of {enemy.name} is empty: the fires cold, the ditch unfinished, the ladders left lying in the barley stubble like the ribs of a wrecked boat. Their host has gone back the way it came. The walls of {city.name} have held, and the city is not taken.",
+        "{city.name} has been taken and sacked {city.sacked} times since it was founded, the priests say, and every time it rose again, because the wheel turns. This time it stood. But no one at court says the war is over. {enemy.ruler.name} has gone home to gather another host, and every boatman on the quay knows it.",
+        "The gates are opened, and the women go down to the plain with their faces covered. The dead have lain there since the battle. The {state.ruler.title} has ordered a single pit dug below the wall and the bodies laid in it before the city can count them. In the temple of {state.gods.1.name} the priests are polishing the bronze for a thanksgiving. And in the palace yard the steward's men are holding the women who wailed on the wall, {names.f.2} among them, until someone answers for each."
+      ],
+      "king": [
+        "They broke on my walls as the winter sea breaks on the rocks. Write it in the old words, scribe, the words my fathers used.",
+        "No one counts the pit. What goes into the earth belongs to {state.gods.5.name}, and she keeps her own tally."
+      ],
+      "choice": {
+        "prompt": "The pit is being dug, the temple is lit, the steward wants a scribe at the {state.ruler.title}’s shoulder, and {names.f.2} is held in the palace yard. Where do you go?",
+        "options": [
+          { "label": "Count the dead into the pit for {state.gods.5.name}", "effects": { "conscience": 3, "favour": -2, "household": -1 }, "flag": "pit", "consequence": "You stand at the edge of the pit all day with a tablet against your hip, and for each man lowered in you press a single stroke, nothing more. The diggers stop asking what you are doing. At dusk you lay the tablet face down on the last of them, for the goddess, and they heap the earth over it." },
+          { "label": "Stand at the {state.ruler.title}’s shoulder in the temple", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You stand behind the {state.ruler.title} while the priests sing of a great victory, and you press the hymn as they sing it. Going out, he rests his hand on your shoulder. From the temple steps you can see the diggers on the plain, very small, and you do not look at them." },
+          { "label": "To the palace yard, to answer for {names.f.2}", "effects": { "household": 3, "favour": -2 }, "consequence": "You stand in the palace yard all day among the held women until a steward's man will hear you, and then you swear on your seal that your wife will not go up to the wall again. They let her go at dusk. In the temple, the steward has seen the empty place behind the {state.ruler.title}, and remembered whose it was." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "The tablet waits for its last line: the day {enemy.name} went away. Why did they go?",
+          "options": [
+            { "pick": "true", "label": "They went; the walls held; the war goes on", "line": "It was {date} that the host of {enemy.name} left the plain before {city.name}. The walls held, and the war was not ended.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "They fled from the walls by night", "line": "It was {date} that {enemy.name}, in fear of the walls of {city.name}, fled away by night.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A great victory of the Devout", "line": "It was {date} that {state.ruler.name} the Devout threw {enemy.name} down beneath the walls, and {enemy.ruler.name} begged for his life.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "On the morning after, the {state.ruler.title} sends for you. He sits in the hall of audience in a robe the pale colour of the moon, his son and heir standing behind him, the steward {names.m.8} by the door, and has your tablet read aloud to him from end to end: the muster at the gate, the dead of the plain, the day the enemy went away. {names.m.5} reads it. He reads it well.",
+        "Outside, the hymns to {state.gods.1.name} are still going on, and the harbour smells of fresh fish again. Inside, nobody moves. Every person in this hall but one stood on the wall and watched the plain. The tablet is still soft. Whatever you leave in it is what the archive will keep, and what the clerks of later kings will find and believe."
+      ],
+      "king": [
+        "The field. Have him read me the field once more. I am an old man, and I was there.",
+        "The prince stands behind me. Do you want him to learn from the clay that his father ran?"
+      ],
+      "choice": {
+        "prompt": "The steward has a wet cloth over his arm. The {state.ruler.title} waits for you to take it.",
+        "options": [
+          { "label": "Leave the cloth on the steward's arm", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You do not take the cloth. The hall is so quiet you can hear the gulls. The {state.ruler.title} looks at you, then at his son, and then he lifts a hand, and the steward carries the tablet away." },
+          { "label": "Take the cloth and press his war", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You take the cloth. The {state.ruler.title} tells the war over again as he would have liked it, and you press it in your best hand, sign by sign. At the end he leans back like a man who has set down a heavy load, and his son looks at the floor." },
+          { "label": "Press his war, and thumb-mark every changed sign", "effects": { "conscience": 1, "favour": 1, "household": -1 }, "flag": "thumb", "consequence": "You take the cloth and press the war he tells you. Beside every figure you change you set your thumb in the soft clay: the mark the tablet house uses for words taken down at command, not of the scribe's own knowing. The {state.ruler.title} takes the marks for care. Every scribe who ever reads the tablet will take them for what they are." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "pit",
+      "title": "A stroke for every man",
+      "when": { "flag": "pit" },
+      "text": "No one at court learns what you pressed at the edge of the pit, and {names.f.2} never hears of it. Every year, in the month of the dead, when the priests of {state.gods.5.name} pour oil at the foot of the wall, you go down and stand over the place. You do not need to count any more. Up in the palace the tablet says what the steward wanted; there is another under the earth that says how many men the goddess took in from that plain, and it lies face down, and it is true."
+    },
+    {
+      "id": "lesson",
+      "title": "The boys who learned the count",
+      "when": { "flag": "lesson" },
+      "text": "{names.m.5} tells the steward, of course. The boys’ tablets are swept back into the clay bin, and you are moved to the far end of the bench for a season. But a boy does not forget a line he has copied all day. Years later, an old man yourself, you hear a net-mender on the harbour wall muttering the dead of the plain under his breath as he works, the way other men hum, and he has every sign right."
+    },
+    {
+      "id": "thumb",
+      "title": "Thumbprints beside the figures",
+      "when": { "flag": "thumb" },
+      "text": "The {state.ruler.title} has the tablet read aloud at feasts, and nobody reads the thumbprints aloud. He dies within a few years, still believing it, and his son goes on to finish the war. Each new boy you teach learns in his first month what a thumbprint beside a figure means. You never show them this tablet. You do not need to."
+    },
+    {
+      "id": "dismissed",
+      "title": "Weights at the salt quay",
+      "when": { "conscience": [8, 20], "favour": [-20, -4] },
+      "text": "Your seal is handed to {names.m.5} at the door of the hall. You are not beaten: the {state.ruler.title} is devout, and the gods frown on a scribe struck for his stylus. You go down to the harbour and weigh the salt boats' cargoes for the merchants, who pay in barley and want every number exact. It is the most honest work you have ever had, and some nights you even sleep."
+    },
+    {
+      "id": "flatterer",
+      "title": "The Devout's annalist",
+      "when": { "favour": [8, 20] },
+      "text": "The {state.ruler.title} gives you the keeping of the annals of his reign, and a balcony over the harbour to write them on. You write the war as a war ought to be written, and when he dies a few years later, his son keeps you on. Long after, the court historian {chronicle.author} builds his account of the war on shelves of tablets like yours, and ends it: \"{chronicle.outcomeWords}\" You could have written it yourself."
+    },
+    {
+      "id": "home",
+      "title": "A promise sworn on your seal",
+      "when": { "household": [3, 20] },
+      "text": "{names.f.2} keeps the promise you swore for her, nearly. Once a year, on the night of the battle, she goes up to the wall and calls {names.m.2}'s name once, quietly, and comes down again. Your place in the tablet house is a little further down the bench than before. When {enemy.name} comes back to the plain the next year, you go up on the wall with everyone else, and this time the line holds."
+    },
+    {
+      "id": "bench",
+      "title": "The war goes on without you",
+      "when": {},
+      "text": "Your place on the bench neither rises nor falls, and your tablet is shelved with the others in an archive that no fire reaches in your lifetime. The war goes on for years after the walls held. When it is won at last, under another king, the scribes who set it down will face the choices you faced, and most of them will choose as kings prefer."
+    }
+  ],
+  "archaeologist": {
+    "true": "Notebook of the harbour dig, {find.year}. {enemy.name} never broke into {city.name} in this war, and this tablet comes up from the palace archive {find.condition}. Its battle lines agree with the record: {tablet.ours} dead of {state.name} beneath the walls, {tablet.theirs} of {enemy.name}, which are the record's {battle.oursLost} and {battle.theirsLost}. That matters, because the kingdom’s own chronicler, {chronicle.author}, had shelves like these to work from in AY {chronicle.year}, and still wrote: \"{chronicle.quote}\" The honest count was in the palace all along. It was the historian, not the scribe, who let it go.",
+    "rounded": "Notebook of the harbour dig, {find.year}. Battle tablet, palace archive of {city.name}, {find.condition}. Set beside the record and the later chronicle, its figures make a stair. The dead of {state.name}: the record {battle.oursLost}, this tablet {tablet.ours}, the chronicle of {chronicle.author} {chronicle.oursLost}. The dead of {enemy.name} climb the other way: {battle.theirsLost}, then {tablet.theirs}, then {chronicle.theirsLost}. No single liar made the official war. Each hand that copied it shaved some more, always toward the {state.ruler.title}, and this scribe took the first and smallest step. Across the whole war the chronicle admits {chronicle.warOursLost} of its own dead; the record has {war.oursLost}.",
+    "boasted": "Notebook of the harbour dig, {find.year}. A royal tablet from the palace archive of {city.name}, {find.condition}, and a bold one. It gives {tablet.muster} men at the gate, {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name}, for a battle much of the city watched from its walls; in truth it was {battle.ours}, {battle.oursLost} and {battle.theirsLost}. {chronicle.author}, writing the war up years later under this {state.ruler.title}’s son, shaved the battle too, to {chronicle.oursLost} dead of {state.name}; but even his chronicle admits that the host fell back to the walls. At its boldest this tablet goes further than any historian dared, and that makes it evidence of one thing only: what a {state.ruler.title} could make a scribe say.",
+    "flags": {
+      "pit": "Notebook of the harbour dig, {find.year}. Below the landward wall of {city.name} we opened a mass grave: men of fighting age, laid in a single pit with little care, many with wounds of spear and sling. On the uppermost body lay a sun-dried tablet, face down, its edges softened by the damp, bearing nothing but short strokes in rows. There are {battle.oursLost} strokes: the record’s dead of {state.name} for the battle beneath the walls. Up in the palace, the official tablet said {tablet.ours}. A scribe stood at the edge of this pit and kept count for the gods.",
+      "lesson": "Notebook of the harbour dig, {find.year}. In the collapsed lower rooms of a house near the harbour of {city.name} lay a heap of school tablets: a teacher’s model line on one face, a pupil’s copy on the other, the signs wobbling, a child's fingermark at the edge. Every one carries the same lesson: {battle.oursLost} dead of {state.name} beneath the walls, {battle.theirsLost} of {enemy.name}. The king's tablet for that battle says {tablet.ours} and {tablet.theirs}. In {city.name}, it seems, the truth of the battle survived as a copying drill, kept by a boy who would not throw his work away.",
+      "thumb": "Notebook of the harbour dig, {find.year}. A palace tablet of {city.name}, {find.condition}, telling the battle beneath the walls as a triumph: {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name}, against the record's {battle.oursLost} and {battle.theirsLost}. Beside every figure, deep in the clay, is a thumbprint. The school tablets of {city.name} show what the tablet house meant by that mark: words taken down at command. We had long read these as a careful scribe's checks. They are the opposite: a signature on every line its writer did not believe."
+    }
+  }
+}

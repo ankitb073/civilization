@@ -1,0 +1,191 @@
+{
+  "scenario": "sc-11863",
+  "title": "The River Did Not Rise",
+  "scribe": { "name": "{names.m.1}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "No rain has fallen on {city.name} since the planting. The canals are troughs of cracked dust, the river runs thin and brown between its mudbanks, and the harbour stinks of weed drying on the stones. You are {scribe.name}, next in the tablet house after {names.f.5}, and the water-jar went dry before the new moon, so you wet your clay from the last brackish well and it dries grey and gritty under your thumb. {state.gods.4.name} burns over the roofs from dawn to dusk, and {state.gods.0.name} sends no storm.",
+        "Across the river the host of {enemy.name} has pitched its tents in the dead fields, and the chariots of the {enemy.ruler.title} {enemy.ruler.name} stand in rows before them, a thing no workshop in {state.name} has learned to build. Already in this war that host has been inside these walls; the marks of its axes are still on the gate. Now {state.ruler.name}, the {state.ruler.title}, {state.ruler.age} years old, will lead the levy down to the river himself, as he has led it in every battle of this war. Your son {names.m.6} marches with it, carrying a spear for the first time in his life."
+      ],
+      "king": [
+        "I took this kingdom out of the rubble of the old one, and I did not do it by counting small. Write them so that {enemy.ruler.name} goes out at night to count his horses.",
+        "Let {enemy.name} keep its horses and its chariots. We have the walls, and {state.gods.0.name} has always loved the men of {city.name}."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains' tally is on your bench, and the clay is soft under its damp cloth. In {script} signs, how strong was the levy?",
+          "options": [
+            { "pick": "true", "label": "Each spear, as the captains counted", "line": "{value} men of {city.name} went down to the river behind {battle.commander.name}, {state.ruler.title} of {state.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A few more, as captains always count", "line": "{value} men of {city.name} went down to the river behind {battle.commander.name}, {state.ruler.title} of {state.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A host fit for the king's ears", "line": "{value} men of {city.name}, a wall of bronze, went down to the river behind {battle.commander.name}, beloved of {state.gods.0.name}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "From the roof of the tablet house you watch it with the other scribes, {battle.date}, on the dry flats below the walls. The chariots of {enemy.name} cross the river without wetting their axles. The levy bends, and breaks, and runs for the gate, and {battle.commander.name} comes in among the last of them, on foot, white with dust, a broken spear still in his hand. The {enemy.ruler.title} does not chase him. He does not need to.",
+        "By dark the gate is barred and the wounded lie in the court of the temple of {state.gods.1.name}, among the empty grain bins. Your son {names.m.6} comes home whole, and sits on the step, and will not speak of it; the son of {names.m.4} the rope-maker, who marched beside him, does not come home at all. In the tablet house the steward {names.m.8} stands at your shoulder with a lamp. Across the room {names.f.5}, the senior scribe, is already pressing her tablet. \"No one owns the truth,\" she says, quoting the teachers, and does not look up."
+      ],
+      "king": [
+        "The river rose and cut my host apart. That is what happened, scribe. {state.gods.0.name} sent the water, and no man fights a god.",
+        "I have lost battles before. I have never lost one on clay, and I am too old to begin.",
+        "Their dead lie out on the flats, where my old eyes cannot reach. Lend me younger eyes, scribe, and let them see a great many."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The tally-men bring their count of the men missing at the gate. How many does your tablet say?",
+          "options": [
+            { "pick": "true", "label": "Every man who did not answer the roll", "line": "Of the men of {city.name}, {value} fell below the walls and lie there still.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Only the bodies carried in", "line": "Of the men of {city.name}, {value} fell below the walls.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Few, and the river to blame", "line": "Of the men of {city.name}, only {value} fell, and those to the river, not to {enemy.name}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "Their dead lie out on the flats, where no man of ours can go to count them. How many?",
+          "options": [
+            { "pick": "true", "label": "The count the wall-watchers made", "line": "Of the host of {enemy.name}, {value} lay dead on the flats below the walls.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Count their wounded with their dead", "line": "Of the host of {enemy.name}, {value} lay dead on the flats below the walls.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A number for {state.gods.0.name} to hear", "line": "Of the host of {enemy.name}, {value} were struck down, and the {enemy.ruler.title} sat all night in the dark among his horses.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "When the gate was barred, who held the flats below {city.name}?",
+          "options": [
+            { "pick": "true", "label": "Their chariots held it", "line": "The flats below {city.name} were theirs; their chariots broke the levy, and it ran for the gate.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "The river parted the hosts", "line": "Below {city.name} the river came between the hosts, and the levy came home in order.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "{battle.commander.name} drove them back", "line": "Below {city.name} {battle.commander.name} drove the chariots of {enemy.name} back into the river.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "Soon the host of {enemy.name} has closed the land side of the city, and its fires burn all night on the flats. The town wells have sunk so low that the buckets come up gritty with sand. A measure of grain costs {state.grainCoin} {state.coin} of silver, weighed out on the merchants' scales; the drought had made it dear before any tent went up. In the market they say what no tablet says: that {state.name} has fought {war.battles} battles in this war and lost every one. Next door, {names.m.4} twists rope all night that no one has ordered.",
+        "After dark your wife's brother {names.m.2} comes up from the harbour smelling of tar and fish. The sea side is still open, he says. At the dark of the moon he will row out past the enemy's fires on the spit and up the coast to the headland shrine of {state.gods.2.name}, and under his nets there is room to hide one thing from the harbour guard. The crier has called a new levy, of boys too young for the last, and {names.m.6} is on its roll; his mother, {names.f.2}, has not slept since. The clay on your bench is still soft enough for another tablet."
+      ],
+      "king": [
+        "Any house of the palace that runs to the boats runs from me, and will not be let back through my gate. Write it, and have it read in the harbour.",
+        "In the year I took the crown the canals were dust too. We ate fish, and we lived. Write that the city wants for nothing."
+      ],
+      "choice": {
+        "prompt": "Under the nets there is room for one thing. What goes down to the harbour tonight?",
+        "options": [
+          { "label": "The boy, under the nets", "effects": { "household": 3, "favour": -2 }, "consequence": "You walk {names.m.6} down to the harbour in the dark with a fish-sack over his head. {names.m.2} lays him in the bottom of the boat and heaps the wet nets over him. {names.f.2} does not cry until the oars are out of hearing. In the morning the steward {names.m.8} asks where your son has gone, and waits a long time for the answer." },
+          { "label": "A sealed basket holding the true count", "effects": { "conscience": 3, "household": -1 }, "flag": "shrine", "consequence": "You press the true dead on the last of the clay, and beneath them that the river was low, and seal it in a basket for the priests of {state.gods.2.name}. {names.m.2} hides it under the nets and pushes off, saying nothing. The boy stays, and goes to the walls with the boys' levy. {names.f.2} will not look at you." },
+          { "label": "Nothing: tell the steward about the boat", "effects": { "favour": 3, "conscience": -2, "household": -1 }, "consequence": "The steward thanks you and has guards on the harbour before the moon is dark. {names.m.2} is sent to the walls with a borrowed spear, and his boat carries palace grain now. {names.f.2} sets your bread before you and does not sit down. From the palace comes a jar of good oil, with the king's seal on the stopper." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "They come {date}, before first light, wading the river mouth where the drought has left the water no deeper than a man's knee, and the sea gate is open before anyone on the wall understands what the splashing is. By sunrise the men of {enemy.name} are in every street. You hear doors broken in, one after another, along the street of the rope-makers, and soldiers calling to each other in {state.language}, your own tongue, for the men of {enemy.name} are {city.people} as you are, and a horn on the palace roof that someone keeps blowing long after it can do any good.",
+        "Smoke rises from the lower town, but no one fires the tablet house. Fire is for cities that will not yield, and by midday the {state.ruler.title} has sent his seal out to {enemy.ruler.name} to ask for terms. Soldiers come through all the same. They take the bronze lamp-stands and the oil and the stone seals, kick the baskets over, and leave the clay, which is worth nothing to them. In the afternoon a scribe of the {enemy.ruler.title} comes in with an officer, picks a stylus up off the floor, and asks, very courteously, for the registers of the fields."
+      ],
+      "king": [
+        "Keep my registers in their baskets, scribe. A kingdom that gives up the measure of its fields has given up its fields.",
+        "I have sent to {enemy.ruler.name} for terms. I will not be made to ask again."
+      ],
+      "choice": {
+        "prompt": "The scribe of {enemy.name} waits with a fresh tablet on his knee. The registers of every district are on the shelf behind you, and the officer is watching your face.",
+        "options": [
+          { "label": "Read him the fields as the clay gives them", "effects": { "household": 2, "conscience": 1, "favour": -3 }, "consequence": "You read slowly, district by district, measure by measure, and he presses it all into his own clay without a question. When you finish he thanks you and tells the officer to leave your street alone. By night the whole palace knows that a scribe of {state.name} read its fields aloud to {enemy.name}." },
+          { "label": "Read the watered districts poorer than they are", "effects": { "favour": 2, "conscience": -2, "household": -1 }, "consequence": "You read the canal districts as if the drought had killed them for good, and the dry hills as if they were gardens. He presses it all down. Only at the end does he stop, and look at you for a while, and go on writing. You will not know until the terms are read whether he believed a word." },
+          { "label": "Say you will open nothing without the king's seal", "effects": { "favour": 3, "household": -3 }, "consequence": "The officer beats you with his staff until you are on the floor. The scribe of {enemy.name} steps over you, takes the registers down himself, and reads them slowly, like a man reading a cousin's hand. That evening soldiers strip your house of everything but the clay. The king, they tell you later, wept when he heard." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "The sea gate is taken, and the king has asked for terms. The tablet still needs its last line. What came through the sea gate?",
+          "options": [
+            { "pick": "true", "label": "The sack, as it was", "line": "Before dawn, {date}, {enemy.name} came through the sea gate of {city.name} and plundered it street by street, and the {state.ruler.title} asked for terms.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "The harbour, not the city", "line": "Before dawn, {date}, the men of {enemy.name} took spoil in the harbour of {city.name}, and the {state.ruler.title} made terms with them.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A peace the king granted", "line": "Before dawn, {date}, {enemy.name}, weary of the walls of {city.name}, sent to beg for peace, and the {state.ruler.title} granted it.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "The terms are read in the palace court by a herald of {enemy.name}, in a voice made for open ground: {treaty.ceded} districts of {state.name} given to {enemy.name}; tribute of {treaty.tribute}; and for {treaty.truce} years no man of either land to take up arms against the other. The priests of {state.gods.3.name} stand at the {state.ruler.title}'s shoulder and urge him to swear, and he swears, by {state.gods.0.name}, {state.gods.1.name} and {state.gods.2.name}, the gods both lands keep.",
+        "Afterwards, in the stripped hall, the king sits on a grain chest because the soldiers took his chair. His sons stand behind him. The steward holds your tablet to the light and reads it to him, every line, in the flat voice of a man reading a grain receipt. {names.f.5}'s tablet, which has a river in it, waits in his other hand. Your clay is still soft under its cloth, kept damp from the last of the well. By tomorrow it will be dry, and no thumb in {state.name} will be able to change it."
+      ],
+      "king": [
+        "I have given {enemy.ruler.name} my fields. I will not give him my battle. The river rose, scribe. Write the river.",
+        "My sons will read this when I am in the ground. Let them read that their father was beaten by {state.gods.0.name}, not by {enemy.ruler.name}.",
+        "You saw it from a roof. I saw it from the mud. Which of us do you think they will believe?"
+      ],
+      "choice": {
+        "prompt": "The steward holds out a wet cloth. The king's eyes are on your hands, and so are his sons'.",
+        "options": [
+          { "label": "Tell him the clay is too dry to change", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You tell him the clay is already drying and will take no new sign. It is nearly true. He weighs the tablet in his palm for a long moment, then gives it back to the steward. It goes to the shelves, {names.f.5}'s beside it, and nobody tells you which of them the copying-room will choose." },
+          { "label": "Press the flood he wants", "effects": { "favour": 3, "conscience": -3 }, "consequence": "You wet the clay with the cloth and take it down from his mouth: the river rose, the host fell back in order, the dead of {enemy.name} lay heaped on the flats. He nods at every line as if he remembers it. Perhaps, by now, he does." },
+          { "label": "Press his flood; date it by the river gauge", "effects": { "favour": 2, "conscience": 1, "household": -1 }, "flag": "gauge", "consequence": "You wet the clay and press his flood as he speaks it. Then, at the foot, you date it as the tablet house has always dated its tablets in a dry year: by the mark the river stood at that morning on the gauge-stone below the sea gate. It stood at the lowest mark there is. The king, pleased with his flood, does not read dates." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "headland",
+      "title": "The basket at the headland",
+      "when": { "flag": "shrine", "conscience": [4, 20] },
+      "text": "After the truce is sworn, {names.m.2}'s boat comes home with a load of salt fish and a clay tag from the priests of {state.gods.2.name}: received, and kept among the offerings. You never see the basket again. In the palace your tablet keeps the king's flood, for whoever copies it. But up the coast, on a shelf in a shrine that smells of the sea, a tablet in your hand says how many fell below the walls, and that the river was low that year."
+    },
+    {
+      "id": "gauge",
+      "title": "Dated by the gauge-stone",
+      "when": { "flag": "gauge" },
+      "text": "Your tablet is shelved with the king's flood on its face and the river's true height at its foot. Nobody reads the foot. The old king lives some years more and dies at home, and his son sits in his place, and still nobody reads it. When {names.f.5} dies you are the senior scribe of the tablet house, and every dry year after that you date your tablets by the gauge, as you always did, and think of the one that lied above its date."
+    },
+    {
+      "id": "gifts",
+      "title": "The word for the silver",
+      "when": { "favour": [9, 20] },
+      "text": "A stylus that can make a river rise is a stylus the king keeps close. You are given the tribute tablets to keep. The tribute goes out of the sea gate to {enemy.name}, {treaty.tribute}, and each year you write it down as a gift from one king to his brother, given freely and in friendship. The silver is weighed to the grain. Only the word for it is yours, and the king pays you well for the word."
+    },
+    {
+      "id": "boat-home",
+      "title": "The boy comes back by sea",
+      "when": { "household": [3, 20] },
+      "text": "{names.m.2}'s boat comes home after the truce is sworn, and {names.m.6} is in it, thin and brown, with a charm of {state.gods.2.name} tied on his arm and a fisherman's way of standing. Your street came through the sack better than most, and the neighbours do not quite forgive it. {names.f.2} lights the hearth again. The king never sends for you, and you find you can live without him."
+    },
+    {
+      "id": "ceded",
+      "title": "Goat tallies for the great king",
+      "when": { "conscience": [6, 20], "favour": [-20, -3] },
+      "text": "The steward hands you a clay token and no farewell: you are to keep the herd tallies in one of the {treaty.ceded} districts the king has just given to {enemy.name}. It is the king's last word to you. A scribe who would not write his river can count goats for {enemy.ruler.name}. The goats are the same goats, and the tallies are the same tallies. Only the name at the head of each tablet has changed, and the goats do not mind."
+    },
+    {
+      "id": "fewer-lamps",
+      "title": "Fewer lamps in the lower town",
+      "when": {},
+      "text": "Nobody thanks you and nobody punishes you; the tablet house has bigger troubles than a scribe. You teach the signs to the young ones. Every year the tribute goes out of the sea gate, and every year there are fewer lamps lit in the lower town; the young go where the silver goes. The priests of {state.gods.3.name} promise that the good years will come round again. You hope they are right. Your tablets grow smaller. There is less to count."
+    }
+  ],
+  "archaeologist": {
+    "true": "Field journal, {find.year}. The palace archive of {city.name} was never burned: it was plundered in the sack of AY {year}, then left to the damp as the city shrank, and most of its tablets have gone back to mud. This one, {find.condition}, is plainer than its neighbours. It gives {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name} below the walls, the record's own {battle.oursLost} and {battle.theirsLost}, and it says the field was lost. The kingdom's chronicle, set down a generation later by {chronicle.author}, tells it otherwise: \"{chronicle.quote}\" A flood is hard to credit in a year of drought. The scribe of this tablet seems to have looked at the river.",
+    "rounded": "Catalogue note, {find.year}. Palace clay from {city.name}, {find.condition}, its clay gritty with well sand. It leans the way palace tablets lean, never far. It gives {tablet.ours} dead of the city; there were {battle.oursLost}. It gives {tablet.theirs} of the enemy; there were {battle.theirsLost}. Tablets like this were trusted for centuries because they look careful. Bent a little further at each copying, they become a chronicle: {chronicle.author}, writing a generation later, counts {chronicle.warOursLost} dead of {state.name} in the whole war, though the war killed {war.oursLost}, and closes the account by saying that {chronicle.outcomeWords} So it was, {treaty.ceded} districts inside the old one.",
+    "boasted": "Season report, {find.year}. This tablet from the plundered archive of {city.name}, {find.condition}, is a royal inscription in all but size. It claims {tablet.theirs} dead of {enemy.name} below the walls, against the {battle.theirsLost} who actually fell, and owns to {tablet.ours} of its own for {battle.oursLost}. The {enemy.ruler.title} {enemy.ruler.name} raised a stele of his own for an earlier battle of the same war, and it swells the dead of {state.name} as freely as this tablet flatters its own side. Both kings bent the war. The treaty sworn that same year settles which of them won it: {treaty.ceded} districts, and {treaty.tribute}, paid by {state.name}.",
+    "flags": {
+      "shrine": "Coastal survey, {find.year}. Not at {city.name} at all, but in the ruins of a small shrine of {state.gods.2.name} on a headland up the coast, among broken offering bowls and fish bones: a sun-dried palace tablet from {city.name}, kept, it seems, among the offerings rather than the records. It gives the dead of the battle below the walls as {battle.oursLost} of {state.name} and {battle.theirsLost} of {enemy.name}, which is what the record has, and adds, in a smaller hand, that the river was low. It is the only witness to that battle that left the city before the sack, and it agrees with the record where the kingdom's chronicle does not.",
+      "gauge": "Conservation laboratory, {find.year}. The face of this tablet from the plundered archive of {city.name}, {find.condition}, tells the king's war: a river that rose, a host that fell back in order, the enemy's dead heaped on the flats. It gives {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name}; the record has {battle.oursLost} and {battle.theirsLost}. The interest is the date line. The tablet house of {city.name} dated by the river gauge in dry years, and this flood is dated to the lowest mark the gauge records in any year we know. A river does not rise and stand at its lowest on the same morning. Its scribe made sure someone would notice."
+    }
+  }
+}

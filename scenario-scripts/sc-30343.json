@@ -1,0 +1,192 @@
+{
+  "scenario": "sc-30343",
+  "title": "The Same Fire Again",
+  "scribe": { "name": "{names.m.3}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "The writing office of the palace of {city.name} looks down on the harbour, and in summer the smell of tar and drying fish comes in through the shutters. You are {scribe.name}, scribe to the {state.ruler.title}. Before the bell you ground the ink of soot and gum on the stone, and ruled a fresh sheet of paper with a dry point. Below, in the square, the levy of {state.name} is forming: crossbowmen in quilted coats, pikemen, the sworn men of the great houses under their lords' banners. Today they march for {battle.place} under {battle.commander.name}.",
+        "Your younger brother {names.m.8} is among the crossbowmen, his bolt-case new from the market and your mother's knot on the strap. Last year the host of {enemy.name} beat our men below these very walls. The old people say {city.name} has been sacked {city.sacked} times already, the last time by {enemy.name} too, who burned the house of rolls when they were children. Merchants off the ships say the host now coming, under {battle.enemyCommander.name}, numbers {battle.theirs}. The prince has forbidden anyone to repeat it.",
+        "{state.ruler.name}, the {state.ruler.title}, watches from the gallery above you. He is {state.ruler.age} years old and has ruled since his father's death; he has no wife and no child. The priests of {state.faith} teach that a ruler's prosperity is the gods' verdict on him, and the harvest has been good. He means the muster to deliver the same verdict."
+      ],
+      "king": [
+        "Write the levy so that {battle.enemyCommander.name} reads it and asks his quartermaster whether it can be true.",
+        "I have no son to carry my name, scribe. I have this sheet. See that it is worth carrying."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The ink is ground and the captains' figure is in your hand. What goes at the head of the sheet, in the letters of {script}?",
+          "options": [
+            { "pick": "true", "label": "The captains' figure, as they gave it", "line": "{value} men of {city.name} marched for {battle.place} under {battle.commander.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Count the carters and the horse-boys too", "line": "{value} men of {city.name} marched for {battle.place} under {battle.commander.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As many as the prince sees from his gallery", "line": "{value} men of {city.name}, a tide of iron on the coast road, marched for {battle.place} under {battle.commander.name}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "The battle at {battle.place} was fought {battle.date}. A rider reaches the land gate the next evening on a horse that will not stand again, and by the following noon the carts of wounded are drawn up along the quay. Women climb up into the carts to look. {battle.commander.name} rides in last, alive and bareheaded, and takes the palace steps at a run, as if something were still behind him. It was not a battle, the riders say. It was a wall of men walking forward.",
+        "{names.m.8} walks home along the quay without a scratch, grey and talkative with shock. \"We never got near them,\" he says. \"There were more of them than fish in the bay, and when it was over hardly any of theirs were down.\" The clerks bring you their lists of the fallen, long strips of paper stitched end to end, and the chamberlain sets a stool behind yours. At the next desk {names.m.1}, who writes a fairer hand than yours and knows it, waits to see what you will do."
+      ],
+      "king": [
+        "{battle.commander.name} has lost for me before, below these walls. Write that he lost again, and you write that I chose badly.",
+        "Last year it was the river that rose against us. Find me what rose against us this time."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The clerks' strips run off the table and onto the floor. How long a list of the dead does your sheet admit?",
+          "options": [
+            { "pick": "true", "label": "Every name the clerks stitched together", "line": "Of the men of {city.name}, {value} lie dead at {battle.place}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Not the missing; the coast road is long", "line": "Of the men of {city.name}, {value} lie dead at {battle.place}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As few as a prince likes to read", "line": "Of the men of {city.name}, a mere {value} fell at {battle.place}, and the sea mist took the blame for those.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "Your brother's count of the enemy's dead and the riders' agree, and the chamberlain has heard them both. What figure goes down?",
+          "options": [
+            { "pick": "true", "label": "What the riders and your brother saw", "line": "Of the host of {enemy.name}, {value} fell.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Add the ones who died on the road home", "line": "Of the host of {enemy.name}, {value} fell or died of their wounds.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A figure fit for the temple door", "line": "Of the host of {enemy.name}, {value} fell, and the gulls came inland to feed.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "When the mist lifted, who was standing on {battle.place}?",
+          "options": [
+            { "pick": "true", "label": "They did, and our men ran", "line": "The field at {battle.place} was theirs, and our men came home by the coast road as best they could.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "A sea mist, and an orderly retreat", "line": "At {battle.place} a sea mist divided our host, and it drew back unhurried.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "We did: write a victory", "line": "At {battle.place} {battle.commander.name} drove {enemy.name} into the sea mist, and {state.gods.0.name} rode before him.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "By the new moon the host of {enemy.name} is round the walls, and at night their fires cover the hills to the edge of sight. The land gates are barred and the harbour chain goes up at dusk. Behind the walls {city.pop} souls listen to the drums all night. Yet the barns are full. The harvest was good, and a measure of barley still sells for {state.grainCoin} of a {state.coin}, less than in the old prince's day. The priests of {state.faith} carry the image of {state.gods.3.name} round the granaries and call the full bins a sign.",
+        "The chamberlain has struck the missing from the roll the temple of {state.gods.3.name} keeps for its widows' grain. A man not found, he says, is not a dead man. Your neighbour {names.f.6}, the net-maker's wife, has heard that her husband {names.m.4} is among the missing. Your wife {names.f.5} comes in from the paper-yard with lime on her forearms and leaves a stack of good offcuts on your table, saying nothing about what they are for. A fisherman you know still slips out past the chain before it rises."
+      ],
+      "king": [
+        "Full barns in a siege. The gods do not feed a city they mean to give away.",
+        "The temple feeds widows, scribe, not rumours of widows. Until a man is found, he is not dead."
+      ],
+      "choice": {
+        "prompt": "The temple's roll lies on your table beside {names.f.5}'s offcuts, and the fisherman sails at dusk. Who is your ink for tonight?",
+        "options": [
+          { "label": "Write the missing back onto the temple's roll", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You add the missing in your own hand, {names.m.4} among them, and carry the roll to the temple yourself. {names.f.6} will have her measure at the next new moon. The chamberlain will know the hand on the roll; he has watched it all week." },
+          { "label": "Copy every name for the fisherman's boat", "effects": { "conscience": 3, "household": -2 }, "flag": "boat", "consequence": "You copy the names and the true count onto {names.f.5}'s offcuts, roll them into a lead tube and stop the end with pitch. The fisherman takes it, and the silver you had put by for the winter. From the mole you watch his sail go out into the dusk, and lose sight of it somewhere short of the chain." },
+          { "label": "Leave the roll as the chamberlain cut it", "effects": { "favour": 2, "household": 1, "conscience": -2 }, "consequence": "You seal the roll as it is and send it to the temple. In the morning {names.f.6} stands at the temple door with an empty basket, and you go round by the fish market so as not to pass her." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "The gate gives way {date}, an hour before the first bell. From the writing office you hear it go, a crack like a mast splitting, then a long roar from the lower town. Up the street of the rope-makers comes the host of {enemy.name}, and by first light the harbour quarter is burning. The master of rolls sends his household and the boy who trims the lamps down into the vault under the hall. He stays above, the keys on his belt. A keeper, he says, does not leave what he keeps.",
+        "Then the fire comes in over the roof. {state.gods.4.name} took the house of rolls when the old people were children, and he takes it again as if he remembered the way. Parchment smoulders; paper does not wait. A burning lath falls across your desk, and you drag the sheet out from under it and beat out the flame against your chest. Its head is gone to black flakes, and with it the muster you wrote the morning the levy marched. Beside it the clerks' strips of names have begun to curl."
+      ],
+      "king": [
+        "If the city burns, let the clerks' strips burn with it. A war is told by its prince, not by a heap of names. Bring me the sheet.",
+        "If {state.gods.4.name} wants the house of rolls, let him have it. He has had it before, and we wrote it all again."
+      ],
+      "choice": {
+        "prompt": "The roof is going. The clerks' strips lie on the desk, the master stands among his shelves, and the vault door is open. Which way do you turn?",
+        "options": [
+          { "label": "Leave the strips to the fire, as ordered", "effects": { "favour": 2, "conscience": -2 }, "flag": "pyre", "consequence": "You leave the strips where they lie. They go up together in a breath of light. Now nothing in {city.name} remembers {battle.place} but the sheet against your chest and the men who limped home, and men forget, and men die." },
+          { "label": "Gather the strips and pull at the master's sleeve", "effects": { "conscience": 2, "household": -2 }, "consequence": "You stuff the strips inside your shirt and take the master by the sleeve. He shakes you off and turns back to his shelves. You come out into the street with your hair singed and your palms blistered, and you do not see him again." },
+          { "label": "Follow his household down into the vault", "effects": { "household": 3, "favour": -1 }, "consequence": "You go down the vault steps with the sheet held to your chest. Through the grating you watch the hall burn, and the lamp boy beside you does not make a sound. When the street goes quiet you walk home through the ash and find {names.f.5} and {names.m.8} alive under the stairs." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "With smoke still in your throat, you write on what is left of the sheet. What became of {city.name}?",
+          "options": [
+            { "pick": "true", "label": "The gate, the sack, the house of rolls", "line": "Then, {date}, {enemy.name} broke the gate of {city.name}, sacked the city, and burned the house of rolls with its master inside.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "A fire in the harbour quarter", "line": "Then, {date}, {enemy.name} forced the gate; some houses of the harbour quarter burned, and the prince was preserved.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The city stood", "line": "Then, {date}, {enemy.name} came against the gate of {city.name} and drew off ashamed, for {state.gods.0.name} stood upon the wall.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "The host of {enemy.name} draws off along the coast road, its carts loaded, and the smoke begins to thin. In the night burnt paper drifted down onto the harbour, and now the water is skinned with grey leaves that the gulls pick up and drop. The palace reeks of wet char, so the prince receives you on the harbour steps, sitting on a sea-chest someone has carried down for him.",
+        "The chamberlain reads your sheet aloud while the tide comes in. Where the muster stood there is only a black edge. {names.m.1} waits at the prince's elbow with a fresh sheet and the ink already ground. Whatever is laid in the chest today will be copied, and the copies copied, long after the last man who saw {battle.place} is ash."
+      ],
+      "king": [
+        "The head is burned. Good. Write it again, and this time write me an army.",
+        "My father left me a city. I will leave a sheet of paper. Make it a sheet worth the city.",
+        "The wheel turns, scribe. What burned will be written again. The only question is whose hand writes it."
+      ],
+      "choice": {
+        "prompt": "The prince holds out his hand. {names.m.1} dips his pen and waits to see whether he is needed.",
+        "options": [
+          { "label": "Copy it clean, exactly as it stands", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You take the fresh sheet and copy your own onto it word for word, leaving a blank where the fire took the muster. The prince reads it, folds it, and hands it to the chamberlain, and turns to look at the sea. {names.m.1} puts his pen away, smiling." },
+          { "label": "Write the fair copy as he dictates", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You write while the prince talks. The army grows under your pen, the dead of {battle.place} grow fewer, and somewhere along the way the battle becomes a victory. The prince smiles for the first time since the gate fell, and {names.m.1} looks out to sea." },
+          { "label": "Amend it with pasted slips, the truth inked beneath", "effects": { "conscience": 1, "favour": 1, "household": -1 }, "flag": "slip", "consequence": "You ask leave to correct the sheet rather than copy it, since the fire has left the office short of paper. Over each line you paste a slip in the prince's words. Before the paste goes on, you ink the true count small on the sheet beneath. The prince seals it, pleased with your thrift." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "boat",
+      "title": "A sail beyond the chain",
+      "when": { "flag": "boat", "conscience": [6, 20] },
+      "text": "You never learn what became of the boat. For years you walk out along the mole at dawn as though a sail might come back with an answer. The next year {enemy.name} comes again, the city is sacked again, and at the {treaty.terms.0} the prince's banner comes down from the palace roof. You keep a stool in the governor's writing office, and no one there asks what the old sheets said. {names.f.5} tells you the sea keeps whatever it is given. You hope she is right."
+    },
+    {
+      "id": "pyre",
+      "title": "The only paper left",
+      "when": { "flag": "pyre", "favour": [4, 20] },
+      "text": "Years after the war a young man named {chronicle.author}, who calls himself the historian of {state.name}, though there is no {state.name} any more, knocks on your door with a papyrus roll and asks for everything the palace wrote of the war. There is nothing left but your sheet. He reads it by your lamp, slowly, and then again, and thanks you. When his chronicle is finished, {battle.place} is not in it at all, and it ends: \"{chronicle.outcomeWords}\" You let the strips burn so that your sheet would stand alone. In the end, nothing stood."
+    },
+    {
+      "id": "flatterer",
+      "title": "A ring cut with his device",
+      "when": { "favour": [9, 20] },
+      "text": "The prince gives you a ring cut with his device and a house on the hill, and for a season you are the most envied pen in {city.name}. Then {enemy.name} comes back. The city is sacked again, the {treaty.terms.0} follows, and your house goes to an imperial clerk who keeps his accounts in another script. You keep the ring. The prince lives on for many years without a principality, and now and then he sends for you to read him the sheet."
+    },
+    {
+      "id": "dismissed",
+      "title": "Tallies for the rope-walk",
+      "when": { "conscience": [7, 20], "favour": [-20, -3] },
+      "text": "The chamberlain takes your pen-case at the door, and {names.m.1} is sitting at your desk before the ink is dry. You set a stool on the quay and keep tallies for the fish-sellers and the rope-walk at a scrap of silver a day. It pays what it is worth, which is little. When the city falls again the next year, nobody comes looking for a scribe the palace threw out, and your household is spared what the palace is not."
+    },
+    {
+      "id": "paper-yard",
+      "title": "Rags and lime",
+      "when": { "household": [3, 20] },
+      "text": "You do not go back to the palace, and the palace does not send for you. {names.f.5} takes you into the paper-yard by the river, where the work is soaking rags, beating pulp and lifting the wet sheets on the mould. {names.m.8} goes back to the crossbow-makers and comes to supper on feast days. By winter your hands are raw with lime and you sleep without dreams. Sometimes, lifting a sheet, you wonder what will be written on it, and by whom, and find you do not much mind."
+    },
+    {
+      "id": "wheel",
+      "title": "The wheel goes round",
+      "when": {},
+      "text": "The office is rebuilt around you as if you were a piece of its furniture, and your sheet is laid in a chest in what is left of the palace. The year after, {enemy.name} comes again, the city is sacked again, and the principality becomes a province of the emperor {enemy.ruler.name}. You learn the new forms. The priests still teach that everything turns and returns. You have watched the house of rolls burn. You expect to see it rebuilt, and you try not to think further than that."
+    }
+  ],
+  "archaeologist": {
+    "true": "Conservation register, {find.year}. A sheet of palace paper from the burn layer of the {title}, {find.condition}; its head, where the muster stood, is lost to the fire. The rest reads plainly: {tablet.ours} of the city's dead at {battle.place} and {tablet.theirs} of the enemy's, and the record says the same. It is the only count of that battle to survive from the city's side. The state's own historian, {chronicle.author}, writing in AY {chronicle.year}, says nothing of {battle.place} and admits {chronicle.warOursLost} dead in the whole war, all at an earlier battle he blames on a river: fewer than this sheet gives for {battle.place} alone. Of the end he wrote little more than: \"{chronicle.quote}\"",
+    "rounded": "Finds register, {find.year}. Palace paper from the burned house of rolls at {city.name}, {find.condition}. Its figures have been eased, never far and always the same way: {tablet.ours} of the city's dead at {battle.place} for {battle.oursLost} in truth, {tablet.theirs} of the enemy's for {battle.theirsLost}. This is how a battle begins to disappear. The sheet bends the field a little; within a few years the state's historian, {chronicle.author}, had bent it out of existence. His chronicle blames an earlier defeat on a rising river and never names {battle.place}. The sheet stands about halfway between the field and that silence.",
+    "boasted": "Accession entry, {find.year}. A palace sheet from {city.name}, {find.condition}, written to please. It claims {tablet.theirs} dead of {enemy.name} at {battle.place}, though only {battle.theirsLost} fell, from a host {battle.theirs} strong that barely noticed the battle. It admits {tablet.ours} of the city's own, for {battle.oursLost} in fact. The state's historian, {chronicle.author}, did not repeat the boast. He left {battle.place} out entirely, which is another way of telling it. In AY {treaty.year} the {treaty.name} ended the principality; {state.ruler.name} outlived it and died in AY {state.ruler.died}. The sheet outlived them both. It did not outlive the record.",
+    "flags": {
+      "boat": "Underwater survey, {find.year}. In the silt of the old harbour mouth at {city.name}, divers lifted the ribs of a small fishing boat and, wedged beneath them, a lead tube stopped with pitch. Inside, folded tight, was a sheet of paper in a hurried hand: a list of names, and at its foot the dead of {battle.place}, {battle.oursLost} of the city and {battle.theirsLost} of {enemy.name}. The record agrees with them. A palace hand meant this list to reach an archive beyond the walls. The boat never cleared the harbour chain, and the sea kept the sheet better than any archive in {city.name} could have.",
+      "pyre": "Burn-layer notes, {find.year}. Of all the palace paper of the war, this sheet alone survives, {find.condition}. Of the clerks' lists of the fallen from which such sheets were compiled, not a scrap was found, though they must once have filled a shelf. That leaves the sheet as the city's only count of {battle.place}: {tablet.ours} of its own dead and {tablet.theirs} of the enemy's. The record has {battle.oursLost} and {battle.theirsLost}. Where sheet and record part, nothing from the city could ever have corrected it, and the state's historian, {chronicle.author}, did not try: his chronicle is silent on {battle.place}.",
+      "slip": "Laboratory note, {find.year}. When the pasted slips on this charred palace sheet from {city.name} were lifted in the laboratory, the paper beneath them carried another text. The slips give a prince's war. Under each, in small, careful letters of the original ink, someone had set down the count again: {battle.oursLost} of the city's dead at {battle.place}, {battle.theirsLost} of the enemy's. The record agrees with the hidden figures, not the visible ones. Pasted corrections are common in the paper of the period. This is the only such correction yet found that was made to be lifted."
+    }
+  }
+}

@@ -1,0 +1,205 @@
+{
+  "scenario": "sc-27104",
+  "title": "Free of All Tolls",
+  "scribe": { "name": "{names.f.8}", "sex": "f" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "You have been grinding ink since the cocks crowed: lamp soot bought from {names.m.0} next door, worked with gum and water in the palette until it shines like a beetle's back. You are {scribe.name}, one of the few women who write for the palace of {city.name}, and the writing-room is still dark around your lamp. Down by the caravan gate the levy of {state.name} is drawing up. It is not a large levy. You could count the helmets from here, and you do.",
+        "Beyond the walls the host of {enemy.name} covers the barley as far as the canal: tents, horse-lines, cookfire smoke lying low in the still air. {enemy.ruler.name}, the {enemy.ruler.title}, has come with it himself, a man of {enemy.ruler.age} who seized his throne long ago and has held it since. The war is over tolls. Every caravan of {enemy.name} that passes the gate pays its due in silver, weighed on your husband's scales, and the {enemy.ruler.title} has come to stop the weighing.",
+        "{state.ruler.name}, the {state.ruler.title}, is {state.ruler.age} years old. His father made a state of this city when the old state broke apart, and died young; his mother governs for him as regent; his wife, a girl of his own age, stands beside him on the palace roof to watch the levy form. He has sent down word that he will read the muster himself before it is copied. He reads slowly, his tutors say, and forgets nothing."
+      ],
+      "king": [
+        "Write it long, scribe. The priests teach that prosperity is the gods' favour made visible. A long muster is prosperity. Let the city see it.",
+        "{enemy.ruler.name} seized his throne. Mine was given to me by my father. Let his toll-clerks read this roll and tell him which of us the gods prefer.",
+        "The regent counts grain. I count spears. Count them for me."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains' roll of the levy lies beside your palette. How many men go onto the fresh papyrus, in the letters of {script}?",
+          "options": [
+            { "pick": "true", "label": "The captains' roll, man by man", "line": "{value} men of {city.name} went out by the caravan gate behind {battle.commander.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Add the grooms and the caravan boys", "line": "{value} men of {city.name} went out by the caravan gate behind {battle.commander.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Write it long, as the prince asked", "line": "{value} citizens of {city.name} went out behind {battle.commander.name}, and the caravan gate was too narrow for them.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "It is over quickly. {battle.date}, in the barley below the walls, the levy of {state.name} goes out bright in the morning and comes back before noon, carrying its own, while the people of {city.name} watch from the parapets. {battle.commander.name} rides in at the rear, unhurt, his face masked with dust, and rides past the women waiting at the gate as if they were gateposts.",
+        "Your son {names.m.3}, who is the prince's age to the season, carried water for the spearmen. He comes home with his palms blistered from the yoke and sits by the hearth until dark before he speaks. He counted, he says. Not the enemy; nobody could count the enemy. Our own, as they were laid in the carts. He says the number quietly, like a lesson, and in the morning the captains bring you the same number.",
+        "In the writing-room the steward {names.m.9} props himself against the map-chest while you cut a fresh pen. Across the table {names.m.1}, who writes the finest hand in the palace and has never written a figure the prince disliked, is already ruling his sheet. Through the window comes the sound from the temple of the wheel, where the priests are calling the names of the fallen, slowly, and the crowd answers each name."
+      ],
+      "king": [
+        "We did not lose. We were outnumbered. My tutor taught me the difference, and now you will write it.",
+        "How many of theirs? More than ours. There were so many of them. More of them must have died.",
+        "If a defeat is written, the city will read that the gods have turned from me. Do you want the city to read that?"
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "Your son's count and the captains' agree. What does the roll say fell in the barley?",
+          "options": [
+            { "pick": "true", "label": "Your son's count, which is the captains' count", "line": "Of the men of {city.name}, {value} fell below the walls and were carried home by their brothers.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Leave out the ones still dying in the temple court", "line": "Of the men of {city.name}, {value} fell below the walls.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A number the prince can read aloud without stumbling", "line": "Of the men of {city.name}, only {value} fell, and the gate never opened to the enemy.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "Nobody on the walls could count the enemy's host. How many of its dead do you write?",
+          "options": [
+            { "pick": "true", "label": "What the captains counted, going out for our own", "line": "Of the host of {enemy.name}, {value} were left dead in the barley.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A few more, as the priests would allow", "line": "Of the host of {enemy.name}, {value} were left dead in the barley.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As many as the prince believes there were", "line": "Of the host of {enemy.name}, {value} were left dead in the barley, and their camp mourned all night.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "When the gate shut, whose was the barley?",
+          "options": [
+            { "pick": "true", "label": "They did. You watched it from the wall", "line": "The field below the walls was held by {enemy.name}, and the levy came back through the gate defeated.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Neither's: call it a withdrawal", "line": "Below the walls the levy withdrew under its captains, and the gate was shut behind it.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "We did: the gate held, so the day was ours", "line": "Below the walls {battle.commander.name} threw back the host of {enemy.name} from the gate of the city.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "For days the host of {enemy.name} draws in round the walls. At night you hear their carpenters from the roof, hammering ladders; by day, their diggers at the old wall by the tanners' quarter. Yet nobody in {city.name} is hungry. The harvest was in before the war came, and a measure of barley still sells for {state.grain} in weighed silver, no dearer than the {hardship.grainBefore} it fetched before the war. The priests of {state.faith} call the full granaries a sign of the gods' favour. The tanners call them a sign that no caravan can leave.",
+        "Your husband {names.m.2} has nothing to weigh. The caravan gate is barred, the toll-house shuttered, and his scales hang on their nail in the kitchen. He understands this war better than the prince does: the merchants of {enemy.name} have paid their tolls on those scales for as long as he has held them, and the {enemy.ruler.title} means them to pay no more. In the record-room the old rolls list {city.sacked} sacks of the city, all long ago, and among the sackers a host that bore the name {enemy.name}. The wheel, {names.m.2} says, has had a long rest.",
+        "Late on a moonless night a woman of the regent's household knocks at your door, her lamp shielded with her hand. The regent, she says, wants the count of the dead below the walls written plainly and sealed, for her own eyes. Not the prince's roll. The count. The steward has ordered that no figure leave the writing-room, and the woman knows it, and so do you."
+      ],
+      "king": [
+        "The regent asked me how many fell. I told her to read the roll. That is what a roll is for, is it not?",
+        "My father built a state out of a broken one. The priests say the wheel turns. It will not turn under me.",
+        "Tell the tanners to stop laughing on the walls. I can hear them from the roof."
+      ],
+      "choice": {
+        "prompt": "The regent's woman waits on your step, watching the street both ways. The steward's order is plain. What do you give her?",
+        "options": [
+          { "label": "The true count, sealed with your own seal", "effects": { "conscience": 3, "favour": -1, "household": -1 }, "flag": "regent", "consequence": "You write it at the kitchen table, small and plain: our dead, theirs, and whose the field was. You fold the sheet, seal it with your own seal, and put it in her hand. She slides it into her sleeve and is gone. If the steward ever sees that seal, he will know whose hand broke his order." },
+          { "label": "A fair copy of the prince's roll", "effects": { "favour": 2, "conscience": -2 }, "consequence": "You copy out the roll as the palace has it, every figure the prince approved, and seal that instead. The woman reads your face in the lamplight for longer than she will read the sheet. The regent will weigh the city's chances with the prince's numbers, as the prince would wish." },
+          { "label": "Nothing: say the count is not finished", "effects": { "household": 2, "conscience": -1 }, "consequence": "You tell her the tally is still being made, which is a lie and a safe one. She goes back up the dark street. {names.m.2} bars the door behind her and says you did right, and neither of you sleeps." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "The old wall by the tanners' quarter comes down {date}, at midday, with a sound like a cart of stones tipped into a ditch. By full light the soldiers of {enemy.name} are in every street. They are not a mob; they are a market. Officers go from door to door with clerks behind them, and the clerks write down everything that is carried out: the bronze, the cloth, the oil, the silver, and in some streets the people too. Smoke rises from the lower town, where householders barred their doors and fought.",
+        "Nobody in the writing-room knows where the prince is; the steward says the guard has him safe. {names.m.1} is tying his rolls into bundles with shaking fingers. Then a clerk of the {enemy.ruler.title} comes in with soldiers at his back: a thin man with ink in the creases of his fingers, like yours. He does not look at the silver lamps. He wants the toll rolls, and the register of every household of {city.name}, street by street and door by door.",
+        "He is courteous. The record-room will not burn, he tells you; the {enemy.ruler.title} burns nothing he means to tax. Then he looks at the register in your arms, at the names of the streets, at your own street, and says that the doors of those who help him will be marked in chalk, and passed over."
+      ],
+      "king": [
+        "Tell the scribe the rolls are mine. A prince does not hand his rolls to a thief's clerk.",
+        "Do not let them have my father's rolls. Burn them first. No. Do not burn them. Hide them."
+      ],
+      "choice": {
+        "prompt": "The clerk holds out his hand for the register. Behind him the soldiers are already at the shelves. Where is the register when they reach your desk?",
+        "options": [
+          { "label": "Give him the register, and let your door be chalked", "effects": { "household": 3, "conscience": -2, "favour": -1 }, "flag": "register", "consequence": "You put the register in his hand. He finds your street, then your door, and makes a small mark in his own book. By noon a soldier has chalked a sign on your lintel, and the looters pass your house by. Next door they carry out every lamp {names.m.0} ever made, and the oil from his cellar after them." },
+          { "label": "Hold the register until they take it from you", "effects": { "favour": 2, "conscience": 1, "household": -2 }, "consequence": "You hold it to your chest until a soldier twists it free, and your wrist with it. The clerk notes in his book, without malice, that the palace scribe resisted. That evening your house is stripped bare like every other on the street, and {names.m.2}'s scales go out in a sack with the rest." },
+          { "label": "Leave it on the table and run to warn your street", "effects": { "household": 2, "conscience": 1, "favour": -2 }, "flag": "street", "consequence": "You leave the register where it lies and go out by the kitchen stair. All down your street you beat on doors: bury the silver, send the young ones onto the roofs, open when they knock and do not fight. When the soldiers come they find little, and kill nobody. The clerk, you hear later, found the register without you." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "The roll is waiting for the morning the wall came down. What does it say?",
+          "options": [
+            { "pick": "true", "label": "The wall, the streets, the sack", "line": "The wall of {city.name} was broken {date}, and the host of {enemy.name} sacked the city street by street.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Call the plunder a ransom", "line": "The wall of {city.name} was opened {date}, and the {state.ruler.title} paid {enemy.name} silver for the city's life.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The city was tested, and did not break", "line": "The wall of {city.name} was tested {date}, and the host of {enemy.name} found the city of the wheel unbroken.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "The host of {enemy.name} marches away with its carts, and the quiet afterwards is louder than the sack. The prince holds audience in a hall stripped of its hangings, on a plain stool, because his chair went away in a cart with everything else. His wife sits on the step below him. The regent stands at his shoulder and does not sit, and keeps her eyes on the prince.",
+        "{names.m.1} reads your roll aloud in his clear voice, sheet by sheet: the muster, the field, the dead, the morning the wall came down. The prince listens with his chin raised and his hands in his lap. He is a boy of {state.ruler.age} who has watched his city taken from his own roof, and the roll in {names.m.1}'s hands will outlive everyone in this hall.",
+        "Papyrus forgives. A wet sponge lifts the soot from the fibres, and a sharp knife and a pot of paste will take out a whole sheet and set a new one in its place, and no reader will ever find the seam. Every scribe in the hall knows it. The steward knows it best of all."
+      ],
+      "king": [
+        "That is not what happened. I watched it. Write it again.",
+        "My father's rolls will lie beside mine. Shall the city read that the son lost what the father built?",
+        "The regent says you write a true hand. I want a loyal one."
+      ],
+      "choice": {
+        "prompt": "The steward sets a wet sponge and a pot of paste beside your palette. The prince is waiting.",
+        "options": [
+          { "label": "Leave the sponge where it lies", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You tell them a roll read aloud in audience should not be washed. The regent's eyes come to you, then go away. The prince says nothing for a long while, and then he says you may go, in a voice that breaks before he reaches the end of it." },
+          { "label": "Sponge it clean and take his dictation", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You lift the ink with the sponge, a column at a time, until the papyrus comes up pale and wet. Then you write as he dictates: a great levy, light losses, an enemy that paid dearly for every street. When you finish he thanks you very formally, as his tutors taught him." },
+          { "label": "Write what he dictates, and paste the truth at the core", "effects": { "conscience": 1, "favour": 1, "household": -1 }, "flag": "core", "consequence": "You write what he dictates. That night, alone in the writing-room, you cut a narrow strip from the end of a sheet and set down the true dead, ours and theirs, as small as your pen allows. You paste it face-down round the rod at the heart of the roll, where no reader ever unrolls." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "the-core",
+      "title": "The strip round the rod",
+      "when": { "flag": "core" },
+      "text": "The prince is pleased with his roll, and it goes up to the record-room with a new tag on its edge. Nobody unrolls a roll to its heart; there is no reason to. The next year the {enemy.ruler.title}'s men return and the city is sacked again, and at the peace {city.name} gives up {treaty.ceded} districts and its tolls. You copy the treaty for the record-room yourself, shelve it beside your roll, and do not look at the rod."
+    },
+    {
+      "id": "chalk-mark",
+      "title": "Chalk on the lintel",
+      "when": { "flag": "register" },
+      "text": "The chalk sign will not come off your lintel; however you scrub, a pale smear of it lasts the winter. Your house came through the sack whole, and the street knows why. The next year, at the peace, {state.name} owes {enemy.name} a tribute of {treaty.tribute}, and the clerks of the {enemy.ruler.title} arrive to assess it with a register in their hands. You know that register. Every household in it pays its share. So does yours. {names.m.0} never sells you soot for your ink again."
+    },
+    {
+      "id": "regent-table",
+      "title": "A table in the regent's rooms",
+      "when": { "flag": "regent", "conscience": [4, 20] },
+      "text": "Nothing is ever said of the sealed sheet. But when the host of {enemy.name} has gone, the regent's woman knocks again, by daylight this time, and you are given a table in the regent's own rooms. There you write the letters that go out under her seal while the prince is still a boy: plain letters, with true figures in them. When the peace comes the next year you copy its terms for her, {treaty.ceded} districts and the tolls and a truce of {treaty.truce} years, and she reads them without asking you to soften a word."
+    },
+    {
+      "id": "warned-street",
+      "title": "The street that was warned",
+      "when": { "flag": "street" },
+      "text": "You left the register on the table and ran, and nobody on your street died in the sack. In other streets it was not so. The steward does not forgive a scribe who leaves her post, and by the new year your table in the writing-room is {names.m.1}'s. {names.m.2} takes his scales off the nail and sells them, since the peace will let the merchants of {enemy.name} through the gate unweighed. {names.m.3} grows taller than the prince."
+    },
+    {
+      "id": "roll-keeper",
+      "title": "The keys of the record-room",
+      "when": { "favour": [8, 20] },
+      "text": "The prince remembers the scribe who wrote his war the way he watched it. You are given the keys of the record-room and a house with a well on the palace street. When the peace is sworn the next year, and {city.name} gives up {treaty.ceded} districts and the tolls the war was fought for, it is your pen that calls the loss a courtesy between neighbours. In AY {chronicle.year} a chronicler who bears the prince's name, {chronicle.author}, will call the end of the war an {chronicle.outcomeClaim}. You will have shown the way."
+    },
+    {
+      "id": "gate-stool",
+      "title": "A stool by the caravan gate",
+      "when": { "conscience": [6, 20], "favour": [-20, -3] },
+      "text": "Your pen is taken at the writing-room door and your table given to {names.m.1}; the prince keeps no hand that has written a defeat. By spring you have a stool and a board by the caravan gate, writing letters for those who cannot: a carter to his mother, a widow to the temple, a lamp-maker to his cousin. You write exactly what they tell you. The caravans of {enemy.name} go by without stopping now. Nobody asks you to write anything larger."
+    },
+    {
+      "id": "still-writing",
+      "title": "Still at the palette",
+      "when": {},
+      "text": "The writing-room keeps you, without reward and without rebuke, and your roll goes up to the record-room with the others. {battle.commander.name} leads the levy out again the next year, and loses again; the city is sacked again; the peace gives {enemy.name} its tolls and a tribute of {treaty.tribute}. Street by street the city empties. The old {enemy.ruler.title} dies the year after the peace, at home in his own palace. Your roll waits on its shelf for whoever writes the war."
+    }
+  ],
+  "archaeologist": {
+    "true": "Dig season of {find.year}. The sack of {city.name} spared the palace record-room, and this roll, {find.condition}, is the reason the battle below the walls can be told at all. Its scribe gives a levy of {tablet.muster} against a host of {battle.theirs}, and the dead as {tablet.ours} of the city and {tablet.theirs} of {enemy.name}, exactly as the record has them. Set it beside the city's own chronicle of the war, written in AY {chronicle.year} by the historian {chronicle.author}, the prince's namesake, and lost but for a quoted fragment. The one sentence of it that survives says nothing of the dead. The palace had the truth on its shelf; only this roll kept it.",
+    "rounded": "Conservation notes, {find.year}. A palace roll from {city.name}, {find.condition}, in a careful hand that leans, here and there, toward the prince: a levy of {tablet.muster} (the record: {battle.ours}), the city's dead at {tablet.ours} for {battle.oursLost}, the enemy's at {tablet.theirs} for {battle.theirsLost}. No clerk of the time would have called it a lie. How much further the historian {chronicle.author} went in AY {chronicle.year} cannot be known: his chronicle is lost but for a quoted fragment. On this roll, at least, the bending is small, and it bends only one way.",
+    "boasted": "Field report, {find.year}. This roll from {city.name}, {find.condition}, flatters like a funeral speech. It musters {tablet.muster} men to the record's {battle.ours}, gives {tablet.theirs} dead of {enemy.name} for {battle.theirsLost}, and owns to {tablet.ours} of the city's own for {battle.oursLost}. The {enemy.ruler.title}'s stele of the next year multiplies the city's dead; this roll does the prince the same service. Within a year {state.name} had ceded {treaty.ceded} districts and opened its markets toll-free. Tellingly, the city's chronicle of AY {chronicle.year} does not repeat this boast. It leaves the battle out altogether. A battle nobody mentions is easier to defend than a victory nobody believes.",
+    "flags": {
+      "regent": "From the palace papers of {city.name}, {find.year}. Folded into a bundle of the regent's correspondence, which came through the sack with the rest of the record-room, is a sheet closed with a scribe's private seal. It gives the dead below the walls as {battle.oursLost} of the city and {battle.theirsLost} of {enemy.name}, and says plainly that the field was lost. The palace roll she wrote gives {tablet.ours} and {tablet.theirs}. Whatever the prince was told, the regent was told the truth, in the week it mattered. When the chronicle of AY {chronicle.year} leaves the battle out, it is not because nobody knew.",
+      "register": "Tribute archive of {enemy.name}, {find.year}. Among the empire's assessment rolls lies a household register of {city.name}, street by street, in the palace hand of the city, with each door's share of the tribute added by imperial clerks. A clerk's note says it was received from the palace scribe {scribe.name}, and that the scribe's own house was passed over. The same name signs a roll of the war in the city's record-room, which gives {tablet.ours} of the city's dead for the record's {battle.oursLost} and {tablet.theirs} of the enemy's for {battle.theirsLost}. The roll answered to a prince; the register was handed over to protect a house. Historians of the tribute owe that scribe more than historians of the war do.",
+      "core": "Papyrus laboratory, {find.year}. On its face this roll tells the prince's war: a levy of {tablet.muster}, {tablet.ours} of the city's dead and {tablet.theirs} of the enemy's. Only when the conservators had humidified it and eased it open to the rod did they find a narrow strip pasted face-down at its heart, written by the same pen, never meant to be unrolled. It gives the dead as {battle.oursLost} and {battle.theirsLost}: the record's figures, and no others. The face of the roll was written for a boy of {state.ruler.age}. The heart was written for whoever came to the end of it."
+    }
+  }
+}

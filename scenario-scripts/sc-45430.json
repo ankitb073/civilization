@@ -1,0 +1,210 @@
+{
+  "scenario": "sc-45430",
+  "title": "A Fair Copy for the Press",
+  "scribe": { "name": "{names.m.4}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "Hot sealing wax, oak-gall ink and the sour rag-stink of paper fresh from the mill: in the writing office of the palace of {city.name} you could tell the hour by the air. You are {scribe.name}, clerk of the royal register, and there is ink in the creases of your knuckles that no soap will reach. In the dust of the square the levy of {state.name} musters: pikemen, musketeers with their match-cords smoking, gunners hauling bronze pieces on squealing wheels. They have not far to go. The host of {enemy.name} is camped on the hills in plain sight, and at night its fires sit on the ridge like a crown.",
+        "The scouts reckon that host at {battle.theirs}, more souls than live in the city. {battle.commander.name} will lead our men out; the {state.ruler.title} stays in the palace. {state.ruler.name} has sat the throne since he was a boy whose mother kept the seals for him, and at {state.ruler.age} the taverns already call him the Old. He was a child the last time {city.name} burned, in his father's reign. {enemy.ruler.name}, the {enemy.ruler.title}, is older still, and her armies have sat beneath these walls before. Whatever you write today, {names.m.3}, printer to the {state.ruler.title}, will set in type by noon.",
+        "Your son {names.m.8} is down there among the powder-carriers, a satchel of paper cartridges on each hip, too proud to look up at the palace windows. {names.f.5} would not come to watch him go. She is at home, scrubbing a doorstep that is already clean, while the drums go down the street toward the gate."
+      ],
+      "king": [
+        "{enemy.ruler.name}'s scouts will read our bulletin before my captains do. Give them a number to carry home that she will not enjoy.",
+        "This city burned in my father's reign. I do not mean to lose it in mine to a clerk's arithmetic.",
+        "I was a boy when they gave me this crown, and my mother counted everything for me. Count for me now, and count kindly."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains' roll lies under your hand, and the printer's boy waits at the door for your fair copy. Which figure goes to the printer?",
+          "options": [
+            { "pick": "true", "label": "The captains' figure, exactly", "line": "Mustered before the gate of {city.name} under {battle.commander.name}: {value} men, foot, horse and guns.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A tidier figure, the way printers like them", "line": "Mustered before the gate of {city.name} under {battle.commander.name}: {value} men, foot, horse and guns.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The army the {state.ruler.title} wishes he had", "line": "Mustered before the gate of {city.name} under {battle.commander.name}: {value} men, foot, horse and guns, the greatest army of the reign.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "On {battle.date} they fight so close beneath the walls that the clerks climb onto the palace leads to watch. You see very little. The guns speak first, then the volleys, a sound like canvas torn along its whole length, and then the smoke settles over the field like wet wool and nothing in it has a shape you can name. Pigeons wheel over the town all afternoon and will not land. Toward evening the gates are opened, and the carts begin to come in.",
+        "{battle.commander.name} comes back on a door, his cloak over his face. The tally-clerks work all night by lantern in the palace courtyard, and at dawn their sheet lies on your desk beside the heralds' count of the enemy dead. Set side by side, the figures need no scholar to read them. {names.m.2}, the second secretary, is already drafting a sentence about supply wagons that failed on the road, which is curious, since the field lay in sight of the granaries.",
+        "{names.m.8} comes home after midnight with his eyebrows burned away and both hands wrapped in a stranger's shirt. He will not say what he saw. He sits by the stove while {names.f.5} unwinds the cloth, and once, without looking up, he asks you whether the dead will be printed by name."
+      ],
+      "king": [
+        "{battle.commander.name} was a careful man, and careful men are easy to blame. I will not blame the dead. Blame the wagons; wagons are always late.",
+        "Prosperity is the sign of favour. Every child of the {state.faith} knows it. No press in my city prints that the One has turned from me.",
+        "Read me the count again, clerk, and this time read it as a friend would."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "How many of the army of {state.name} fell beneath the walls of {city.name}?",
+          "options": [
+            { "pick": "true", "label": "Every cross on the tally-clerks' sheet", "line": "Fallen beneath the walls, of the army of {state.name}: {value} men, and {battle.commander.name} with them.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Leave out the men not yet found", "line": "Fallen beneath the walls, of the army of {state.name}: {value} men, and {battle.commander.name} with them.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A loss the bulletin can carry", "line": "Fallen beneath the walls, of the army of {state.name}: no more than {value}, and {battle.commander.name} gloriously with them.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "The heralds walked the field under a flag of truce and counted the enemy's dead. Do you print their count?",
+          "options": [
+            { "pick": "true", "label": "The heralds' count under the truce", "line": "Left dead on the field, of the host of {enemy.name}: {value}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Round it up; the smoke hid a great deal", "line": "Left dead on the field, of the host of {enemy.name}: {value}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Enough to put an empress in mourning", "line": "Left dead on the field, of the host of {enemy.name}: {value}, for whom {enemy.ruler.name} has put on mourning.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "When the smoke cleared beneath {city.name}, whose colours were on the field?",
+          "options": [
+            { "pick": "true", "label": "The enemy held it", "line": "The field was held by {enemy.name}, and our army withdrew within the walls.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "We gave ground; the wagons failed", "line": "Our army gave ground step by step, the supply wagons having failed on the road.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "We threw them back", "line": "The host of {enemy.name} was thrown back from the walls of {city.name} with great slaughter.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "The host of {enemy.name} digs. Each morning the raw earth of its trenches lies a little nearer the gate, and at night its mortars lob shells over the wall that whistle before they burst. A thin rain falls and does not lay the smell of powder. In the market a measure of grain costs {state.grainCoin} {state.coin}, which the assayers reckon at {state.grain} weights of silver; ten years ago they reckoned it at {hardship.grainBefore}. The bakers have begun to sell bread by the slice.",
+        "Your bulletin hangs on every meeting-house door, and the true count lies folded in your desk. Next door {names.f.8}, a widow, reads the bulletin each morning and goes back inside; her son marched with the pikes. The grain-factors at the exchange know a bulletin from a count. One of them, {names.m.1}, has called at your house already this week, hat in hand: a man who knew the true dead before the market did would know how long the city can hold, and what bread will cost next week.",
+        "Only money still crosses the lines, because both armies borrow. Your cousin {names.f.2} keeps a counting-house in a city the war has not reached, and her courier leaves at dawn with letters and bills of exchange sewn into his saddle. Meanwhile {names.m.5} the chamberlain wants a notice for the printer, saying that the city's bank will pay every depositor in full. You have copied the loan papers yourself. The {state.ruler.title} borrowed those deposits to pay the army."
+      ],
+      "king": [
+        "Tell the grain-factors that the One weighs their scales at the judgement. So, rather sooner, do I.",
+        "A bank that is believed is a bank that can pay. Write so that it is believed."
+      ],
+      "choice": {
+        "prompt": "The courier rides at dawn, the factor waits at your door, and the chamberlain wants his notice. Who is your pen working for tonight?",
+        "options": [
+          { "label": "Fold the true count into the courier's packet", "effects": { "conscience": 2, "household": -1 }, "flag": "courier", "consequence": "You write to {names.f.2} about a debt of linen, and under your name, in the cramped hand of a merchant's postscript, the dead of both sides as the tally-clerks and heralds counted them. The courier rides out in the dark. If the pickets of either army open his saddle, it is your neck." },
+          { "label": "Sell the true count to the factor", "effects": { "household": 3, "conscience": -3 }, "flag": "factor", "consequence": "{names.m.1} reads the figures over slowly, counts good silver onto your table, and is gone before the candle gutters. By morning the factors are buying every sack in the city. {names.f.5} has flour for a month. Through the wall you hear {names.f.8} asking her lodger, quietly, whether he could pay a little early." },
+          { "label": "Write the chamberlain's notice: the bank will pay", "effects": { "favour": 2, "conscience": -2 }, "consequence": "You write that the bank of {city.name} stands behind every deposit, and {names.m.3} has it on the doors by morning. By noon the queue at the bank has melted away, and {names.f.8} walks home with her savings still inside. Before the week is out the bank closes its shutters until the siege is lifted." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "On {date}, in the last hour of the night, the gate tower comes down. You feel it through the floorboards before you hear it: then every bell in the city at once, the shouting from the lower town, the long rattle of muskets in the streets. The host of {enemy.name} pours through the breach crying the name of its {enemy.ruler.title}. {city.name} has been sacked {city.sacked} times before, and the {city.people} keep a story for every one. None of them is any use to you now.",
+        "The fire reaches the chancery by noon, on a dry wind off the hills. Paper does not burn like timber. It curls and lifts and goes up the stairwell in burning leaves, and the leaves drift out over the roofs, so that the lower town is pelted with the registers of dead reigns. The archive has burned before, in other sacks, and each time the clerks began again from whatever was carried out. You snatch your sheet from the desk. Its edges are already brown, but the lines hold.",
+        "In the yard soldiers take you by the collar and march you to the printing-house of {names.m.3}, who stands by his press with a pistol at his back. An officer of the {enemy.ruler.title} lays a proclamation on the stone. It must go up on the city's doors tonight in {script} letters, which he cannot read. It makes the dead of {state.name} far more than any tally you have seen, and the enemy's dead fewer than the heralds counted."
+      ],
+      "king": [
+        "If they take the city, clerk, you write nothing for them. Not a letter of it. Not your name.",
+        "Whatever else burns, the register of my reign comes out of the fire with you."
+      ],
+      "choice": {
+        "prompt": "The officer taps the {enemy.ruler.title}'s name at the head of the page and waits. Which words does {names.m.3} set?",
+        "options": [
+          { "label": "Her proclamation, word for word", "effects": { "household": 2, "conscience": -2, "favour": -2 }, "consequence": "You write her victory out in your own city's letters, our dead swollen and hers shrunk, and {names.m.3} sets it with shaking hands. By evening it is pasted over your own bulletin on every meeting-house door. The officer writes a pass for your household, signed and sealed, and you carry it home inside your shirt beside the charred sheet." },
+          { "label": "Her name at the head, the true count beneath", "effects": { "conscience": 3, "household": -2, "favour": -1 }, "flag": "proclamation", "consequence": "The officer cannot read a word of {script}. You give him her name in large letters at the head, and beneath it, small and plain, the true dead of both sides, the tally-clerks' figure and the heralds'. {names.m.3} looks at you once, then sets it, lips pressed tight. If anyone who reads both tongues stops at that door, you are both dead men." },
+          { "label": "Spill the type across the floor", "effects": { "favour": 2, "conscience": 1, "household": -3 }, "consequence": "You put your shoulder to the forme, and a week's setting of {names.m.3}'s type goes across the floor in a grey rain of letters. The soldiers beat you where you fall. They turn you out at dark, not worth a ball, and you limp home to find the door broken in, the stove gone, and {names.f.5} and {names.m.8} hiding in the rag-loft of the paper-mill." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "There is still room at the foot of the charred sheet for {date}. What happened?",
+          "options": [
+            { "pick": "true", "label": "The breach, the sack, the burning", "line": "On {date} the host of {enemy.name} broke into {city.name}, sacked it, and burned the chancery with its registers.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "A gate forced, some papers lost", "line": "On {date} the enemy forced a gate of {city.name}; there was a fire, and some papers of the chancery were lost.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The city stood", "line": "On {date} the host of {enemy.name} stormed the walls of {city.name} and was beaten back, and the {state.ruler.title}'s peace was kept.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "The enemy has drawn back to its camps on the hills, and the city's silver has gone with it in wagons. The palace roof is open to the sky, so the {state.ruler.title} holds court in the great meeting-house of the {state.faith}, under plain whitewashed walls, with his eldest daughter at his shoulder. {names.m.2} reads your sheet aloud to him, scorched edges and all, in a voice that leaves nothing out. The smell of burning comes in at every door.",
+        "{names.m.3} waits by the door with ink on his hands; whatever is settled here goes into type tonight and onto every door in {state.name} within the week. The preachers stand along the wall in grey, murmuring of peace, and of the inner light by which each soul finds the truth unaided. In the market they are already guessing the price of that peace: silver by the wagon, and towns on the border, {treaty.towns.0} among them. You think of what you did the night the courier rode, and in the printing-house, and of what you did not do."
+      ],
+      "king": [
+        "The preachers want peace, and they want me to ask for it. If it comes, clerk, it will be written that I granted it.",
+        "My daughter will have this city after me. Write her something she can stand on.",
+        "You have a steady hand for a man who has had a week like mine. Steady it a little further."
+      ],
+      "choice": {
+        "prompt": "The {state.ruler.title} lays a penknife for scraping beside the charred sheet, and {names.m.3} waits for his copy. What goes to the press?",
+        "options": [
+          { "label": "Send the charred sheet to the press as it stands", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You hand the scorched sheet to the printer's boy as it is. The {state.ruler.title} watches it go, then looks at you, and nods once to the printer. No one in the meeting-house speaks to you on your way out, not even {names.m.2}, which from him is the nearest thing to respect." },
+          { "label": "Scrape it and write as he dictates", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You scrape your figures thin with the penknife and write over them while he speaks: fewer of ours, more of theirs, a wall that held. {names.m.3} has it in type before midnight. By the end of the week your words, which are his, are nailed up in every market town in {state.name}." },
+          { "label": "Amend it for him; let the first pulls run true", "effects": { "conscience": 1, "favour": 1, "household": -1 }, "flag": "variant", "consequence": "You scrape the sheet and write in what he dictates. Then, at the printing-house, you ask {names.m.3} to set the true count first and pull a few sheets before he corrects the type. He grumbles that paper is dear and he wastes none of it. The uncorrected sheets go into the stack with the rest." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "factor",
+      "title": "A sign of favour",
+      "when": { "flag": "factor" },
+      "text": "The factor's silver carries your household through the siege, and after the peace it buys you a share in a company that sends ships beyond the sea. The ships come home laden. You move to a house with glass in every window, and the preachers of the {state.faith}, who teach that prosperity is a sign of the One's favour, bow to you in the street. {names.f.5} does not bow back. She remembers what bread cost that week."
+    },
+    {
+      "id": "proclamation",
+      "title": "In the empress's name",
+      "when": { "flag": "proclamation" },
+      "text": "For a week the true count of the dead hangs on the doors of {city.name} under the name of {enemy.ruler.name}. The {state.ruler.title}'s men tear the sheets down wherever they find them, but the women copy the figures first. No one ever asks who set it. {names.m.3} takes the secret to his grave and you keep yours, though when people curse the enemy's lies you sometimes have to leave the room."
+    },
+    {
+      "id": "courier",
+      "title": "A letter about linen",
+      "when": { "flag": "courier", "conscience": [5, 20] },
+      "text": "In the spring a letter comes back from {names.f.2}, sealed with the mark of her counting-house. She thanks you for the news of the linen. Lower down, in her own hand, she writes that her house has declined to lend to the agents of {state.name}, having better figures than their gazettes. You burn the letter in the stove and go on writing bulletins. Somewhere far from {city.name}, a merchant's files are telling the truth on your behalf."
+    },
+    {
+      "id": "variant",
+      "title": "Paper is dear",
+      "when": { "flag": "variant" },
+      "text": "The bulletin goes out to every door in {state.name}, and nearly every copy says what the {state.ruler.title} wanted. Here and there, in a village meeting-house or a lawyer's parlour, a copy says something else. A few readers write to the printer about it. {names.m.3} answers each of them that he cannot think what they mean. To the end of his life he swears he never wasted a sheet, and you never thank him aloud."
+    },
+    {
+      "id": "historiographer",
+      "title": "Historiographer royal",
+      "when": { "favour": [8, 20] },
+      "text": "The {state.ruler.title} likes a clerk who can make a rout read like a retreat. You are named historiographer, given rooms above the new chancery, and set over the papers of the reign. When the {treaty.name} is sworn and {state.name} gives up {treaty.ceded} districts, it is your pen that tells the realm how generous its {state.ruler.title} has been. A generation later the history by {chronicle.author} puts it much as you did: “{chronicle.outcomeWords}”"
+    },
+    {
+      "id": "corrector",
+      "title": "A corrector's wage",
+      "when": { "conscience": [6, 20], "favour": [-20, -2] },
+      "text": "{names.m.5} takes your keys at the meeting-house door; the register has no room for a clerk who prints defeats, and {names.m.2} has your desk by the end of the week. {names.m.3} the printer, who has set every word you ever wrote, takes you on to read his proofs at a corrector's wage. You spend the rest of your working life catching other men's errors in other men's books, and nobody ever catches you in one."
+    },
+    {
+      "id": "stationer",
+      "title": "The stationer's by the paper-mill",
+      "when": { "household": [2, 20] },
+      "text": "When the war is over you leave the palace, and no one asks you to stay. With what is left of your savings you open a stationer's shop by the paper-mill: pens, sand, sealing wax, and the reading of letters for those who cannot read their own. {names.m.8}'s hands heal stiff, but they heal. On winter evenings {names.f.5} reads aloud from whatever the customers forgot to collect."
+    },
+    {
+      "id": "clerk",
+      "title": "A desk in the new chancery",
+      "when": {},
+      "text": "The rebuilt chancery has a desk for you, and nothing more. The charred sheet is filed with the rest, and the {state.ruler.title}'s bulletins go on being printed from fair copies in your hand. The next year {state.name} gives up {treaty.ceded} districts and swears a truce of {treaty.truce} years, and you write that too, choosing every word with care. That is what a clerk is for."
+    }
+  ],
+  "archaeologist": {
+    "true": "Finds register, {find.year}. A sheet of rag paper from a chest in the vaults of the rebuilt chancery of {city.name}, {find.condition}. It is scorched along one edge, and its last line, in fresher ink, was written after the fire it describes. Everything else matches the record figure for figure: {tablet.ours} dead of {state.name} beneath the walls and {tablet.theirs} of {enemy.name}. Beside it the printed history of {state.name}, by {chronicle.author}, reads as what it is: “{chronicle.quote}” The victor's history errs as far the other way. Both were written at leisure, long after. This was written in the smoke.",
+    "rounded": "Finds register, {find.year}. Register sheet, chancery of {city.name}, {find.condition}. Set against the record, which has {battle.oursLost} dead of {state.name} and {battle.theirsLost} of the enemy, it gives {tablet.ours} and {tablet.theirs}, and wherever it leaves the truth it leans, gently, toward the {state.ruler.title}. That is the arithmetic of a frightened office rather than of a liar, and it is where the bending began. The printed history of the war by {chronicle.author}, a generation on, gives {chronicle.oursLost} and {chronicle.theirsLost}. The clerk shaved the figures; the historian carved them.",
+    "boasted": "Finds register, {find.year}. This charred sheet from the burned chancery of {city.name} reads like the bulletins pasted on meeting-house doors in that war: {tablet.ours} of the city's dead, {tablet.theirs} of the enemy's, against a true {battle.oursLost} and {battle.theirsLost}. The historian of {state.name}, {chronicle.author}, writing at leisure a generation later, chose {chronicle.oursLost} and {chronicle.theirsLost}. None of it changed the bill. A year after the sack {state.name} agreed to pay {treaty.indemnity} and to give up {treaty.ceded} districts under the {treaty.name}. Victories can be printed. Indemnities are paid in silver.",
+    "flags": {
+      "courier": "Finds register, {find.year}. The chancery sheet from {city.name} survives, {find.condition}, and gives the city's dead as {tablet.ours} and the enemy's as {tablet.theirs}. A second witness travelled further. Among the filed letters of a counting-house far from the war is one about a debt of linen, dated in the week of the siege, with a postscript in a cramped hand: {battle.oursLost} dead of {state.name} beneath the walls, {battle.theirsLost} of {enemy.name}. The record says the same. Whatever the citizens were told, the bankers of the age, it seems, were told the truth.",
+      "factor": "Finds register, {find.year}. The chancery sheet from {city.name}, {find.condition}, gives the city's dead as {tablet.ours}; the record has {battle.oursLost}. A grain factor's account-book, kept in a stone house the fire missed, shows who else knew. In the week of the siege it records silver paid to a clerk of the chancery for news, and the next morning the heaviest purchases of grain in the whole book. The factor, it seems, paid for the true figure and traded on it. The city had to wait for the printer.",
+      "proclamation": "Finds register, {find.year}. The chancery sheet from {city.name} survives, {find.condition}, and gives {tablet.ours} of the city's dead, not the {battle.oursLost} who fell. A stranger witness gives the record's figures exactly. Copies survive of a broadsheet posted in the city after the {title}, set in {script} letters under the name of {enemy.ruler.name}, with {battle.oursLost} dead of {state.name} and {battle.theirsLost} of {enemy.name}. Neither side's chronicle comes near them; the victor's boasts as victors do. Whoever set this broadsheet was not working for the {enemy.ruler.title}.",
+      "variant": "Finds register, {find.year}. The chancery sheet from {city.name}, {find.condition}, matches the bulletin printed from it: {tablet.ours} of the city's dead and {tablet.theirs} of the enemy's, against the record's {battle.oursLost} and {battle.theirsLost}. But not every copy of the bulletin agrees with it. A few, printed from the same type before it was corrected, give the record's figures instead. The pattern is familiar from the period: paper was dear, and uncorrected sheets were sold with the rest. Here the correction ran backwards. The truth was set first, and the lie was the correction."
+    }
+  }
+}

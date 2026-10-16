@@ -1,0 +1,195 @@
+{
+  "scenario": "sc-22923",
+  "title": "He Broke Them, or Was Broken",
+  "scribe": { "name": "{names.m.5}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "They still call it the tablet house, though no one in {city.name} has pressed clay in living memory. It is a long room over the harbour, where the papyrus lies rolled on cedar shelves and the air tastes of salt and lampblack. You are {scribe.name}, a palace scribe whose hands have never touched clay. You write {state.language} in {script} letters, which set down the bones of a word and leave its breath to the reader. Your son {names.m.8} grinds soot for your ink at the low table while the gulls quarrel on the sill.",
+        "In the square by the land gate the levy of {state.name} musters: iron caps, spears, a few chariots of the old families, riders on whatever horses the stables could spare. On the plain beyond the walls the emperor {enemy.ruler.name} of {enemy.name} has camped, and his heralds call this war holy. The levy has gone out of this gate against his host before and come back fewer. Last year his soldiers followed it in, and {city.name} has now been sacked {city.sacked} times since its founding.",
+        "{state.ruler.name} raised the kingdom of {state.name} out of the wreck of the old state in AY {state.ruler.since}. He is {state.ruler.age} years old, and he will lead the levy himself. The steward {names.m.0} brings you the captains' roll with the king's seal still soft on its cord, and stays to watch you write."
+      ],
+      "king": [
+        "A kingdom's levy, scribe, not a fishing town's. The emperor's agents can read. Give them something worth carrying home.",
+        "I raised this realm with fewer spears than stand in that square. Numbers obey conviction, and so do scribes."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains' roll lies open beside your ink. In {script} a figure is a few strokes, and a stroke added costs nothing. How many marched?",
+          "options": [
+            { "pick": "true", "label": "The captains' figure, stroke for stroke", "line": "{value} men of {state.name} went out by the land gate behind their {state.ruler.title}, {battle.commander.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Add a stroke, as every palace hand does", "line": "{value} men of {state.name} went out by the land gate behind their {state.ruler.title}, {battle.commander.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A kingdom's levy, as the king commands", "line": "{value} men of {state.name}, a kingdom's whole strength in iron, went out by the land gate behind their {state.ruler.title}, {battle.commander.name}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "{battle.date} the armies meet so near the walls that the women on the roofs watch it whole. From the tablet-house window you see only dust, a glint of riders wheeling along the river flats, and then the levy coming back through the land gate at a run. {battle.commander.name} comes in among the last, bareheaded, his helmet in his hand. {enemy.ruler.name} led his own host today, and he rides along the walls at dusk to be seen.",
+        "By evening the tally-men have their count, and in the lower town the lamps are being put out, house by house, for the dead. Your rival {names.m.7}, who writes a rounder hand than yours and a rounder number, is already at the steward's elbow, saying the river rose in the night and cut the line, as though water could be entered in a ledger. You know the count. The plain is the emperor's. The steward sets a lamp beside your roll and trims the wick himself, so that you will not need to stop."
+      ],
+      "king": [
+        "The river broke my line, not that boy. Write the river, scribe. No man is shamed by water.",
+        "He is {enemy.ruler.age} and calls his hunger holy. I am {state.ruler.age}, and I know what a field costs. Count his dead as a king counts them."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The tally-men have their count. What count does the roll carry?",
+          "options": [
+            { "pick": "true", "label": "Every man the tally-men counted", "line": "Of the levy of {state.name}, {value} fell on the plain under the walls.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Not the missing; boats are still coming in", "line": "Of the levy of {state.name}, {value} fell on the plain under the walls.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Few, as a king prefers to hear it", "line": "Of the levy of {state.name}, {value} fell, and every one of them sold himself dearly.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "The emperor's dead were left on the river flats. What does the roll make of them?",
+          "options": [
+            { "pick": "true", "label": "The count from the burial truce", "line": "Of the emperor's host, {value} were left dead on the river flats.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Count generously; the flats were wide", "line": "Of the emperor's host, {value} were left dead on the river flats.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Enough to make the emperor weep", "line": "Of the emperor's host, {value} were left dead on the river flats, more than his priests could bury by nightfall.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "And the plain below the walls: who kept it?",
+          "options": [
+            { "pick": "true", "label": "The emperor held it", "line": "The plain below {city.name} was the emperor's, and the levy fell back through the land gate.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Blame the river, as the king asks", "line": "The river rose and cut our line, and the levy gave ground to the water, not to the enemy.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The king won it", "line": "{battle.commander.name} drove the host of {enemy.name} back across the river flats, and the plain below {city.name} was ours.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "The emperor closes the land side with a ditch and a fence of stakes, but the harbour stays open, and grain comes in by night along the shore. A measure costs {state.grainCoin} {state.coin}, or {state.grain} in weighed silver: cheaper than the {hardship.grainBefore} it fetched in the years before the war. This is a siege of fear, not of hunger. Each morning the heralds cry under the walls that a city which opens its gates will be spared what was done to it last year, and each morning the priests of the {state.faith} answer from the towers that duty is the whole of virtue.",
+        "Each night the old families of {city.name} meet as a council in the fish-sellers' hall, and the talk there is of keys. They have asked the palace for the true count of the dead, to weigh against the emperor's promises, and the king has refused them. Tonight your neighbour {names.m.2}, who keeps a coasting boat at the fish stair and speaks for the fishermen on the council, knocks at your door for the figure in your own roll. In the next street the steward's men are going from house to house, taking boys for the walls, and {names.m.8} is just old enough."
+      ],
+      "king": [
+        "The {state.faith} teaches order and duty. A city in order does not hold councils behind its king's back.",
+        "Every boy of the palace households goes to the walls. The steward has the list.",
+        "Let the heralds shout. Stones were never converted by argument."
+      ],
+      "choice": {
+        "prompt": "{names.m.2} waits at your door, and the steward's men are in the next street. Whom do you answer first?",
+        "options": [
+          { "label": "Give the council the true count", "effects": { "conscience": 3, "favour": -1, "household": -1 }, "flag": "council", "consequence": "You unroll the war and read {names.m.2} the dead as the tally-men gave them, and he says them over until he has them by heart. That night the council hears the figure from a fisherman's mouth. If the steward ever learns where it came from, there is a word for a palace scribe who counsels a city against its king, and the word is treason." },
+          { "label": "Hide {names.m.8} in the archive loft", "effects": { "household": 3, "favour": -2 }, "consequence": "{names.f.1} brings the boy to the long room after dark, and you put him up among the empty cedar shelves under the roof, with a blanket and a jar of water. When the steward's men come to your door, {names.f.1} tells them he has gone to her mother's. In the morning the steward looks at you and does not ask, and you know he has counted the water jars." },
+          { "label": "Tell the steward who sent for the count", "effects": { "favour": 3, "conscience": -3, "household": 1 }, "consequence": "The steward's men are at the fish-sellers' hall before the council has finished its wine. They walk {names.m.2} up to the palace with his hands tied. {names.f.0} does not speak to your wife again. In the morning a flask of good oil is left at your door with the king's thanks, and {names.m.8}'s name is missing from the steward's list." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "The gates are opened {date}. There is no breach and no fire. The council goes out at dawn with the keys, and the emperor's soldiers come in at a walk, taking the towers street by street and the harbour last. By noon the banners of {enemy.name} hang from the palace roof. {state.ruler.name} is neither killed nor chained; he is kept in his own rooms under the emperor's guard, a king in everything but a kingdom.",
+        "Then the emperor's clerks arrive, and they frighten you more than the soldiers did. They come in a file with their own ink and their own seals, and go through the archive shelf by shelf, entering every roll on wax tablets. The archive has outlived every sack of {city.name}; it will outlive this, but it will belong to someone else. At the gate a herald reads the terms, sealed by the emperor and, below his seal, by {state.ruler.name}: the kingdom of {state.name} is ended by {treaty.terms.0}, and its {treaty.ceded} districts pass to {enemy.name}."
+      ],
+      "king": [
+        "We made peace; set it down so. Peace is a thing kings make together. Conquest is a thing done to a man, and nothing has been done to me.",
+        "I took this city out of the wreck of the old state in AY {state.ruler.since}, with my own hands. It was not taken from me like a purse.",
+        "Keep the day-books of my reign out of their lists. They belong to me, not to a province."
+      ],
+      "choice": {
+        "prompt": "The chief clerk wants the keys of the archive and the names of its scribes. The steward wants the day-books of the reign. Whose servant are you this morning?",
+        "options": [
+          { "label": "Give the clerk the keys, and your name", "effects": { "household": 3, "favour": -3, "conscience": -1 }, "flag": "chancery", "consequence": "The chief clerk turns the keys over, reads a line of your hand, and nods. A province needs men who know its districts and its weights. He writes your name on his list below the shelves. When you pass the king's door that night, the guard is a stranger, and so, already, are you." },
+          { "label": "Carry the day-books of the reign up to the king", "effects": { "favour": 3, "household": -2 }, "consequence": "You wrap the day-books of the reign in a fuller's cloth and carry them up the back stair as if they were washing. The king unties the cloth, finds the first page of his reign, and reads it twice, moving his lips. If the clerks count their shelves and find a gap, they will know whose shelf it was." },
+          { "label": "Go to the gate and hear the terms yourself", "effects": { "conscience": 2, "favour": -1 }, "consequence": "You stand in the crowd while the herald reads, and count the districts on your fingers as they are named, losing none. When you come back, the keys hang at the clerk's belt and the day-books are gone from their shelf; nobody waited for you. That night you write the districts out from memory and leave the list on the archive table. It is the last roll the scribes of {state.name} ever file." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "The terms have been read at the gate. How does your roll tell the end of {state.name}?",
+          "options": [
+            { "pick": "true", "label": "As the herald read it", "line": "It was {date}, that the city opened its gates to {enemy.ruler.name}, and the kingdom of {state.name} passed whole to {enemy.name} by {treaty.terms.0}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "A peace, with some districts given up", "line": "It was {date}, that peace was made at the gates of the city, and certain districts were given up to {enemy.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "An honourable peace, as the king wishes", "line": "It was {date}, that {state.ruler.name} granted {enemy.name} an {chronicle.outcomeClaim} before the walls, and the city was spared.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "The steward brings you up to the king's rooms at dusk. The guards on the door are men of {enemy.name} now, and they let you by because a scribe is nobody. {state.ruler.name} sits at the window over the harbour and has the roll read to him from the beginning: the levy, the plain, the dead, the opened gates. He listens the way a man listens to his own will being read aloud.",
+        "In the corridor the emperor's chief clerk waits to carry the roll down to the archive and enter it on his list. On the table lie the steward's knife and a pot of flour paste. A sheet can be cut from a roll and a fresh one pasted in its place so neatly that only a careful eye would find the join. You think of {names.m.2} at your door, of the council's wine, and of what you said, or hid, or told."
+      ],
+      "king": [
+        "Go back to the plain. I want to hear the river in it, loud, and the emperor's dead louder.",
+        "By a stroke of his clerk's pen my kingdom is a province. Leave me a roll that says otherwise. It is all of the kingdom I can keep.",
+        "You were taught the inner light, as I was. Reason says a beaten man is never believed. Make me believable."
+      ],
+      "choice": {
+        "prompt": "The king waits. The knife lies by the roll, and the clerk's shadow falls across the doorway. What leaves this room with the clerk?",
+        "options": [
+          { "label": "Tie the cord on it as it is", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You roll it up and tie the cord. The king watches the harbour until the light goes, and says, without turning, that he has been well served by worse men. The clerk carries the roll down to the archive and enters it on his list in a hand far neater than yours." },
+          { "label": "Cut out the sheet and paste in his version", "effects": { "favour": 3, "conscience": -2 }, "flag": "amend", "consequence": "You cut along the paste lines, lift out the sheet that holds the plain and its dead, and write a fresh one as he speaks: the river, fewer of ours, more of theirs, a field held. The new paste is dry by morning. The old sheet goes into the brazier, and the king watches it curl." },
+          { "label": "Write it in bare letters that read either way", "effects": { "conscience": 1, "favour": 1, "household": -1 }, "flag": "unpointed", "consequence": "In {script} the letters for 'he broke them' and 'he was broken' are the same; only the reader's breath tells them apart. You write the line on the field again in bare letters. The steward reads it aloud as a victory, and the king nods. Anyone who reads slowly will hear the other word." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "council",
+      "title": "The fishermen's figure",
+      "when": { "flag": "council", "conscience": [6, 20] },
+      "text": "The council never says where its number came from, and {names.m.2} carries the secret down to the fish stair and back every day for the rest of his life. When the gates are opened, the old families say afterwards that they opened them knowing what the war had cost, and not what the king said it cost. Under the emperor's governors you copy deeds and harbour dues and keep your own counsel. Some mornings there is a basket of mullet on your step."
+    },
+    {
+      "id": "province-clerk",
+      "title": "Revenue rolls of the new province",
+      "when": { "flag": "chancery" },
+      "text": "The emperor's clerks keep you on, and pay better than the king ever did. You write the levies of the {treaty.ceded} districts in a hand grown careful and exact, because the clerks of {enemy.name} check every figure against their own. Within the decade a measure of grain weighs out at {hardship.grainAfter} in silver, and it is you who writes it down. Some men of the old kingdom spit when you pass. Your roll of the war lies in the archive under a new seal, and you do not ask to see it again."
+    },
+    {
+      "id": "kings-secretary",
+      "title": "His epitaph, as he wished it",
+      "when": { "favour": [8, 20] },
+      "text": "His favour is yours, and it buys nothing outside his own rooms. You stay beside {state.ruler.name} through the long years of his keeping and take down what he dictates: the river, the {chronicle.outcomeClaim}, the realm he raised from rubble. He dies in AY {state.ruler.died}, an old man who never lost a battle on papyrus. You write his epitaph as he wished it, and the stonecutter, who fought on the plain, carves it and keeps his thoughts to himself."
+    },
+    {
+      "id": "fish-stair",
+      "title": "Wills on the fish stair",
+      "when": { "conscience": [8, 20], "favour": [-20, -3] },
+      "text": "The last act of the king's reign that touches you is your dismissal, and the emperor's clerks have no use for a scribe the old court threw out. You set a stool on the fish stair with your ink and your knife, and write wills and bills of sale for the harbour at a few coppers a sheet. Your hand is the best on the waterfront. In all the years that follow, nobody asks you to write a number larger than it is."
+    },
+    {
+      "id": "loft",
+      "title": "A boy in the archive loft",
+      "when": { "household": [2, 20] },
+      "text": "{names.m.8} comes down from the loft when the gates are opened, pale and bored, with the dust of the cedar shelves in his hair. You lost the king's favour over those nights and do not miss it; the king has nothing left to give. {names.f.1} kept a lamp in the window every night he was up there. You find work copying deeds for the emperor's tax-farmers, and in the evenings you teach the boy his letters, and how much a reader's breath can change them."
+    },
+    {
+      "id": "clerks-list",
+      "title": "A name on the clerk's list",
+      "when": {},
+      "text": "The new masters keep the archive, and most of the men who know its shelves. You copy deeds and harbour dues at the same window under a different seal, and the gulls do not notice the change. Your roll of the war is entered on the clerk's list and put away, and nobody reads it in your lifetime. Long after, {chronicle.author} closes his own account of the war with the words \"{chronicle.outcomeWords}\" Whether he ever unrolled yours, no one can say."
+    }
+  ],
+  "archaeologist": {
+    "true": "Field season of {find.year}, the archive mound at {city.name}. The roll, {find.condition}, is a battle register in a palace hand, and its figures agree with the record man for man: {tablet.muster} in the levy, {tablet.ours} of {state.name} dead, {tablet.theirs} of {enemy.name}. That makes it rare, and damning, though not of its writer. In AY {chronicle.year}, long after the kingdom was gone, {chronicle.author} turned the same afternoon into this: \"{chronicle.quote}\" The scribe of the defeat told it straight to a beaten king's face. It was the historian, safe and late, who could not bear it.",
+    "rounded": "Field season of {find.year}, the archive mound at {city.name}. The roll, {find.condition}, is ordinary court work, and useful for that very reason. Where its figures leave the record they lean the same way, and never far: {tablet.ours} of the city's dead to the record's {battle.oursLost}, {tablet.theirs} of the enemy's to {battle.theirsLost}. No captain could have called it a lie. Set it beside the chronicle {chronicle.author} wrote in AY {chronicle.year}, which gives {chronicle.oursLost} and {chronicle.theirsLost}, and the pair show how a war is bent: not at once by a liar, but a little at a time, by careful men, each leaning on the last.",
+    "boasted": "Field season of {find.year}, the archive mound at {city.name}. The roll, {find.condition}, was written in the last week of a kingdom and kept by its conquerors. It sends {tablet.muster} men into a battle the record fought with {battle.ours}, kills {tablet.theirs} of {enemy.name} against {battle.theirsLost} in the record, and admits {tablet.ours} of its own dead for {battle.oursLost}. We are not the earliest to doubt it. On the outside of the roll a later hand, in the manner of the clerks of {enemy.name}, has added a note: palace roll of {state.name}, figures not to be used. The conquerors filed it anyway, as a specimen of how the beaten wrote.",
+    "flags": {
+      "council": "Field season of {find.year}. The palace roll of {city.name}, {find.condition}, gives {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name}. Another witness survives in the minutes the fish-sellers' guild kept of the council of the old families, in the week before the gates were opened: the member for the fishermen gives the dead of the plain as {battle.oursLost}, from the palace roll itself, he says. That is the record's figure. The council opened the gates within days. Whatever else it weighed, it did not weigh the king's number.",
+      "chancery": "Field season of {find.year}, the archive mound at {city.name}. The roll, {find.condition}, gives {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name}; the record has {battle.oursLost} and {battle.theirsLost}. Its hand is easy to know again: a long tail on certain letters, margins ruled with a dry point. The same hand turns up for years afterwards on the revenue rolls of the new province, listing the levies of its {treaty.ceded} districts, and on those rolls no figure can be faulted. This scribe may have owed his king a softer number. He gave his conquerors exactness.",
+      "amend": "Field season of {find.year}, the archive mound at {city.name}. The roll, {find.condition}, has been cut. Held to the light, the joins either side of a single sheet stand proud, the paste thicker than elsewhere, and the fibres of that sheet come from another batch. It tells the king's war: {tablet.ours} of {state.name} dead and {tablet.theirs} of {enemy.name}, though {battle.oursLost} and {battle.theirsLost} actually fell. Of the sheet it replaced, nothing survives. The ink across each join is the same ink from the same pen: the man who cut the roll was the man who wrote it.",
+      "unpointed": "Field season of {find.year}, the archive mound at {city.name}. The roll, {find.condition}, is written in {script}, which sets down a word's consonants and leaves its vowels to the reader. Court scribes of the age marked every line that could be read amiss. Here a line is left bare, the line on the battle, and its verb reads either way: the {state.ruler.title} broke the host of {enemy.name}, or was broken by it. Its figures are {tablet.ours} and {tablet.theirs}; the record has {battle.oursLost} and {battle.theirsLost}, and says which reading is true. Every reader before us chose the other."
+    }
+  }
+}

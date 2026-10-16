@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Backdrop harness</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #111; font: 13px/1.3 system-ui, sans-serif; color: #eee; }
+    #stage { position: fixed; inset: 0; }
+    #bar { position: fixed; left: 8px; right: 8px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; z-index: 2; }
+    #bar button, #bar select { font: inherit; background: rgb(0 0 0 / 0.55); color: #eee; border: 1px solid rgb(255 255 255 / 0.25); border-radius: 6px; padding: 4px 8px; }
+    #bar .lab { background: rgb(0 0 0 / 0.55); padding: 4px 8px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <!-- Dev only (not built): the Tablet House backdrop for every beat. See atlas/scripts/shoot-backdrop.ts. -->
+  <div id="stage"></div>
+  <div id="bar"></div>
+  <script type="module" src="/src/game/tablet/backdrop/harness.ts"></script>
+</body>
+</html>

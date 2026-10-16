@@ -1,0 +1,194 @@
+{
+  "scenario": "sc-15812",
+  "title": "Smooth It by Morning",
+  "scribe": { "name": "{names.m.5}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "Iron has come to {city.name}. You hear it under the window, where the spearmen's caps ring together as the companies form, and in the smiths' street, which no longer sleeps. You are {scribe.name}, and the roll of the levy is yours to keep. Below you the host of {state.name} lines up by companies: the city's spearmen, bowmen from the villages of {city.region} with field mud dried on their shins, the chariots of the old families, wheels new-bound in iron. By noon they will be on the road to {battle.place}.",
+        "The {war.name} has dragged on since AY {war.start}, a war over the roads of {city.region} and the tolls taken on them, and the last king fell beneath these walls in its early years. {state.ruler.name}, the {state.ruler.title}, has reigned since AY {state.ruler.since}. He is {state.ruler.age}, lately widowed, with a small son in the women's rooms, and last year he beat the host of {enemy.name} himself. Today he stands in the lead chariot. Somewhere among the village bowmen is {names.m.3}, your wife's brother, who left his barley to march and did not look back at the gate."
+      ],
+      "king": [
+        "Foreign kings used to send gifts when they heard our musters read. I want gifts. Let {enemy.ruler.name} have it read out in her camp, and think about the road home.",
+        "She is a young woman with a small host and a long road home. Let the clay show her what is coming."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "Company by company, the captains' roll is added. You trim the stylus and set the first {script} letter. What figure follows it?",
+          "options": [
+            { "pick": "true", "label": "The captains' roll, company by company", "line": "{value} men of {state.name} went out to {battle.place} behind the chariot of {battle.commander.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Fill every company to its proper strength", "line": "{value} men of {state.name}, every company full, went out to {battle.place} behind {battle.commander.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Count the drivers, the cooks and the oxen too", "line": "{value} men went out behind the {state.ruler.title}, and {state.gods.0.name} of the sky looked down on a field of spears.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "A runner from {battle.place} reaches the gate at noon and cannot speak until the women at the well give him water. It was {battle.date}. {enemy.ruler.name}, the {enemy.ruler.title}, led her host in her own chariot, and hers was the smaller host. By evening the carts are on the {city.region} road with the wounded packed in them like sacks of barley, and among them comes the chariot of the {state.ruler.title}, a horse lame in the traces, the driver gone.",
+        "{names.m.3} walks in at dark with mud to his knees and his bow gone. He eats standing up. 'We were so many we could not see the front,' he says. 'Then her chariots came round the hill, and the front came back through us.' His sister, your wife {names.f.7}, keeps hold of his sleeve all through the meal. In the market they are already saying that {state.gods.5.name} of war has gone over to a woman.",
+        "In the tablet house the tally-men push their pebbles about the counting board and argue in low voices, but the count is plain. {names.m.6}, the steward, stands at the end of the bench with his hands in his sleeves. Beside you {names.m.2} has already smoothed a fresh tablet and sits with his stylus raised, waiting to see which way you lean, so that he can lean further."
+      ],
+      "king": [
+        "I did not lose the field. I gave it to her, to keep the host whole for the walls. Write it so.",
+        "She had a few chariots and a lucky hill. Count her dead as {state.gods.5.name} would count them.",
+        "Our own dead are with {state.gods.2.name} now. The earth does not need their number, and neither does {enemy.ruler.name}."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The pebbles lie in rows on the board: the dead of {state.name} at {battle.place}. What number reaches the clay?",
+          "options": [
+            { "pick": "true", "label": "Every pebble on the board", "line": "Of the men of {state.name}, {value} fell at {battle.place} and were left where they lay.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Not the missing; the hill may give some back", "line": "Of the men of {state.name}, {value} fell at {battle.place}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Few enough to read aloud at the gate", "line": "Of the men of {state.name}, no more than {value} went down to {state.gods.2.name} at {battle.place}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "Her dead were left lying on her side of the field. What do you give them?",
+          "options": [
+            { "pick": "true", "label": "What the runner says he saw", "line": "Of the host of {enemy.ruler.name}, {value} lay dead at {battle.place}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Count the wounded they carried away", "line": "Of the host of {enemy.ruler.name}, {value} lay dead or dying at {battle.place}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Enough to fill her camp with mourning", "line": "Of the host of {enemy.ruler.name}, {value} were cut down, and her camp keened for them all night.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "And {battle.place}: whose was it at the end?",
+          "options": [
+            { "pick": "true", "label": "Her host held it, and ours ran", "line": "The field at {battle.place} was the {enemy.ruler.title}'s, and the host of {state.name} ran from it.", "effects": { "conscience": 3, "favour": -2 } },
+            { "pick": "rounded", "label": "The great king kept his host for the walls", "line": "At {battle.place} the {state.ruler.title} drew back his host whole, to guard the walls of {city.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The great king broke her", "line": "At {battle.place} the {state.ruler.title} routed {enemy.name}, and {enemy.ruler.name} turned her chariot for home.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "Behind the carts comes her host, to sit down in the fields of {city.region}, near enough that you smell their cookfires from the roof. The gates are shut {date}. The villages have come inside: oxen tethered in the temple courts, seed grain in doorways, children asleep under carts. {names.m.3} has brought his wife, his children and his ox into your courtyard, and the ox is eating the thatch. Grain, at least, is not short. On the temple scales a measure of barley weighs against {state.grain} weights of silver, where in the last years of the great king's father it took {hardship.grainBefore}.",
+        "Her host has sat in these fields before, in the bad year when the last king fell at the gate, and the city did not fall. The priests of {state.faith} say it is the old pattern coming round. At night the face of {state.gods.4.name} hangs over her camp. In the tablet house lies the one thing that can be counted against any figure the palace chooses: the captains' roll of the dead, name by name, company by company. The steward wants it smoothed blank by morning. And each evening {names.f.1}, who weaves at the next door, waits at your gate to ask whether her son {names.m.1} is on it."
+      ],
+      "king": [
+        "Send the priests round the walls again with {state.gods.3.name}. The river has drowned greater hosts than hers.",
+        "Every name on that roll is a mother at my gate. Smooth it, and let them mourn quietly, at home.",
+        "My father held this city through a lifetime of wars. Nobody will say I lost it to a girl."
+      ],
+      "choice": {
+        "prompt": "The roll of the dead is under your hand, the steward's order is in your ear, and {names.f.1} is at your gate. Where is the roll at sunrise?",
+        "options": [
+          { "label": "Give it to {names.m.3} to bury under his seed grain", "effects": { "conscience": 3, "favour": -1, "household": -1 }, "flag": "seedpit", "consequence": "You wrap the roll in a fleece, and {names.m.3} digs it into the seed pit he has made in your courtyard, under the jars of next year's barley. 'Seed keeps,' he says, and stamps the earth flat. On your way to bed you stop at {names.f.1}'s gate. Her son's name was in the potters' company. You tell her." },
+          { "label": "Read {names.f.1} her son's line, then smooth it", "effects": { "conscience": 1, "favour": 1 }, "consequence": "You find {names.m.1} in the potters' company, near the bottom, and read his line to her at the gate, holding the lamp low. She thanks you as if you had given her something. Then you go back to the tablet house and draw the paddle down the roll, and the names go under it a company at a time." },
+          { "label": "Smooth it unread, as the steward orders", "effects": { "favour": 2, "household": 1, "conscience": -2 }, "consequence": "You draw the paddle down the roll until the clay is blank and shining, and {names.m.6} nods from the end of the bench as if you had passed a test. {names.f.1} waits at your gate for several evenings. Then she stops waiting, and her shutters stay closed." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "There is no assault. The great king sends silver out to her camp under a green bough, and the next morning her heralds stand at the gate. The tablet of peace has been written by her own scribe, in her own tongue, and dated by the years of her reign, not his. It is read aloud under the gate lintel: the land of {city.region}, its fields and its people, to {enemy.name}; {treaty.tribute}; her merchants to pass the roads without toll; and no war between the lands for {treaty.truce} years.",
+        "The gods of the oath are named, and among them our own {state.gods.2.name} of the earth, her name bent in a foreign mouth. The last lines call ruin on any hand that changes the words. The great king swears; the heralds swear in the name of {enemy.ruler.name}; and the {treaty.name} is made. That afternoon her men drag boundary stones out into the barley on sledges. {names.m.3} stands on the wall and watches them set one in the field his grandfather cleared. By the treaty, he and his children go with that field."
+      ],
+      "king": [
+        "Do not look at me so. A king who pays silver keeps his city. A king who keeps his pride keeps a heap of rubble.",
+        "{city.name} has been sacked {city.sacked} times, scribe. It will not be sacked in my reign. Write that I chose this.",
+        "Her land, she calls it. The fields of {city.region} were ploughed for my father before she was born."
+      ],
+      "choice": {
+        "prompt": "By the treaty the people of {city.region} go with their fields. {names.m.3}'s name stands on no roll of the city, and you keep the rolls. What do the rolls say about him?",
+        "options": [
+          { "label": "Write him onto the palace roll as a kiln-hand", "effects": { "household": 3, "conscience": -1, "favour": -1 }, "consequence": "You press his name into the roll of palace servants, between a water-carrier and a groom, and make it look a season old. It is a small lie in a dry corner of the archive. {names.f.7} takes your face in both hands when you tell her. The ox is sold to the temple for less than it is worth." },
+          { "label": "Let him go back to his field, under her stones", "effects": { "conscience": 2, "household": -2 }, "consequence": "{names.m.3} yokes the ox at first grey and drives it out through the gate, toward the field with the new stone in it. He will plough for {enemy.name} now. {names.f.7} does not speak to you for days, and when she does, it is to ask whether a scribe's honesty has ever fed anyone." },
+          { "label": "Kneel to the great king and ask for him", "effects": { "favour": -2, "household": 2, "conscience": 1 }, "consequence": "You kneel in the audience hall and ask for a farmer's name. The great king grants it with a wave of the hand, the way he grants things that cost him nothing, and the steward writes it down himself. You will be reminded of this kindness, you think, for as long as you sit in the palace." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "Now the palace tablet must say how the war ended. Which peace was sworn at the gate?",
+          "options": [
+            { "pick": "true", "label": "The terms as they were read under the lintel", "line": "At the gate of {city.name} the {treaty.name} was sworn: the land of {city.region} to {enemy.name}, {treaty.tribute}, the {enemy.ruler.title}'s merchants free of toll, and peace for {treaty.truce} years.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Some fields given, silver promised, peace made", "line": "At the gate of {city.name} the {treaty.name} was sworn; certain fields beyond the stones were given up, and silver was promised.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The great king, in his mercy, granted peace", "line": "Out of pity for the common folk the {state.ruler.title} granted peace to {enemy.name} at the gate of {city.name}, and the border was settled by his word.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "The tablet is read to the great king in the small audience hall, with the shutters closed against the dust and the noise of the gate. Out on the {city.region} road the merchants of {enemy.name} are already passing the toll-house, and the toll-keeper sits on his bench with nothing to weigh. The stones stand in the barley. By the brazier the great king's boy runs a wooden chariot along the floor, and nobody sends him out.",
+        "The steward reads your tablet through: the levy, the field, the dead of both sides, the peace. The great king listens, rubbing his thumb along his jaw. Behind you {names.m.2} shifts his weight, the way a man does who has a better tablet ready in his sleeve. The archive has not burned; nothing in it is fired but what the palace chooses to fire. What goes to the kiln tonight will outlast the king, his boy, the silver and the stones. What is left on the shelf unfired, the damp will have back."
+      ],
+      "king": [
+        "My son will still be weighing out this silver when there is grey in his beard. Let him at least read that his father did not lose.",
+        "The dead, once more, and do not hurry them. Is that what a great king's scribe leaves for a great king's son?",
+        "A tablet is written for the gods and for grandsons, scribe. Neither of them was at {battle.place}."
+      ],
+      "choice": {
+        "prompt": "The steward lays a smoothing paddle beside the tablet. The great king waits, and the boy has stopped his chariot to watch you.",
+        "options": [
+          { "label": "Send it to the kiln as it stands", "effects": { "conscience": 2, "favour": -2, "household": -1 }, "consequence": "You say the kiln is hot and the tablet is ready for it. The great king studies you until the boy's chariot starts rolling again. Then he tells the steward to take it away, and turns back to his son. Nobody tells you whether it went to the kiln, and you are not called to the audience hall again that season." },
+          { "label": "Paddle it smooth and press his peace", "effects": { "favour": 3, "household": 1, "conscience": -2 }, "consequence": "Paddle in hand, you take the face back to bare clay and press his words, slowly, the way he must have heard his father's scribes do it: fewer of ours, more of hers, a peace given out of kindness. When you finish, the great king lifts the boy onto his knee and has the steward read it to him." },
+          { "label": "Press his words in a pupil's clumsy hand", "effects": { "favour": 1, "conscience": 1 }, "flag": "amend", "consequence": "You paddle the face clean and press what he dictates, but slowly, in the big uneven signs of a boy in his first year; every scribe in the palace knows that such a hand is never trusted on a royal tablet. The great king hears it read back and is pleased. He has never looked at a hand in his life. The steward looks at it, and then at you." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "seedpit",
+      "title": "Under next year's seed",
+      "when": { "flag": "seedpit", "conscience": [4, 20] },
+      "text": "The roll stays under the seed jars in your courtyard, and each spring {names.m.3} lifts out the barley for sowing and leaves the fleece where it lies. The palace never learns where the clay went. {names.f.1} brings you bread at every new moon, and she is the only one you ever tell what lies under the seed. The palace tablet has its number. Your courtyard has their names."
+    },
+    {
+      "id": "pupil",
+      "title": "A boy's hand on a king's tablet",
+      "when": { "flag": "amend" },
+      "text": "Only scribes read hands, and the scribes say nothing. The palace shelves your tablet with the great king's words on its face, pressed in signs a first-year boy might make, and your bench and your house stay yours. The great king dies in AY {state.ruler.died}, and his boy does not reign long after him. When {chronicle.author} sets down the palace account of the war in AY {chronicle.year}, he copies the words and never stops to wonder at the hand."
+    },
+    {
+      "id": "silver-keeper",
+      "title": "Overseer of the yearly silver",
+      "when": { "favour": [8, 20] },
+      "text": "The great king rewards a hand that can make a peace sound like a gift. You are given the tablets of the tribute to keep, and a house to keep them in by the treasury. The treaty asks {treaty.tribute}. Each year you weigh it out on the palace scales, watch it go down the road to {enemy.name}, and press into the clay that the great king has sent his gifts of friendship. You do not live to weigh the last of it."
+    },
+    {
+      "id": "toll-house",
+      "title": "A toll-house with nothing to take",
+      "when": { "conscience": [6, 20], "favour": [-20, -2] },
+      "text": "Your seal is gone by evening, and the steward's only explanation is a place: the toll-house by the new boundary stones, where by the treaty nothing may be taken from the merchants of {enemy.name}. Every day you press their names and their loads into the clay and take nothing. It is the most exact ledger in all {state.name}, and nobody ever asks to read it."
+    },
+    {
+      "id": "full-table",
+      "title": "A full table in a shut city",
+      "when": { "household": [4, 20] },
+      "text": "Your house comes through the war whole. {names.m.3} stays in the city and finds work at the palace kilns, and by the next harvest his children have stopped asking about the field with the stone in it. Your son {names.m.8} is too young to remember the war, and you mean to keep it so; at night you teach him the {script} letters by the light of the hearth. Whatever your tablet says, your table is full."
+    },
+    {
+      "id": "long-bench",
+      "title": "Oxen turned short at the stones",
+      "when": {},
+      "text": "Your seat in the tablet house stays the same seat. Each year the silver goes down the road, and the ploughmen on this side of the stones learn to turn their oxen short. Your tablet goes into the archive with the others. In AY {chronicle.year}, after the great king's death, {chronicle.author} writes the palace account of the war from tablets like yours and from what the palace wanted remembered, and you are too old by then to say which was which."
+    }
+  ],
+  "archaeologist": {
+    "true": "Dig report, {find.year}, the palace store at {city.name}. This archive never burned, so nothing in it was baked by accident; the palace fired what pleased it. This tablet comes up {find.condition}. It is a plain witness all the same: {tablet.ours} dead of {state.name} at {battle.place} and {tablet.theirs} of {enemy.name}, exactly as the record counts them, and, where the clay still holds, a peace that agrees clause for clause with the treaty tablet {treaty.catalog}. Beside it, the palace chronicle that {chronicle.author} compiled in AY {chronicle.year}: \"{chronicle.quote}\" If the chronicler was misinformed, it was not for want of clay. The true count sat on this shelf the whole time.",
+    "rounded": "Field catalogue, {find.year}. A palace tablet of {city.name}, {find.condition}, of the kind epigraphers call courteous: its figures lean, a little, and always toward the throne. It gives {tablet.ours} dead of the city against the record's {battle.oursLost}, and {tablet.theirs} of the enemy against {battle.theirsLost}. In AY {chronicle.year} the palace chronicle went much farther: \"{chronicle.quote}\" The road to that sentence begins here, in the week of the battle, with someone who had the true count in front of them.",
+    "boasted": "Inventory note, {find.year}. This palace tablet of {city.name} is a victory hymn pressed in clay. It claims {tablet.theirs} enemy dead at {battle.place}, though {battle.theirsLost} died, and admits {tablet.ours} of its own for {battle.oursLost}. The steles of {enemy.ruler.name} swell the city's dead as freely as palace tablets like this one shrink them; the record lies between the boasts. Neither explains the treaty, by which {state.name} gave up {treaty.ceded} districts within the year and bound itself to silver for {treaty.tributeYears} years. The palace chronicle ends as this scribe would have wished: \"{chronicle.outcomeWords}\"",
+    "flags": {
+      "seedpit": "House survey, {find.year}. Under the courtyard of a house in the potters' street of {city.name}, a clay-lined seed pit held barley long gone to dust and, beneath it, a run of unbaked tablets, the print of a fleece still on the outermost: the captains' roll of the dead of {battle.place}, name by name, company by company, with no total anywhere. We counted the names. There are {battle.oursLost}, the record's figure. The palace's own tablet says {tablet.ours}; the palace chronicle says \"{chronicle.quote}\" A figure can be bent with a thumb. Names have to be erased one at a time, and nobody erased these.",
+      "amend": "Epigraphic note, {find.year}. This palace tablet of {city.name}, {find.condition}, carries the great king's war: {tablet.ours} dead of {state.name} at {battle.place} and {tablet.theirs} of {enemy.name}, where in fact {battle.oursLost} and {battle.theirsLost} fell. It is pressed in a hand like a child's, big and uneven. Yet its colophon names {scribe.name}, a senior scribe whose other tablets are among the finest in the archive. Palace hands did not slip on a royal tablet. This one slipped on purpose, and every scribe who read it would have known why."
+    }
+  }
+}

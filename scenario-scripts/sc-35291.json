@@ -1,0 +1,202 @@
+{
+  "scenario": "sc-35291",
+  "title": "The Queen's Chair on the Gate Tower",
+  "scribe": { "name": "{names.f.2}", "sex": "f" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "The oak-gall ink has thickened in its well overnight, and you thin it with a drop of vinegar before anyone has lit the corridor candles. You are {scribe.name}, scribe to the queen of {state.name}, and your husband {names.m.6}'s dye vats on the stream below the walls have stood cold since the enemy's outriders came. In the square below, the levy is forming: crossbowmen spanning their bows, pikemen in quilted coats, the lords' riders in their colours. Your son {names.m.1} is among the crossbowmen. You do not go to the window. You cut a fresh quill.",
+        "{enemy.name} has come to the gate as it came in the year the queen was born, and the scouts put its host at {battle.theirs}, spread across the fallow fields beyond the stream. {state.ruler.name}, {state.ruler.title} of {state.name}, is {state.ruler.age}, and has reigned longer than most of the city's {city.pop} souls have been alive. She has had herself carried up to the gate tower in a chair. Each lord has brought the men his land owes her, and {battle.commander.name}, who is {battle.commander.age} and has led her hosts since the war began, will take them out to fight below the walls."
+      ],
+      "king": [
+        "Let {enemy.ruler.name} hear this number read aloud in her hall. She is {enemy.ruler.age}. I was old before she was born, and I am not dead yet.",
+        "I was born in the year their drums last beat at this gate. Write the levy loud enough to drown them.",
+        "Every lord in that square will hear what his men came to. Let none of them ride home ashamed."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains have brought their rolls, and you have added them on a wax board. What goes onto the sheet, in {script} letters?",
+          "options": [
+            { "pick": "true", "label": "The sum of the captains' rolls", "line": "{value} men went out of the gate of {city.name} under {battle.commander.name}, to meet {enemy.name} below the walls.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Some few more, as the chancery likes", "line": "Some {value} men of {state.name} went out under {battle.commander.name} to meet {enemy.name} below the walls.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The sum as the queen will want it read", "line": "{value} men, the whole strength of {state.name}, went out under {battle.commander.name}, and the gate could hardly let them through.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "In the new furrows below the walls, {battle.date}, the queen's host stands to meet them, and every battlement and roof in {city.name} is crowded. From the palace roof you see the queen's crossbowmen loose, and loose again, and the first ranks of {enemy.name} go down. Then the horsemen of {battle.enemyCommander.name}, the empress's general, come round the end of the line, and the line bends, and breaks. By dusk the gate is choked with men trying to get in, and the captains on the tower are shouting for it to be shut.",
+        "{names.m.1} comes home after dark, held up by a stranger, with the shaft of a quarrel snapped off in his shoulder. {names.m.6} holds the lamp while you cut away the shirt. The barber-surgeon from the corner looks at the wound and says he will draw the iron when he sees silver, and not before. The palace has not paid its scribes since the winter.",
+        "In the morning the captains' clerks climb to the writing room with their companies, and the heralds who went out under a flag of truce at first light bring their count of the enemy's dead. The steward {names.m.0} stands at your elbow while you add. Everyone in {city.name} saw the field. The queen wants the sheet by noon."
+      ],
+      "king": [
+        "The city saw a battle from its walls. The city will be dust before this paper is. Write for whoever reads it after the dust.",
+        "I ordered the host back within the walls. A general who obeys me has not lost.",
+        "Be sparing with our dead and generous with theirs, scribe. The priests cannot object to both."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The companies are added. How many of the queen's men fell in the fields below the walls?",
+          "options": [
+            { "pick": "true", "label": "Every man the captains could not find", "line": "Of the men of {state.name}, {value} fell in the fields below the walls of {city.name}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Only those known to be dead", "line": "Of the men of {state.name}, {value} are known to have fallen below the walls of {city.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As few as the queen's ears will take", "line": "Of the men of {state.name}, scarcely {value} fell below the walls, and not one of them from behind.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "The heralds walked the furrows at first light and came back with a count of the enemy's dead. Do you take it?",
+          "options": [
+            { "pick": "true", "label": "The heralds' count", "line": "Of the host of {enemy.name}, {value} lay dead in the fallow fields.", "effects": { "conscience": 1, "favour": -1 } },
+            { "pick": "rounded", "label": "More; the dark hid many", "line": "Of the host of {enemy.name}, {value} lay dead in the fallow fields, and more were carried off in the dark.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Enough to frighten an empress", "line": "Of the host of {enemy.name}, {value} lay dead, and the ploughs of {state.name} will turn up their bones for a generation.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "When the gate was shut, whose were the furrows?",
+          "options": [
+            { "pick": "true", "label": "{enemy.name}'s, as the battlements saw", "line": "The field below the walls was left to {enemy.name}, and the host of the queen was driven back through the gate.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "No one; night took it", "line": "Night came down on the field below the walls, and the two hosts drew apart.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The queen's host", "line": "Below the walls {battle.commander.name} broke {battle.enemyCommander.name}, and the host of {enemy.name} fled before the banners of the queen.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "Within the week {enemy.name} has ringed the city. Its sappers have broken the arches of the aqueduct on the north road, the fountains in the squares run dry, and women wait at the old wells with buckets until after dark. There is grain in the queen's stores, the steward says, and no one need go hungry. But in the grain market a measure that cost {state.grainCoin} {state.coin} before the battle is no longer sold for coin at all. The dealers want silver by weight now: {hardship.grainAfter} for the measure, where last week it was {state.grain}.",
+        "At home {names.m.1} lies on the bench with the iron still in him, and the fever has begun. {names.m.6} has no dye-work; the vats on the stream are in the enemy's hands. Through the wall you hear {names.f.6}, whose husband went out with the pikemen and is missing, telling her children he is with the wounded. As a palace scribe you draw grain from the queen's granary at the old price. This week's sack stands by your door.",
+        "In the writing room {names.m.4}, who has copied the queen's letters for longer than you, is telling the governors of the provinces that the field was won. Behind the map-chest the plasterers have patched the wall where a stone shot came through, and gone to their dinner; the new lime is still soft enough to take a mark."
+      ],
+      "king": [
+        "Tell the grain dealers that the Wheel asks justice in dealings, and that my steward can count.",
+        "Let them break the aqueduct. The city has its wells, and walls do not grow old the way queens do."
+      ],
+      "choice": {
+        "prompt": "Your son needs the barber, the widow through the wall needs bread, and the plaster behind the map-chest is still soft. Tonight you can see to one of them.",
+        "options": [
+          { "label": "Cut the true count into the wet plaster", "effects": { "conscience": 3, "household": -1 }, "flag": "plaster", "consequence": "By the last of the lamp you take the point of your penknife to the wet lime behind the map-chest and cut the companies and their dead into it, with the sum at the foot: {battle.oursLost} of ours, {battle.theirsLost} of theirs. By morning the plaster has set, and the map-chest is pushed back against it. You will have to walk past it every day." },
+          { "label": "Leave your palace grain at {names.f.6}'s door", "effects": { "conscience": 2, "household": -2 }, "consequence": "You set the sack against her door and do not knock. In the morning she is at the well before anyone and will not meet your eye, and her children have stopped crying in the night. {names.m.6} boils the last of your own meal thin for {names.m.1} and does not mention the barber." },
+          { "label": "Sell your palace grain at the siege price", "effects": { "household": 3, "conscience": -2 }, "consequence": "A dealer in the lower market weighs out silver and asks nothing; he knows where palace grain comes from. The barber cuts that night. {names.m.1} cries out once and then sleeps. Through the wall, {names.f.6} sets a lamp in her window for the husband who is with the wounded, and leaves it burning." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "The great assault comes {date}. At the change of the watch the drums begin under the north wall, then the ladders, then a ram under a roof of wet hides against the gate. Every pair of hands in the palace is sent to the walls, and you carry quarrels up the tower stair to the crossbowmen until your arms shake. The stones of {city.name} are older than the {state.faith} faith, and the arches over the gate do not move. By noon the ladders are burning in the ditch.",
+        "A few nights later the watch on the north tower sees fires in the enemy's camp, and at dawn the camp is smoke and the host of {enemy.name} is on the south road. No herald comes, and no terms. The bells of the House of the Wheel ring all day. In the market they call it a victory; the old crossbowmen say the empress will be back once her barns are full. The palace orders a thanksgiving, and the keeper of the House, {names.f.9}, comes up to the writing room for the roll of the fallen."
+      ],
+      "king": [
+        "You see, scribe? Everything turns, as the teachers say. They came; now they have gone.",
+        "A thanksgiving is for the living. Give the keeper my victories, not my dead.",
+        "I have outlived my husband and my daughters. I can outlive one bad afternoon below the walls."
+      ],
+      "choice": {
+        "prompt": "{names.f.9} waits at your table for the names of the fallen, as the custom of the House requires. The steward's order to keep them in the palace lies on top of the roll.",
+        "options": [
+          { "label": "Give the keeper the whole roll", "effects": { "conscience": 2, "favour": -2, "household": -1 }, "flag": "names", "consequence": "{names.f.9} reads the names at the thanksgiving by candle, every one of them, and it takes until the bells ring for morning. The steward stands at the back of the House the whole night through. The queen asks you nothing about it afterwards, and you would rather she had." },
+          { "label": "Give her the lords' sons only", "effects": { "favour": 1, "conscience": -1, "household": 1 }, "consequence": "You copy out the sons of the great houses with their fathers' titles, and leave the crossbowmen and pikemen of the lower town where they lie. The thanksgiving is short and the court approves. The husband of {names.f.6} is not named, though she stands at the front all evening, listening for him." },
+          { "label": "Burn the roll in the palace bakehouse", "effects": { "favour": 2, "conscience": -3, "household": 1 }, "consequence": "The baker watches you feed the sheets into the oven one at a time. Paper burns quickly. At the thanksgiving {names.f.9} gives thanks for a victory and reads no names, {names.m.4} reads out the queen's letter to the governors, and afterwards the steward finds you to say that the queen was pleased." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "And the siege itself, for the last lines of the sheet. What became of {city.name}?",
+          "options": [
+            { "pick": "true", "label": "The walls held, and the war goes on", "line": "The walls of {city.name} held against the assault of {enemy.name} {date}; the enemy drew off, and the war went on.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "They broke on the walls and fled", "line": "The host of {enemy.name} broke itself on the walls of {city.name} {date}, and fled the land of the queen.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A great victory; the war is won", "line": "The queen's host drove {enemy.name} from the walls of {city.name} {date}, and the war was ended for ever.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "The queen receives you in the cold room above the gate, wrapped in furs though the day is warm. Her son, the heir, stands behind her chair; he is an old man himself, and has waited all his life. {names.m.4} has offered to read your sheet aloud. The steward says that you will. She holds the paper close to her face, then lets it fall to her lap.",
+        "The steward has a pen-knife and a fresh pot of ink at hand: a line can be scraped, or the whole sheet copied fair. Outside, boys are playing at victory among the burnt ladders in the ditch, and in the street below a woman is calling one name, over and over. Whatever is sewn into the record today will be the only part of this afternoon anyone remembers."
+      ],
+      "king": [
+        "Read it to me. My eyes have done enough reading for one reign.",
+        "I came to the faith of the Wheel as a grown woman, scribe. I know what it says about lies. I also know who keeps the House in candles.",
+        "When I am dead, this is what they will have of me. Go back to the beginning."
+      ],
+      "choice": {
+        "prompt": "The queen waits with her eyes closed. A clean sheet and the pen are laid before you.",
+        "options": [
+          { "label": "Read it to her straight, to the end", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You read it to the end in a steady voice and stop. She is quiet for so long that the heir clears his throat. Then she says, \"Take it away,\" and turns her face to the window, and the steward does not walk you to the door." },
+          { "label": "Copy it fair again at her dictation", "effects": { "favour": 3, "conscience": -2 }, "consequence": "She dictates and you write: the companies swelled, the dead thinned, the field below the walls handed back to her banners. Her voice is stronger than it has been all week. When you have sanded the new sheet, the steward takes the old one from your hand and lays it on the brazier." },
+          { "label": "Read it kinder than the ink; change nothing", "effects": { "favour": 1, "conscience": 1, "household": -1 }, "flag": "aloud", "consequence": "You read slowly, and wherever the ink is hard you make your voice kinder than the ink. She nods at every line. The steward, reading over your shoulder, holds his peace, and writes in the margin that the sheet was read before the queen and approved. He will remember this." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "dismissed",
+      "title": "A board in the grain market",
+      "when": { "conscience": [6, 20], "favour": [-20, -7] },
+      "text": "Your seal goes back to the steward at the palace door; the queen does not keep a fair hand that writes her defeats. You set up a board in the grain market and write deeds of sale and grain contracts for anyone who can pay, while grain stays dear and the war goes on. Your sheet of the battle is never sewn in with the royal records. A clerk tells you it went to stop a crack in the chancery wall, and you find you do not mind."
+    },
+    {
+      "id": "plaster",
+      "title": "Behind the map-chest",
+      "when": { "flag": "plaster" },
+      "text": "The plaster sets as hard as the wall around it, and the map-chest stands in front of it for the rest of the reign. The palace keeps its own version of the battle below the walls; the true count is cut into the writing room itself, and you walk past it every morning. You see the old queen buried in the year the peace is sworn, and her son the year after. Nobody moves the chest. Nobody has a reason to."
+    },
+    {
+      "id": "the-roll",
+      "title": "At the turning of the year",
+      "when": { "flag": "names" },
+      "text": "Every year, on the day of the battle, {names.f.9} reads the roll aloud in the House of the Wheel, and every year the steward sends a man to stand at the back and listen. The war goes on. {enemy.name} returns to {city.name}, is beaten off, and returns. When at last the priests go up to the palace to urge a peace, you wonder whether it was the names that wore them down, the way feet wear a stair. No one ever thanks you, and no one ever asks."
+    },
+    {
+      "id": "voice",
+      "title": "What the queen heard",
+      "when": { "flag": "aloud", "conscience": [0, 20] },
+      "text": "For the rest of her life the queen speaks of the battle below the walls as she heard it from you, and the court learns to speak of it the same way. The sheet, in letters too small for her eyes, says what you wrote, with the steward's note in the margin, and no one reads it again while she lives. She never sends for your voice after that. You wonder, sometimes, whether she knew."
+    },
+    {
+      "id": "annalist",
+      "title": "A gown in her colours",
+      "when": { "favour": [8, 20] },
+      "text": "The queen gives you a room inside the palace wall, a gown in her colours, and the annals of the reign to keep. Your sheets are sewn into the cedar chests of the record room, and {names.m.4} has to ask you for the key. Years later, when {chronicle.author} sits down to write the history of the war, your sheets are the first opened. The history leaves the battle below the walls out altogether. You tell yourself that was not your doing."
+    },
+    {
+      "id": "barber",
+      "title": "The quarrel-head in the dish",
+      "when": { "household": [3, 20] },
+      "text": "The dealer's silver buys the barber, and the barber draws the iron from {names.m.1}'s shoulder and drops it in a dish by the bed, where your son keeps it for the rest of his life. He goes back to the wall when the enemy returns, and comes home again. {names.f.6} moves to her sister's in the lower town before winter. You do not go to the House of the Wheel for a long while, and when you do, you stand at the back."
+    },
+    {
+      "id": "kept",
+      "title": "A basket of that year's papers",
+      "when": {},
+      "text": "Your place and your seal stay as they were. Your sheet goes into a basket with the other papers of that year, between a grain account and a letter about horses, and you never learn where the basket goes. The enemy returns, and goes, and returns. The queen lives longer than anyone thought she could, and dies in the year of the peace. When the chronicle of her war is written, it leaves out the battle you watched from the roof. Whatever you wrote, someone else chose what to keep."
+    }
+  ],
+  "archaeologist": {
+    "true": "Archive survey, {find.year}. A sheet of rag paper in {script} letters, {find.condition}, written in the week of what the catalogues now call the {title}. It gives {tablet.ours} dead of {state.name} in the fields below {city.name} and {tablet.theirs} of {enemy.name}, and so does the record: {battle.oursLost} and {battle.theirsLost}. Every other witness bends. The stele of {enemy.ruler.name} makes the dead of {state.name} far greater, and the court chronicle of {chronicle.author}, finished in AY {chronicle.year}, skips the battle and closes its account of the war with \"{chronicle.quote}\" Only this sheet says what the city saw from its walls.",
+    "rounded": "Archive survey, {find.year}. A palace sheet in {script} letters, {find.condition}. Its lines lean, never far and always the queen's way: {tablet.ours} dead of {state.name} for {battle.oursLost}, {tablet.theirs} of {enemy.name} for {battle.theirsLost}. Errors of this size are the ones historians go on repeating, because nothing about them looks like a lie. The court's own chronicle, by {chronicle.author}, worked on a grander scale. For the whole war it admits {chronicle.warOursLost} dead of {state.name} against {war.oursLost}, and of this battle it says not a word. Beside that book, the sheet is almost honest.",
+    "boasted": "Archive survey, {find.year}. This sheet, {find.condition}, is a court poem with numbers in it. For the battle below the walls of {city.name} it gives {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name}; the true toll was {battle.oursLost} and {battle.theirsLost}, and the field went to {enemy.name}. The war was lost all the same, and in AY {war.end} the peace handed land and an indemnity to {enemy.name}. Boasts like this are easy to catch. The court chronicle of {chronicle.author} was subtler: it does not inflate the battle. It leaves it out.",
+    "flags": {
+      "plaster": "Archive survey, {find.year}. Behind a map-chest in the old writing room of the palace of {city.name}, restorers stripping the walls found a patch of lime plaster cut with a knife-point while it was wet: the companies of the queen's levy and their dead in a quick palace hand, summed at the foot, {battle.oursLost} of {state.name} and {battle.theirsLost} of {enemy.name}. The record would sign its name to them. The palace's own sheet of that week, {find.condition}, gives {tablet.ours} and {tablet.theirs}. Its writer wanted a copy where no steward would look, and found the one place a steward never does: the wall behind his own furniture.",
+      "names": "Archive survey, {find.year}. The book-room of the House of the Wheel in {city.name} yielded a roll of the dead of the battle below the walls, recopied whenever the old one wore out, its margins dark with the thumbs of generations of readers. Its total is {battle.oursLost}: the record's figure, not a name short. The queen's sheet, {find.condition}, gives the dead as {tablet.ours}. The court chronicle of {chronicle.author} closes by telling us that {chronicle.outcomeWords} It is hard not to wonder what the priests had been listening to, every year, before they urged it.",
+      "aloud": "Archive survey, {find.year}. This sheet, {find.condition}, carries a note in its margin in a second, heavier hand: read before the queen, and approved. What she approved, if she heard it as written, was {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name} below the walls of {city.name}, against the record's {battle.oursLost} and {battle.theirsLost}. She was {state.ruler.age}, and the chronicle of her war was written only after her death. Whatever was read to her that day, the ink was never corrected. A document and its reading can drift a long way apart; this one shows how far."
+    }
+  }
+}

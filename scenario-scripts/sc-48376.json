@@ -1,0 +1,192 @@
+{
+  "scenario": "sc-48376",
+  "title": "As Dictated",
+  "scribe": { "name": "{names.f.5}", "sex": "f" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "Smoke has crept back through the new paint of the register office in brown tide-lines. The rooms of the palace of {city.name} were plastered again after the sack of the year before last, when the army of {enemy.name} burned the old archive, and nothing the register held before the fire survives. You are {scribe.name}, typist of the palace register. Since the fire {state.ruler.name}, the {state.ruler.title}, has been dictating his reign to you again from memory, an afternoon at a time.",
+        "He is {state.ruler.age} years old. He took the crown in AY {state.ruler.since}, when no one else could hold it, and he has no son to leave it to. This morning the levy leaves for {battle.place} by rail, with a band in the station square and rain on the brass. Your husband {names.m.4} works the signals in the yards. He came home at dawn with the count of the troop trains chalked on his cuff, and your daughter {names.f.6} copied it onto her school slate before he could brush it off.",
+        "The newspapers of {enemy.name} say their president, {enemy.ruler.name}, a man of {enemy.ruler.age}, has put {battle.theirs} men under arms for this holy war, and that their general is {battle.enemyCommander.name}, who won its first battle. Against that, a city of {city.pop} souls by the last census sends what it has, under {battle.commander.name}, a general of {battle.commander.age}. The {state.ruler.title} wants the muster in the afternoon papers."
+      ],
+      "king": [
+        "Their president counts heads the way a grocer counts beans. Let him read our levy in his own papers over his breakfast.",
+        "Figures are the only soldiers that cost me nothing, child. Type the levy as I say it, and the presses will make it so."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The War Ministry's roll of the levy lies beside your machine, its {script} keys still cold, and a boy from the press waits in the corridor. What do you type?",
+          "options": [
+            { "pick": "true", "label": "The ministry's roll, to the last man", "line": "{value} men of {city.name} left by rail for {battle.place} under {battle.commander.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A round figure, the way bulletins print them", "line": "Some {value} men of {city.name} left by rail for {battle.place} under {battle.commander.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The figure the old king says aloud", "line": "{value} men, the whole manhood of {city.name}, marched to {battle.place} under {battle.commander.name}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "The battle is fought on {battle.date}, and the palace is the last to hear of it. The wire from {battle.place} goes dead before noon. The army of {enemy.name} talks to its columns by wireless, through the air; {state.name} still waits on a copper line, and the line has been cut. The news comes from the sky instead: enemy aeroplanes low over the boulevards, scattering leaflets that give our dead at a figure larger than any we have. At dusk the first hospital train comes into the yards, and {names.m.4} sets the signals for it.",
+        "The ministry's return arrives next morning in a sealed envelope. {battle.commander.name} is alive and falling back on the city. It is the strangest return you have ever typed: the field was lost, and yet the enemy left more dead on it than we did. {names.m.6}, at the next machine, says that is a victory if the figures are typed in the right order. Across the landing at home, {names.f.9}, who buried her husband after the last war, has not slept; her son {names.m.0} marched with the levy.",
+        "In the year of the sack the levy marched under another general, who was never seen again, and the wire the palace published gave our dead as fewer than the hospitals buried. The city found out from its cemeteries. Everyone in the register office remembers it, and nobody in the register office mentions it."
+      ],
+      "king": [
+        "A battle is not a field, child. It is an account: theirs in one column, ours in the other. Now add them up and tell me who won.",
+        "Put their dead first. Most readers stop at the first figure."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The ministry gives our dead at {battle.place}, name by name. What figure goes into the register?",
+          "options": [
+            { "pick": "true", "label": "Every name the ministry sent up", "line": "Of the levy of {city.name}, {value} fell at {battle.place}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Not the missing; the trains are still coming in", "line": "Of the levy of {city.name}, {value} fell at {battle.place}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As few as the old king will sign", "line": "Of the levy of {city.name}, a mere {value} fell at {battle.place}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "The ministry has an estimate of the enemy's dead. The {state.ruler.title} has another. What do you type?",
+          "options": [
+            { "pick": "true", "label": "The ministry's estimate, as it came", "line": "The army of {enemy.name} left {value} dead before our lines.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Rounded up, as estimates always are", "line": "The army of {enemy.name} left some {value} dead before our lines.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Enough to empty their president's villages", "line": "The army of {enemy.name} left {value} dead before our lines, and its own newspapers dare not print the figure.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "When the firing stopped, whose trenches were at {battle.place}?",
+          "options": [
+            { "pick": "true", "label": "The enemy held it, and we fell back", "line": "At {battle.place} the enemy held the field, and {battle.commander.name} fell back on {city.name}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "They lost more men; call it undecided", "line": "At {battle.place} both armies bled, the enemy the more, and the day ended undecided.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "We won: count the dead", "line": "At {battle.place} {battle.commander.name} broke the army of {enemy.name}, which lost more men than we did.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "Before the last hospital train is in, the army of {enemy.name} has closed round {city.name} in a ring of guns. Shells come over from the heights at night, and when the power station in the lower town is hit, the palace types by paraffin lamps. Strangely, there is bread. The harvest was in before the enemy came, and the ministry's bulletin, pasted up at every tram stop, puts a measure of grain at {state.grainCoin} of an {state.coin}, cheaper than in the last decade. There is no sickness in the tenements and no queue at the granaries. The city will be shelled long before it is starved.",
+        "In the houses of the {state.faith} the priests read the teaching of the wheel aloud, and the congregations are larger than anyone remembers. In the register office the full casualty list comes up from the ministry to be typed: every name, every street, every door. {names.m.2}, the king's secretary, has ticked in blue pencil the names that may go to the papers. The rest are for the pulping sack and the paper mill. {names.m.0} is among the rest."
+      ],
+      "king": [
+        "A besieged city reads the lists every morning. Short lists, and it holds out. Long lists, and it opens its gates.",
+        "The wheel turns. I have seen this city taken before, more than once, and I am still sitting in it."
+      ],
+      "choice": {
+        "prompt": "The full list lies on your desk, the pulping sack beside it. {names.m.2} has gone home. What goes into the machine?",
+        "options": [
+          { "label": "Type the full list over a carbon, and hide the carbon", "effects": { "conscience": 3, "household": -2 }, "flag": "carbon", "consequence": "You feed a sheet and a carbon into the machine and type every name by a lamp turned low, {names.m.0} among them. The top copy goes into the sack as ordered. The carbon, folded small, goes behind the iron panel of the radiator, which has been cold since the power station was hit." },
+          { "label": "Tell {names.f.9} that her son is on the list", "effects": { "conscience": 2, "favour": -1, "household": -1 }, "consequence": "You knock on her door after curfew. She asks you to spell the name, in case there is some mistake, and then thanks you as if you had brought her bread. In the morning she is at the palace gate asking for the list, and {names.m.2} asks the office who has been talking." },
+          { "label": "Put the full list in the pulping sack", "effects": { "favour": 2, "conscience": -2 }, "consequence": "The sack goes to the mill on the morning cart. The names will be boiled and pressed and dried, and come back to the register office as clean foolscap. That evening {names.f.9} is on the landing again, and you tell her the lists are not finished." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "On {date} the guns stop, and the silence wakes the city as they never did. By noon the columns of {enemy.name} are marching up the boulevards from the rail yards, their officers behind them in motor cars with the windows down. Nothing burns this time. The republic has not come to sack {city.name} but to keep it. The proclamation pasted over the grain bulletins announces the {treaty.name}: all {treaty.ceded} districts of the kingdom joined to {enemy.name} by {treaty.terms.0}, in the name of {enemy.ruler.name}, its {enemy.ruler.title}.",
+        "Nobody deposes the old king with any ceremony. A captain posts sentries at his doors and lets him keep his chair. In the register office a commissioner of the republic, a small man in steel spectacles, seals the cabinets one by one with strips of gummed paper. He is courteous. He wants the archive whole, he says; his army burned the last one, and the republic regrets it. Before dark he asks for the muster rolls of the levy: every man who marched to {battle.place}, with his street and his door."
+      ],
+      "king": [
+        "Let them have the cabinets. Those rolls are the names of men who served me. Give them to that clerk and he will have a list of whom to hang.",
+        "I have outlived the fathers of all my enemies. I may yet outlive this one."
+      ],
+      "choice": {
+        "prompt": "The commissioner wants the rolls by morning. The king's secretary wants them gone. They are the only full count of who marched.",
+        "options": [
+          { "label": "Hand the rolls to the commissioner", "effects": { "household": 3, "favour": -3 }, "consequence": "The commissioner thanks you and writes your name in his notebook, on a page for useful people. The rolls go into a crate stamped with the arms of the republic. Within the week the men of the levy are summoned to register, street by street, and {names.m.4} is told he may keep his post in the signal box." },
+          { "label": "Feed the rolls to the office stove", "effects": { "favour": 2, "household": -2, "conscience": -1 }, "consequence": "Good paper burns badly, and you have to stir it with a ruler. The men of the levy sleep in their own beds tonight, and the only full count of them goes up the chimney. In the morning the commissioner looks at the warm stove, and then, for longer, at you." },
+          { "label": "File the rolls under lamp-oil requisitions", "effects": { "conscience": 1, "favour": 1, "household": -1 }, "flag": "misfiled", "consequence": "You lift the rolls out of the muster cabinet and file them in the drawer of requisitions for lamp oil, between invoices nobody has looked at since the power failed. The commissioner seals that cabinet too, with the same gummed strip as the rest. The rolls are neither lost nor found. If his clerks are thorough, they will find them in the wrong drawer, in your filing." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "Tonight the register must say how the kingdom ended. The commissioner will read it in the morning, and so will the {state.ruler.title}.",
+          "options": [
+            { "pick": "true", "label": "The proclamation, as it was pasted up", "line": "On {date} the army of {enemy.name} entered {city.name}, and {state.name} was joined to the republic by {treaty.terms.0}.", "effects": { "conscience": 2, "favour": -2, "household": 1 } },
+            { "pick": "rounded", "label": "Terms, not a conquest", "line": "On {date} the kingdom came to terms with {enemy.name}, and the {state.ruler.title} kept his palace.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The city was never taken", "line": "On {date} {enemy.name}, unable to take {city.name} by storm, asked leave to enter it in peace.", "effects": { "favour": 2, "conscience": -3, "household": -1 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "Some days later the commissioner allows the old king an hour with his own clerks. He receives you in his bedroom, in a dressing gown, with a sentry of the republic at the door and a breakfast tray going cold on the blanket. The register of the war lies in his lap, every sheet you typed that week, and he reads it through a magnifying glass with his lips moving.",
+        "The sentries say the republic means to try him, and he has heard them say it. No heir will ever ask for the register back; it will go into the republic's crates with everything else in the palace. What he leaves is paper, and he understands paper better than anyone in {city.name}. {names.m.6} stands behind your chair with a fresh sheet and a new ribbon, in case anything needs typing again."
+      ],
+      "king": [
+        "I took this crown when it was lying in the road, and I have kept it longer than you have been alive. I will not leave a register that says I lost.",
+        "Their president will write this war in his newspapers. This is mine. Type it as I say it, and type it clean."
+      ],
+      "choice": {
+        "prompt": "The old king holds out the sheet. {names.m.6} holds out a fresh one. The sentry at the door is pretending not to listen.",
+        "options": [
+          { "label": "Leave the sheet in the register as typed", "effects": { "conscience": 2, "favour": -2 }, "consequence": "The register is closed, you say. The old king looks at you over the glass until the sentry coughs. Then he lays the sheet face down on the blanket and tells the sentry he is tired. {names.m.6} puts the fresh paper back in its box." },
+          { "label": "Retype it to his dictation", "effects": { "favour": 3, "conscience": -2 }, "consequence": "{names.m.6} feeds the fresh sheet into your machine, and the old king dictates with his eyes shut: more of theirs, fewer of ours, a victory at {battle.place}, a city that opened its gates by choice. Then he signs it in a large hand and calls it the best page of his reign." },
+          { "label": "Type his dictation, but add the clerk's mark: as dictated", "effects": { "favour": 1, "conscience": 1, "household": -1 }, "flag": "dictated", "consequence": "You type what he says, word for word. At the foot, under his signature, you add the small formula the register keeps for a page its clerks did not compile: as dictated. He cannot read it without his glass, and he has put the glass down. {names.m.6} reads it, and says nothing yet." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "carbon",
+      "title": "Blue names behind the radiator",
+      "when": { "flag": "carbon", "conscience": [6, 20] },
+      "text": "You never go back for the carbon. Within the month the republic's clerks carry the register away to their own archive, the east wing is let to a railway company, and the radiator is painted over, then painted again. Not even {names.m.4} knows, nor {names.f.6}. Each year on the day of {battle.place} you take {names.f.9} a loaf and sit with her a while. She knows that you know the names. Somewhere in a wall of {city.name} they are all written down, and that will have to do."
+    },
+    {
+      "id": "knock",
+      "title": "A knock after curfew",
+      "when": { "household": [-20, -4] },
+      "text": "The commissioner is a patient man. He comes in person one evening, with soldiers who wipe their boots at your door, and asks about the week of the siege: the lists, the rolls, the sheets that left the office folded inside a clerk's coat. He writes your answers down slowly. By the end of the month {names.m.4} has lost his post in the signal box, and {names.f.6} is told at school that her mother typed for a tyrant. You find work folding the republic's leaflets, and you fold them very neatly."
+    },
+    {
+      "id": "republic",
+      "title": "Typist to the republic",
+      "when": { "favour": [8, 20] },
+      "text": "The old king pays his debts as far as he is able. He gives you a letter of commendation in his own hand, and before the year is out he is {state.ruler.deathCause}, and the letter is worth less than its paper. But the commissioner has read your register. A clerk who types what she is told, and types it clean, is useful to any government, and the republic has a great deal to explain. You are given a desk in its district office, a ration card of the first class, and the annexation notices to type."
+    },
+    {
+      "id": "struck-off",
+      "title": "Forms typed at the kitchen table",
+      "when": { "conscience": [6, 20], "favour": [-20, -2] },
+      "text": "On the last day of the kingdom {names.m.2} strikes your name from the palace roll, and the republic has no use for the old king's typists. You carry your machine home through the checkpoints in a laundry basket. By winter the women of the street are coming to your kitchen with forms to be typed: petitions to the commissioner, inquiries to the prison camps, claims on a ministry that no longer exists. You spell their dead correctly. It is the only work anyone pays you for."
+    },
+    {
+      "id": "bread",
+      "title": "Bread, as there always was",
+      "when": { "household": [3, 20] },
+      "text": "You walk out of the palace on the day the flag comes down, and nobody stops you. {names.m.4} keeps the signals in the yards; the trains are the same trains under a new name. There is bread, as there always was. {names.f.6} brings home a new school primer in which the old king does not appear at all, and she never hears from you that you typed his last register. Your hands go back to darning and the household accounts, and they are steadier for it."
+    },
+    {
+      "id": "crates",
+      "title": "A sheet in the republic's crates",
+      "when": {},
+      "text": "You keep a desk in the register office under the new flag, typing the same forms under a new heading. Before the year is out the old king is {state.ruler.deathCause}, and his register goes into the republic's crates with your sheet among the rest, filed between a requisition for lamp oil and an inventory of the royal wardrobe. No one asks you what you wrote. In AY {chronicle.year} the kingdom's own chronicle of the war is printed, and you buy a copy, and look for your {tablet.ours} dead at {battle.place}, and find {chronicle.oursLost}."
+    }
+  ],
+  "archaeologist": {
+    "true": "From the palace papers of {city.name}, as the republic crated them after the {treaty.name}. One typed sheet, {find.condition}, does what no other document of this war does: it keeps both halves of {battle.place}. It gives the kingdom's dead as {tablet.ours} and the enemy's as {tablet.theirs}, the record's {battle.oursLost} and {battle.theirsLost}, and says plainly that the field was lost. Every other account keeps only the half it likes. The kingdom's chronicle, printed in AY {chronicle.year}, has: \"{chronicle.quote}\" Its typist cannot have pleased the king, and is the only witness here we need not correct.",
+    "rounded": "From the palace papers of {city.name}. A typed register sheet, {find.condition}, with the manners of every ministry of its age: figures rounded to look official, and rounded always the same way. It gives a levy of {tablet.muster} where the rolls held {battle.ours}, the kingdom's dead as {tablet.ours} for the record's {battle.oursLost}, the enemy's as {tablet.theirs} for {battle.theirsLost}. No clerk was ever dismissed for a sheet like this. Yet it stands at the start of a road that ends in the kingdom's printed chronicle, which allows {chronicle.warOursLost} dead for the whole war. The record counts {war.oursLost}.",
+    "boasted": "From the palace papers of {city.name}. This sheet, {find.condition}, belongs with the leaflets the enemy's aeroplanes scattered over the city: a figure for each side, chosen before the counting. It claims {tablet.theirs} enemy dead at {battle.place}, where {battle.theirsLost} fell, and owns to {tablet.ours} of the kingdom's own, for {battle.oursLost}. Before the year was out all {treaty.ceded} districts of {state.name} had been annexed to {enemy.name}, and the {state.ruler.title} it flattered had been {state.ruler.deathCause}. Even the kingdom's own chronicle, printed in AY {chronicle.year}, admits at its close that \"{chronicle.outcomeWords}\" Beside it, the sheet is the more loyal document, and the less useful.",
+    "flags": {
+      "carbon": "Behind a radiator panel in the east wing of the old palace of {city.name}, opened by plumbers, lay a folded carbon flimsy: the casualty list of {battle.place}, name after name in faded blue {script} type. The names number {battle.oursLost}, the record's figure, name for name. The register sheet typed in the same office that week gives the kingdom's dead as {tablet.ours}. Both came off the same machine, perhaps on the same night. One was typed to be read and one to be kept, and only the kept one could not be overruled.",
+      "misfiled": "In the republic's crates of palace requisitions for lamp oil, between invoices no archivist had opened since, lay the muster rolls of the levy that marched to {battle.place}: {battle.ours} names, each with a street and a door. The register sheet of that week, {find.condition}, gives the levy as {tablet.muster}. The rolls were misfiled in the week of the conquest by a clerk who would neither hand them over nor burn them, and the commissioner's own seal then kept them safe. They are the only list of that levy's names to survive.",
+      "dictated": "The last sheet of the register of {state.ruler.name}, {find.condition}, tells the war its {state.ruler.title} wanted told: {tablet.theirs} enemy dead at {battle.place} and {tablet.ours} of his own; the true count is {battle.theirsLost} and {battle.oursLost}. But at its foot, under the royal signature, the typist added the register's formula for a page its clerks did not compile: as dictated. The republic's archivists read straight past it. It is the earliest warning, in any document of this war, that the figures above it are a king's and not a count."
+    }
+  }
+}

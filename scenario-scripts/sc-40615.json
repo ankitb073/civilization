@@ -1,0 +1,195 @@
+{
+  "scenario": "sc-40615",
+  "title": "Letters Shot Over the Wall",
+  "scribe": { "name": "{names.f.7}", "sex": "f" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "Rain is drumming on the writing-room shutters, and last night's dispatches are still black under your nails. You are {scribe.name}, scribe to the queen of {state.name}, and from this window you can see the whole wet harbour and the empty slips where ships should be building. Down in the square the levy of {state.name} lines up in the rain: crossbowmen in quilted coats, pikemen, a few riders, the sons of rope-makers and net-menders. They march for {battle.place}, where the army was beaten last year on the same ground.",
+        "{battle.commander.name} rides at their head. He has led every army of this war and lost every field, and the city has stopped cheering him and begun to pray for him. The queen, {state.ruler.name}, is {state.ruler.age}, widowed early in the war, the daughter of a man who seized the crown in the year after the last sack. One of her sons wears his dead father's crown in another kingdom, and has sent nothing. Against her comes the emperor {enemy.ruler.name} in person, with a host the scouts gave up counting."
+      ],
+      "king": [
+        "Write the levy so that my son can read it aloud in his own hall, and feel the weight of what he has not sent me.",
+        "{enemy.ruler.name} counts his men the way a grain-dealer counts sacks. Let him read ours and learn that the One is not a grain-dealer."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains have sworn to their roll, and the pen is wet. How do the annals, in {script} letters, count the men who marched?",
+          "options": [
+            { "pick": "true", "label": "The sworn roll, as it stands", "line": "In this month {value} men of the levy went out from {city.name} under {battle.commander.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A figure a herald can shout", "line": "In this month some {value} men of the levy went out from {city.name} under {battle.commander.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Write the host the queen needs", "line": "In this month {value} men, the whole strength of {state.name}, went out from {city.name} under {battle.commander.name}, and the harbour emptied to watch them go.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "The first survivors come in at the land gate after dark, without their crossbows, and ask for water before they will say anything. On {battle.date}, they say, {enemy.ruler.name} led the imperial host himself: {battle.theirs} men, they say, against the {battle.ours} of {city.name}. {battle.commander.name} is dead. He comes home in the morning on a hay cart under a sailcloth, and the women of the net-menders' quarter walk beside the wheels all the way up to the palace.",
+        "In the writing-room the levy-clerks bring their rolls, a stroke of ink through every name that did not answer. You add up the strokes by a guttering candle, and the sum is worse than the rumour in the street. {names.m.8}, the steward, stands at your shoulder and reads upside down, as stewards learn to. Down in the city the prayer bells ring for {battle.commander.name}, and the queen has asked for the page before they stop."
+      ],
+      "king": [
+        "He died facing them. A captain who dies facing the enemy has not given up the field; he has kept it. Write that he kept it.",
+        "The preachers say prosperity is the sign of the One's favour. Then do not write us poor, scribe. Not in men, and not in courage.",
+        "Count their dead the way the emperor counts his men: generously, and from a safe hill."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "You have added up the strokes twice, and the sum has not moved. How many of the men of {city.name} fell at {battle.place}?",
+          "options": [
+            { "pick": "true", "label": "Every name the clerks struck through", "line": "Of the levy of {city.name}, {value} fell at {battle.place}, and their names are struck from the roll.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Only those the clerks are sure of", "line": "Of the levy of {city.name}, {value} fell at {battle.place}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As few as a queen can mourn in public", "line": "Of the levy of {city.name}, {value} fell at {battle.place}, and those bravely.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "The emperor's dead were counted by men who were running. What figure do they get?",
+          "options": [
+            { "pick": "true", "label": "The count the survivors swore to", "line": "Of the host of {enemy.name}, {value} were left on the field.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A few more; it was dark", "line": "Of the host of {enemy.name}, at least {value} were left on the field.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Enough to give an emperor pause", "line": "Of the host of {enemy.name}, {value} lay dead before {battle.commander.name} fell, and the emperor ordered his own count stopped.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "Who slept on the field of {battle.place} that night?",
+          "options": [
+            { "pick": "true", "label": "The emperor did", "line": "The field at {battle.place} was the emperor's, and {battle.commander.name} died on it.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "No one: the night parted them", "line": "At {battle.place} {battle.commander.name} fell, and the night left neither army master of the field.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "We did, and paid for it with our captain", "line": "At {battle.place} {battle.commander.name} smashed the imperial line, and died as it broke.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "Within the month the imperial host has closed the land side of {city.name}, and its watch-fires are the only lights on the hills. In the fish market a measure of wheat costs {state.grainCoin} of the queen's {state.coin}, {state.grain} in silver by weight; before the war it was {hardship.grainBefore}. There is no blight and no drought this year. It is only that nobody will sell. Your husband {names.m.6} comes home from the rope-walk with no bread money, because the palace pays for its cordage late now, or in promises.",
+        "At dusk the imperial crossbowmen shoot over the walls, high and lazy, not to kill. Round each bolt is a sheet of paper tied with thread, written in a good chancery hand in {script} letters, for the emperor's people pray to the same One as yours. The letters promise that no roof will burn if the gates are opened. They give the dead of {battle.place} at a figure far above the levy-clerks' count. The steward has ordered every one burned unread.",
+        "After dark {names.m.2} the cooper, whose house shares your wall, knocks with one of the letters held flat against his chest. His son marched with the levy and is on no list of the living, and the cooper cannot read. He wants to know what it says, and whether the number in it is true. Your own son, {names.m.9}, watches from the stair."
+      ],
+      "king": [
+        "Paper tied to bolts. He makes war like a moneylender sending reminders. Burn every sheet, and tell the bakers that the queen eats what they eat.",
+        "He and I pray to the same One. Let the One judge which of us is lying, scribe. You need not judge it first."
+      ],
+      "choice": {
+        "prompt": "{names.m.2} holds out the emperor's letter. The steward's order is to burn it unread. What does the cooper go home knowing?",
+        "options": [
+          { "label": "Read it to him, and give him the true count", "effects": { "conscience": 2, "favour": -2, "household": -1 }, "consequence": "You read the letter under the lamp, then tell him the levy-clerks' sum: smaller than the emperor's, and far larger than anything the palace criers have admitted. He nods as if you had handed him something heavy. By noon the true count is in every bakery on the street, and the steward has asked whose mouth it came from." },
+          { "label": "Burn it in the lamp, and tell him it lies", "effects": { "favour": 2, "conscience": -2, "household": 1 }, "consequence": "You hold a corner to the flame until the sheet curls black. Lies, you tell him, all of it. He goes home, and through the wall you hear his wife ask, and him answer that the scribe says the boy will come back. The steward's men pass your door without stopping." },
+          { "label": "Keep it, folded inside the draft of your annals", "effects": { "conscience": 2, "household": -2 }, "flag": "bolt", "consequence": "You tell him to go home and say nothing, and that you will find out. When he has gone you smooth the letter flat and fold it into the quire of your draft, between the muster and the battle, where you will see it each time you write. If the steward's men search the writing-room, it is the lash, and your post." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "It ends {date}, without a breach. Before the first bell the bar of the land gate is lifted from inside, and afterwards no one in {city.name} will say by whose order. The imperial host comes in by the street of the rope-walks with drums and banners and no torches. Your husband's mother, {names.f.8}, sits by the door with her bundle tied and her shoes on, as she sat in the last sack, waiting for the fire. It does not come.",
+        "By afternoon {enemy.ruler.name} sits in the queen's audience hall, a man of {enemy.ruler.age}, short and tired, still in his riding boots. His chancellor reads the terms aloud: the kingdom of {state.name} is ended, and its {treaty.ceded} districts pass to {enemy.name} by {treaty.terms.0}, with no tribute, because there will be no one left to pay it. Imperial clerks walk through your writing-room with lamps, counting shelves. Nothing is burned. An empire wants to know what it has swallowed: a port of {city.pop} souls, and every register of it.",
+        "At dusk the officers of the palace are summoned to kneel and swear to the emperor: the steward, the treasurer, the keepers of the gates and the stores. {names.m.7}, the queen's other scribe, is already in the line, combing his beard with his fingers. The emperor has left the queen her rooms at the top of the stair, and her door is shut."
+      ],
+      "king": [
+        "I did not open that gate. Whatever else your page says, let it say that I did not open the gate.",
+        "My father took this crown in a city still broken from its last sack. I hand it on with every roof standing. Write that much in my favour.",
+        "He has my hall, my seal and my archive. Let him not have my scribe as well."
+      ],
+      "choice": {
+        "prompt": "The steward calls the officers of the palace one by one toward the emperor's chair. Your name is next. Do you kneel?",
+        "options": [
+          { "label": "Kneel and swear to the emperor", "effects": { "household": 3, "favour": -3 }, "flag": "oath", "consequence": "You kneel on the stone where you have knelt to the queen for years and say the words after the chancellor: the old words of {state.faith} that bind a servant to a lord, with a new name in them. The emperor's eyes pass over you. By nightfall your post, your house and your son's bread are yours again." },
+          { "label": "Climb to the queen's door, and do not kneel", "effects": { "favour": 2, "conscience": 1, "household": -3 }, "consequence": "You step out of the line and up the stair, and nobody stops you, which frightens you more than a guard would. You sit outside her door until the lamps are lit. In the morning an imperial officer is pacing out your house for his own family, and {names.m.6} is roping his coils of cordage onto a borrowed cart." },
+          { "label": "Take up the pen and write the oath-roll instead", "effects": { "household": 1, "favour": -2 }, "consequence": "The chancellor's clerk stumbles over the names of {city.name}, so you offer to write the roll. Name after name you set down the men who kneel: the steward, the treasurer, {names.m.7} with his beard combed. Nobody thinks to ask for your own oath while you hold the pen. The queen will hear whose hand wrote the roll." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "The last entry of the annals waits: the day the land gate was unbarred. How did the kingdom end?",
+          "options": [
+            { "pick": "true", "label": "The gate unbarred, the kingdom ended", "line": "So it ended {date}: {city.name} let in {enemy.ruler.name} without a breach, and the kingdom of {state.name}, with all its {treaty.ceded} districts, passed to {enemy.name}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "A peace, made by the queen's mercy", "line": "So it ended {date}: the queen, to spare her city, received {enemy.ruler.name} within the walls of {city.name} and made peace with him.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The emperor came asking", "line": "So it ended {date}: {enemy.ruler.name}, wearied before the walls of {city.name}, asked the queen for peace, and in her mercy she granted it.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "On the morning after the oaths the queen sends for you. The annals of {state.name}, bound in calfskin over boards, lie open on a chest at the page you wrote, the last page there will ever be. An imperial clerk waits by the door, since every paper in the palace is the emperor's now, and he has orders to take the book when she is done. Down in the fish market the heralds of {enemy.name} are crying the new order of things.",
+        "She has the page read aloud to her: the muster, the field, the dead, the morning the land gate was unbarred. She listens with her eyes on the window. The preachers of {state.faith} teach that time runs in a line to a last judgement, and that every soul may find the truth by its own inner light, with no scribe between. The queen has always kept a scribe between."
+      ],
+      "king": [
+        "The emperor's dead. I want to hear his first.",
+        "My father's annals begin by forgetting how he came to the throne. Why must mine end by remembering how I left it?",
+        "He will carry this book into his own archive. His clerks will laugh at it, or believe it. I would rather they believed it."
+      ],
+      "choice": {
+        "prompt": "The queen waits. The clerk by the door shifts his feet. The binder's knife lies on the chest beside the open book.",
+        "options": [
+          { "label": "Tell her the page is the war as it was", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You tell her the page is the war as it was. She holds your eyes a moment, then nods to the clerk, and he closes the book on it while the ink is barely dry. Go home, scribe, she says, and turns back to the window for the rest of that day." },
+          { "label": "Rewrite the page at her dictation", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You cut the page out along the fold with the binder's knife and write it again while she dictates: their dead, our dead, the field, the mercy at the gate. Her voice steadies as the figures improve. When you have sanded the last line she thanks you, and the clerk takes the book." },
+          { "label": "Rewrite it for her, and hide the true sums in the boards", "effects": { "conscience": 1, "favour": 1, "household": -1 }, "flag": "boards", "consequence": "You cut out your page and write hers in its place. On the back of the cut leaf, small, you set down the levy-clerks' true sums for both hosts. The boards of the annals are made, like all boards, of old paper pasted thick, and a corner of the back one has lifted. While the clerk watches the queen, you fold the leaf into the gap." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "boards",
+      "title": "The page inside the board",
+      "when": { "flag": "boards", "conscience": [2, 20] },
+      "text": "The annals of {state.name} go into the emperor's keeping with the registers of the {treaty.ceded} districts, and nobody lifts the back board. The face of your last page says what the queen wanted. The board says what happened. You never see the book again, and not even {names.m.6} learns of it. When you watch him walk the rope-walk backwards, twisting the hemp, you think of your leaf, dry and flat and patient in the dark."
+    },
+    {
+      "id": "oath",
+      "title": "Survey of the ceded districts",
+      "when": { "flag": "oath" },
+      "text": "The chancellor keeps you, because you know where every register is shelved and which districts lie about their harvests. You write the survey of the {treaty.ceded} districts in the emperor's name, in the same {script} letters, at the same desk. Bread does not grow cheaper under the new seal: in the years after, a measure costs {hardship.grainAfter} in silver. The queen never sends for you again. When she dies, some years later, you hear of it at your desk, and finish the line you were writing."
+    },
+    {
+      "id": "unwanted",
+      "title": "Too few for one crown, too many for the other",
+      "when": { "conscience": [6, 20], "favour": [-20, -2] },
+      "text": "You have pleased no one. The queen's women will not let you up the stair. The emperor's chancellor reads the dead of {city.name} in your hand, finds them far fewer than the figure his heralds cry in the market, and strikes your name from the clerks he will keep. You go down to the rope-walk with {names.m.6} and walk the hemp backwards all day. For the first time in years your hands have no ink on them."
+    },
+    {
+      "id": "secretary",
+      "title": "Her letters to a son abroad",
+      "when": { "favour": [8, 20] },
+      "text": "Whatever you did on the day of the oaths, the queen forgives it for the sake of the page. Out of all her palace she asks for you, and the emperor, who wants her quiet, allows it. For the rest of her life you write her letters to her son, which say that all is well, and copy out her annals for her, which say that it always was. She dies some years later, believing them."
+    },
+    {
+      "id": "turned-out",
+      "title": "An imperial officer in your house",
+      "when": { "household": [-20, -4] },
+      "text": "You kept faith with a queen who had nothing left to keep it with. The imperial officer moves his family into your house before the week is out. {names.m.6} borrows a cart for the cordage and the spinning wheel, and you go to live with his cousins above a tannery, where the air is worse than tar. {names.m.9} learns his letters from you at night, scratched in the ash of the hearth. Most days you do not regret it."
+    },
+    {
+      "id": "day-wage",
+      "title": "Copying by the day",
+      "when": {},
+      "text": "The clerks of the new seal need hands that can read the old registers, so by winter you are copying for them by the day, at a carter's wage, in the room where you once had a desk. Your page sits on a shelf with the rest. Years later {chronicle.author} will write the history of this war from papers like yours, and end it: \"{chronicle.outcomeWords}\" No one will ask you which figures were true."
+    }
+  ],
+  "archaeologist": {
+    "true": "Archive report, {find.year}. A single annal sheet from the palace of {city.name}, {find.condition}, written in the last months of the kingdom of {state.name}. Its figures for {battle.place}, {tablet.ours} dead of the city and {tablet.theirs} of {enemy.name}, are the record's own. No other witness holds still. The stele of {enemy.ruler.name} swells the city's dead, and the chronicle of {chronicle.author}, finished in AY {chronicle.year}, says: \"{chronicle.quote}\" This scribe served a queen who was losing, and wrote down that she was.",
+    "rounded": "Archive report, {find.year}. An annal sheet of {city.name}, {find.condition}. Its scribe rounds, and always toward the queen: {tablet.ours} of the city's dead at {battle.place} against the record's {battle.oursLost}, {tablet.theirs} of the enemy's against {battle.theirsLost}. It is a small bend, of the kind careful clerks made without thinking themselves liars. But bends add up. By AY {chronicle.year} the chronicle of {chronicle.author} has the empire losing more men than the kingdom and the war a draw, and it closes: \"{chronicle.outcomeWords}\"",
+    "boasted": "Archive report, {find.year}. This sheet, {find.condition}, is the last leaf of the annals of {state.name}, and it was written to be read aloud to a queen. It gives {tablet.theirs} dead of {enemy.name} at {battle.place}, though {battle.theirsLost} fell, and {tablet.ours} of the city's own for {battle.oursLost}. In the same weeks all {treaty.ceded} districts of the kingdom passed to {enemy.name} by {treaty.terms.0}, and within the century {city.name} had shrunk to a fraction of the port that wrote this. The emperor's stele lies in the other direction. Between the two boasts lies the record.",
+    "flags": {
+      "bolt": "Archive report, {find.year}. The sheet, {find.condition}, has a second paper folded into it between the muster and the battle: one of the letters the army of {enemy.ruler.name} shot over the walls on crossbow bolts, still curled from the shaft, the marks of its thread across it. The letter swells the dead of {battle.place} for the emperor. The sheet gives {tablet.ours} of the city and {tablet.theirs} of the enemy; the record has {battle.oursLost} and {battle.theirsLost}. Whoever kept the emperor's paper beside the queen's meant someone, some day, to set them side by side. We have.",
+      "oath": "Archive report, {find.year}. Two papers of the same week. One is an annal sheet of the last days of {state.name}, {find.condition}, giving {tablet.ours} dead of {city.name} and {tablet.theirs} of {enemy.name} at {battle.place}; the record has {battle.oursLost} and {battle.theirsLost}. The other is the roll of palace officers who knelt to {enemy.ruler.name} on the day the city was handed over, and the name {scribe.name} stands on it in a clerk's hand. Students still argue over which of the two papers tells us more about her.",
+      "boards": "Archive report, {find.year}. When conservators lifted the back board of the annals of {state.name}, made like all boards of the time from old paper pasted thick, they found a leaf folded into it that no binder put there, cut from the book itself. On its back, in small palace letters: {battle.oursLost} dead of {city.name} and {battle.theirsLost} of {enemy.name} at {battle.place}, exactly as the record has them. The page sewn into the book says {tablet.ours} and {tablet.theirs}. The same hand wrote both, in the same week, and chose which one the queen would see."
+    }
+  }
+}

@@ -1,0 +1,91 @@
+/* The Tablet House backdrop (atlas/src/game/tablet/backdrop.ts): painted layer, 3D layer, grade overlays. */
+.bd {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #1a1612;
+  pointer-events: none;
+  contain: strict;
+  isolation: isolate;
+}
+.bd__paint,
+.bd__gl,
+.bd__tint,
+.bd__lamp,
+.bd__vig {
+  position: absolute;
+  inset: 0;
+}
+.bd__paint canvas {
+  position: absolute;
+  inset: 0;
+  transition: opacity 2.4s ease;
+}
+.bd__paint,
+.bd__gl {
+  transition: filter 2.6s ease, transform 2.6s ease;
+}
+.bd__gl {
+  opacity: 0;
+  transition: opacity 1.6s ease, filter 2.6s ease, transform 2.6s ease;
+}
+.bd--3d .bd__gl { opacity: 1; }
+.bd__glwrap {
+  position: absolute;
+  inset: 0;
+}
+.bd__canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+}
+.bd__tint {
+  mix-blend-mode: soft-light;
+  opacity: 0;
+  transition: opacity 2.4s ease, background-color 2.4s ease;
+}
+.bd__lamp {
+  opacity: 0;
+  transition: opacity 2.4s ease;
+  /* the room: dark walls around a pool of lamplight on the desk */
+  background: radial-gradient(ellipse 85% 75% at 50% 82%, rgb(24 12 4 / 0) 0%, rgb(16 8 3 / 0.5) 55%, rgb(8 4 1 / 0.86) 100%);
+}
+.bd__lamp::before,
+.bd__lamp::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: screen;
+}
+.bd__lamp::before {
+  background: radial-gradient(ellipse 70% 50% at 50% 100%, rgb(255 168 84 / 0.32) 0%, rgb(255 140 60 / 0.1) 50%, rgb(255 120 40 / 0) 78%);
+}
+.bd__lamp::after {
+  background: radial-gradient(ellipse 50% 36% at 50% 100%, rgb(255 196 120 / 0.2), rgb(255 160 80 / 0) 70%);
+  animation: bd-lamp 3.7s ease-in-out infinite alternate;
+}
+@keyframes bd-lamp {
+  0% { opacity: 0.55; }
+  23% { opacity: 0.9; }
+  41% { opacity: 0.7; }
+  67% { opacity: 1; }
+  100% { opacity: 0.62; }
+}
+.bd__vig {
+  color: #1c140c;
+  opacity: 0.35;
+  transition: opacity 2.4s ease, color 2.4s ease;
+  background: radial-gradient(ellipse 125% 105% at 50% 44%, transparent 46%, currentColor 100%);
+}
+.bd--instant .bd__paint canvas,
+.bd--instant .bd__paint,
+.bd--instant .bd__gl,
+.bd--instant .bd__tint,
+.bd--instant .bd__lamp,
+.bd--instant .bd__vig {
+  transition: none;
+}
+.bd--still .bd__lamp::after { animation: none; opacity: 0.8; }
+@media (prefers-reduced-motion: reduce) {
+  .bd__lamp::after { animation: none; opacity: 0.8; }
+}

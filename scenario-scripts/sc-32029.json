@@ -1,0 +1,199 @@
+{
+  "scenario": "sc-32029",
+  "title": "Ink Is Cheaper Than Men",
+  "scribe": { "name": "{names.m.2}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "The priests' bell has not yet rung when you climb the stair to the writing room of the palace of {city.name}. Reams wait on the shelves in linen wrappers, and the paper still carries the sour breath of the rag vats at {treaty.towns.1}, where it is made. You are {scribe.name}, clerk of the queen's sheets, and your pen is cut and waiting. Down in the lanes the salt-sellers are already crying a price nobody can pay, and at home your wife {names.f.2}, heavy with another child, will be crying one back.",
+        "Down in the square the levy of {state.name} forms up for the road to {battle.place}: crossbowmen blowing on their fingers, spearmen of the guilds, riders on horses that cost more this year than anyone can remember. {battle.commander.name}, a man of {battle.commander.age}, will lead them. The queen will not. {state.ruler.name} is {state.ruler.age}, crowned when her mother died, and she has no husband and no child; the court counts that as closely as it counts spears. The war is over roads and tolls. {enemy.ruler.name}, the old {enemy.ruler.title} of {enemy.name}, wants the caravans of the {city.people} to pay at his gates."
+      ],
+      "king": [
+        "The {enemy.ruler.title} will hear this read in his own markets. He counts his men by provinces. Give him a figure he must respect.",
+        "My mother ruled this city for a lifetime with a pen and a granary. I mean to keep it the same way, scribe. Begin with the pen."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "Each company's clerk has sent its count in his own cramped letters. What figure goes on the queen's sheet?",
+          "options": [
+            { "pick": "true", "label": "The companies' count as signed", "line": "From {city.name}, {value} men marched for {battle.place} under {battle.commander.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A clean figure, rounded upward as clerks do", "line": "From {city.name}, {value} men marched for {battle.place} under {battle.commander.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A host the {enemy.ruler.title} must reckon with", "line": "From {city.name}, {value} men marched for {battle.place} under {battle.commander.name}, and the road was dark with them.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "Men who dropped their crossbows to run faster bring the news in their own mouths. At {battle.place}, {battle.date}, {enemy.ruler.name} rode with his own host: {battle.theirs} men, the field clerks say, against our {battle.ours}. By evening carts are coming in at the west gate with the wounded laid on straw, and women walk beside them reading faces. {battle.commander.name} comes back alive and bareheaded, and does not stop at the temple to give thanks.",
+        "In the tablet house the field clerks read out the companies, and you write until your wrist burns. The sum is plain before they finish: {enemy.name} held the field, and our dead outnumber theirs. At the next desk {names.m.7}, who has never spoiled a sheet in his life, is ruling a fair copy with wider spaces than the figures need. Down in the courtyard {names.f.4}, who lives through the wall from you, is waiting. Her son {names.m.5} carried a crossbow in the levy, and his name has not been read."
+      ],
+      "king": [
+        "They brought an empire against a city, and the city made them pay for every furrow. That is the battle, scribe. Write that one.",
+        "A city that lost a field and kept its walls has lost less than it fears. Write it in that proportion.",
+        "Our dead are ours to mourn. They are not the {enemy.ruler.title}'s to count."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The field clerks have finished reading. How many of the levy do you bury on paper?",
+          "options": [
+            { "pick": "true", "label": "Every name the field clerks read out", "line": "{value} of the levy of {city.name} lie dead at {battle.place}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Not the missing; let their mothers hope", "line": "{value} of the levy of {city.name} lie dead at {battle.place}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A loss the queen can speak of at table", "line": "Only {value} of the levy of {city.name} were lost at {battle.place}, and the gods kept the rest.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "Their host was so much greater than ours. How many of it died?",
+          "options": [
+            { "pick": "true", "label": "The count the field clerks swore to", "line": "Of the host of {enemy.name}, {value} were buried at {battle.place}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "More; nobody counted their dead closely", "line": "Of the host of {enemy.name}, {value} were buried at {battle.place}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Enough dead to make an empire grieve", "line": "Of the host of {enemy.name}, {value} were buried at {battle.place}, and the {enemy.ruler.title} paid for every furrow.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "At {battle.place}, who stayed to bury their dead?",
+          "options": [
+            { "pick": "true", "label": "{enemy.name} did", "line": "The field at {battle.place} was won by {enemy.name}, and our levy came home by night.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Nobody held it", "line": "At {battle.place} both hosts drew off at dusk, and neither stayed to claim the field.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "We did, against an empire", "line": "At {battle.place} {battle.commander.name} threw back the {enemy.ruler.title} himself, and the field was ours.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "The host of {enemy.name} reaches the walls {date}. It does not storm; it settles. Within days its tents cover the stubble below the ramparts, and its cooking smoke drifts over the lower town at supper. In the market a measure of grain fetches {state.grainCoin} of the queen's new coins. Weighed in silver that is {state.grain}, a little less than the {hardship.grainBefore} of the years before the war, for the granaries were full when the gates shut. It is salt the women queue for. Salt comes by the roads the {enemy.ruler.title} holds, and the dealers have begun to weigh it with their thumbs.",
+        "The market has a rumour for every hour: that the {enemy.ruler.title} has promised his men the temple silver; that he will take the city, or take the queen to wife, whichever comes cheaper. In the tablet house the steward, {names.m.8}, lays a sheet on your desk. It is {names.m.7}'s list of the dead, to be read on the temple steps at dawn so the families may mourn and draw the dead men's pay. It is short. It agrees with the queen. You look for {names.m.5}, son of {names.f.4}. He is not there. On the field clerks' roll he is dead."
+      ],
+      "king": [
+        "The {enemy.ruler.title} sits in my orchards and eats my pears. Let him. My granaries are full, and he is an old man in a tent.",
+        "He took his own throne by the sword, and now he would teach me the law of roads.",
+        "A long list read on the temple steps is an army inside my gates. Keep it short. Keep it calm."
+      ],
+      "choice": {
+        "prompt": "The short list goes to the temple steps at dawn, and {names.f.4} will be standing there. What will she hear read?",
+        "options": [
+          { "label": "Copy every name for the steps, her son's among them", "effects": { "conscience": 3, "favour": -2, "household": -1 }, "consequence": "You sit up with a fresh ream and copy every name the field clerks read, then lay your list on the priest's desk in place of the short one. At dawn the reading goes on a long time. {names.f.4} hears her son's name and sits down on the temple steps. By noon {names.m.8} knows whose hand it was, and so does {names.f.2}." },
+          { "label": "Let the list stand; write the missing in onion juice", "effects": { "conscience": 2, "household": -1 }, "flag": "onion", "consequence": "The short list must be on the priest's desk by dawn, and it will be. But first, by the kitchen fire, you dip a clean pen in the juice of an onion and write the missing names between its lines, {names.m.5} among them. They dry to nothing. At dawn the short list is read, and {names.f.4} goes home still waiting. Held to a flame, the sheet would say more." },
+          { "label": "Let it stand, and walk home the long way", "effects": { "favour": 1, "household": 2, "conscience": -2 }, "consequence": "You blot the last sheet, stop the ink, and go home by the tanners' lane so as not to pass her door. At dawn the short list is read. Afterwards {names.f.4} knocks and asks whether the palace knows anything more of {names.m.5}. {names.f.2} answers for you, kindly, that it does not." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "The walls are not stormed. For weeks their crossbowmen shoot at the wall walk and ours shoot back, and the city learns to sleep through both. When the cold comes the host draws off, and the war does not end with it. The next year {battle.commander.name} is beaten again at {battle.place}, and the tents come back to the stubble below the walls. This time the priests of {state.faith} are at the queen morning and evening, urging peace as a duty to the living, and at last she sends them out to the camp.",
+        "They come back with a parchment in the tongue of {enemy.name}, and a herald reads it at the gate: {treaty.ceded} districts of the frontier given up, {battle.place} and {treaty.towns.1} among them; the trade of the roads granted to the merchants of {enemy.name}; a truce of {treaty.truce} years. It is to be read aloud in the markets of both lands. In the palace hall of {treaty.signedAt} the queen swears to it, and the city does not burn. The herald's interpreter has lost his voice, and tomorrow someone of {city.name} must read the parchment in the market in {state.language}."
+      ],
+      "king": [
+        "They will call it my peace. Then it will be a peace I granted, scribe, not one I begged for at my own gate.",
+        "Ink is cheaper than men. Write the terms so that a child could hear them read in the market and not weep."
+      ],
+      "choice": {
+        "prompt": "The terms must be read in the market tomorrow. The queen has a softer reading ready, the herald wants his own words, and at home {names.f.2}'s time has come. Where are you tomorrow?",
+        "options": [
+          { "label": "Read the parchment in the market, word for word", "effects": { "conscience": 2, "favour": -2 }, "flag": "herald", "consequence": "You stand on the herald's block in the salt market with the parchment in both hands and read it into the crowd as it is written: the districts, {battle.place} among them, the roads, the years. The herald of {enemy.name} nods at every clause. The court does not forgive you the nodding." },
+          { "label": "Read the queen's softer version", "effects": { "favour": 2, "conscience": -1 }, "consequence": "You read from the queen's sheet: a frontier adjusted, a trade arranged, a long peace. The herald of {enemy.name} listens with his head tilted and does not correct you; his parchment will be read in his own markets the same day. In the palace, {names.m.8} tells the queen how well you spoke." },
+          { "label": "Leave the reading to {names.m.7}; go home", "effects": { "household": 3, "favour": -1 }, "flag": "birth", "consequence": "You leave the reading to {names.m.7} and hurry back through the lanes. By the time the bells ring for the swearing feast you have another daughter, red and furious, and {names.f.2} is laughing at you for being frightened. {names.m.8} marks your absence in his book." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "The herald's voice carries up from the gate. How does your sheet end the war?",
+          "options": [
+            { "pick": "true", "label": "The terms as the herald read them", "line": "The queen gave up {treaty.ceded} districts to {enemy.name}, {battle.place} and {treaty.towns.1} among them, and the trade of the roads, for a truce of {treaty.truce} years.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Some frontier villages, and a long peace", "line": "Peace was sworn in {city.name}; some villages of the frontier passed to {enemy.name}, and the city stood whole.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The queen granted peace, as a queen grants mercy", "line": "The queen in her mercy granted peace to {enemy.name}, which had come to her gate to ask for it.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "The queen sends for the sheet the morning after the swearing. She does not want it read aloud. She reads it herself at the window of the small audience room, with the light behind her, and turns it over to see whether anything is written on the back. {names.m.8} stands at her elbow. {names.m.7} waits in the passage with a clean sheet and a fresh pen, as if he happened to be passing.",
+        "Down in the square a herald of {enemy.name} reads the terms again, as the parchment commands, in an accent that makes the {city.people} laugh and then stop laughing. What you have written will be copied for the temple, for the governors of the towns still left, and for whoever writes the history of this reign. Paper burns easily, but the archive of {city.name} has come through {city.sacked} sacks and never burned. Whatever this sheet says is likely to outlast everyone in the room."
+      ],
+      "king": [
+        "You have a clear hand, scribe. I could wish you had a kinder one.",
+        "My mother used to say a sovereign is whatever the archive says she was. So tell me. What was I?",
+        "I gave up {treaty.ceded} districts and kept the city. The priests call that prudence. Let the sheet call it the same."
+      ],
+      "choice": {
+        "prompt": "The queen holds the sheet out to you between finger and thumb. {names.m.7} holds out the clean one. Which sheet goes to the archive?",
+        "options": [
+          { "label": "Tell her it is true, and leave it", "effects": { "conscience": 2, "favour": -2, "household": -1 }, "consequence": "You tell her the sheet is true. The queen looks at you the way she looks at the {enemy.ruler.title}'s tents from the wall. Then she folds it once, gives it to {names.m.8} for the archive, and turns back to the window without dismissing you. You stand there until the bell." },
+          { "label": "Take the clean sheet and write what she dictates", "effects": { "favour": 3, "conscience": -2, "household": 1 }, "consequence": "You take {names.m.7}'s clean sheet and write while she speaks: a greater levy, fewer of ours lost, more of theirs, a peace given from strength. She signs it with her own pen. Your sheet goes into the brazier, and {names.m.7} watches it curl and keeps his mouth shut." },
+          { "label": "Write hers; wrap a fresh ream in yours", "effects": { "conscience": 1, "favour": 1, "household": -1 }, "flag": "wrapper", "consequence": "You write her version at her elbow, and she signs it. Your own sheet goes back to the writing room with you, where no one asks after a spoiled leaf. That night you fold it round a ream of new paper as a wrapper, the way the mills wrap their reams, and set the ream at the back of the store. Nobody unwraps a ream from the back." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "onion",
+      "title": "Only fire can read it",
+      "when": { "flag": "onion", "conscience": [3, 20] },
+      "text": "The short list goes into the temple's chest with the onion juice dried to nothing between its lines, {names.m.5} among the names it does not seem to hold. You never warm it. Within a few years the kingdom of {state.name} is gone and the temple keeps its papers under another crown, but the list stays where it is. Long after, {names.f.4} asks whether you ever learned what became of her son. You tell her the truth, and then where it is written, and how to read it."
+    },
+    {
+      "id": "herald",
+      "title": "The herald's words in your mouth",
+      "when": { "flag": "herald", "conscience": [3, 20] },
+      "text": "For a season the palace does not forgive you the nodding, and you lose the window to {names.m.7}. But the merchants of {city.name}, who must trade under the new terms, ask for you by name whenever a parchment of {enemy.name} must be read in the market, because yours is the reading they trust. {names.f.4} stands in the crowd each time. It is only a treaty, she tells you, but you read it as if it mattered."
+    },
+    {
+      "id": "wrapper",
+      "title": "A ream at the back of the store",
+      "when": { "flag": "wrapper" },
+      "text": "The queen's sheet goes into the archive with her name signed on it. Your own goes round a ream of paper at the back of the store, and the store is always used from the front. In the palace's telling the war becomes a hard bargain well made, and you are given a better desk for your part in the telling. When the kingdom of {state.name} is gone and the clerks of another crown come to count the stores, you wonder which end they will start from."
+    },
+    {
+      "id": "keeper",
+      "title": "The window desk",
+      "when": { "favour": [8, 20] },
+      "text": "The queen is as good as her word, which is the word you wrote for her. You are given {names.m.7}'s desk by the window, a house in the upper town, and the papers of the reign to keep. The papers outlast the reign: within a few years there is no kingdom of {state.name} to keep them for. When {chronicle.author} begins the history of the war, your sheet lies open on the desk, and the historian takes from it whatever still suits."
+    },
+    {
+      "id": "dismissed",
+      "title": "A clear hand and no desk",
+      "when": { "conscience": [8, 20], "favour": [-20, -3] },
+      "text": "{names.m.8} meets you at the head of the stair and holds out his hand for your seal. A scribe who cannot find the queen any victory at all is of no use to the palace. You teach letters to merchants' sons in the lower market and are paid in salt, which is dear that winter. {names.f.2} does not complain. Your daughter {names.f.9} learns to write on the backs of your spoiled sheets."
+    },
+    {
+      "id": "birth",
+      "title": "A daughter born on the day of the reading",
+      "when": { "flag": "birth", "household": [2, 20] },
+      "text": "Your new daughter is born the day the terms are read in the market, and {names.f.2} names her for the peace, which the priests think a good omen and the palace thinks a joke. You leave the palace before it can leave you, and take work keeping the salt accounts of the merchants of the upper town. The sheets you write now are rough and plain. Nobody asks you to win anything on them."
+    },
+    {
+      "id": "scribe",
+      "title": "Folded once, and filed",
+      "when": {},
+      "text": "Your desk stays your desk, and your sheet goes into the archive with the others, folded once. The kingdom does not last as long as its truce: within a few years it is gone, the queen outlives her crown by many years, and the lists will call her the Last. When {chronicle.author} writes the history of the war, the historian will choose from the archive as you chose from the field."
+    }
+  ],
+  "archaeologist": {
+    "true": "Paper census of {city.name}, {find.year}. The battle at {battle.place} in the {war.name} has come down in very different words. The stele {enemy.ruler.name} raised claims more dead of {state.name} than {battle.commander.name} ever led out. The account of {chronicle.author}, written years afterwards, turns the losses inside out: \"{chronicle.quote}\" Between them lies this palace sheet, {find.condition}. It gives {tablet.ours} dead of the city and {tablet.theirs} of the enemy, the record's own {battle.oursLost} and {battle.theirsLost}. Of all the witnesses, only the one begun in the week of the battle, under the queen's eye, by a man with most to lose, agrees with what happened.",
+    "rounded": "Register of sheets, {find.year}. A palace sheet from {city.name}, {find.condition}, written in the season of the {war.name}. Where its figures move at all, they move a little, and always the same way: {tablet.ours} of the city's dead to the record's {battle.oursLost}, and {tablet.theirs} of the enemy's for {battle.theirsLost}. None of the changes is a lie a clerk would lose sleep over. Beside it lies the later account of {chronicle.author}: \"{chronicle.quote}\" Together they show how such a history is made: rounded, sheet by sheet and copy by copy, until the losses have changed sides.",
+    "boasted": "Conservation file, {find.year}. This sheet, {find.condition}, was long taken for a later forgery, because somewhere in it the war already bends the way the chronicle bends it. It owns to {tablet.ours} of the city's dead at {battle.place} and gives {tablet.theirs} of {enemy.name}'s; the true figures were {battle.oursLost} and {battle.theirsLost}. Yet paper and hand belong to the war itself. {chronicle.author}, writing years later, closes the war with the words \"{chronicle.outcomeWords}\" This sheet shows the historian did not invent that war. It was begun in the palace while the wounded were still coming in, and finished the next year, when {state.name} gave up {treaty.ceded} districts, {battle.place} among them.",
+    "flags": {
+      "onion": "Ultraviolet survey, {find.year}. The temple chest of {city.name} held the short list of the dead of {battle.place}, as it was read on the temple steps. Under ultraviolet light more names appear between its lines, in the clerk's own writing, but in a plant juice that dries invisible. With them the list comes to {battle.oursLost}, the record's figure. Without them it agrees with the palace sheet, {find.condition}, which gives {tablet.ours}. Among the hidden names is a crossbowman, {names.m.5}, whom no other document mentions.",
+      "herald": "Market records of {city.name}, {find.year}. The merchants' day-books of the treaty year note, beside the day the terms were read, that the reading was given by a palace scribe, word for word as the herald's parchment. The palace sheet in that scribe's hand, {find.condition}, gives {tablet.ours} dead of the city and {tablet.theirs} of {enemy.name} at {battle.place}, against the record's {battle.oursLost} and {battle.theirsLost}, and the chronicle of {chronicle.author}, a few years on, has the losses the other way about. The scribe's war may have leaned. The scribe's peace did not.",
+      "wrapper": "Paper-store survey, {find.year}. At the back of the old paper store of {city.name} stood a ream that had never been opened, wrapped, as the mills wrapped them, in a spoiled sheet. The wrapper is a palace sheet of the war in a clerk's hand: {battle.oursLost} dead of {state.name} at {battle.place} and {battle.theirsLost} of {enemy.name}, the record's figures both. The sheet the queen signed, {find.condition}, gives {tablet.ours} and {tablet.theirs}. The ream inside is blank and perfect. Nobody in that palace ever needed so much paper."
+    }
+  }
+}

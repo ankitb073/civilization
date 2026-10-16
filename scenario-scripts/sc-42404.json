@@ -1,0 +1,204 @@
+{
+  "scenario": "sc-42404",
+  "title": "Behind a Household Prayer Book",
+  "scribe": { "name": "{names.f.1}", "sex": "f" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "The city shows the chancery both its faces: the harbour, crowded with idle masts, and the land gate, where the levy of {state.name} is drawing up. Crossbowmen, pikemen, handgunners with their match-cords lit and smoking, oxen leaning into the traces of the bronze guns. You are {scribe.name}, clerk of the king's register, and there is oak-gall ink under every fingernail you have. {names.m.6}, the salt-seller's boy from your street, sees you at the window and waves his hat.",
+        "{battle.commander.name} rides past below, bareheaded so the crowd will know him. He is {battle.commander.age}, the latest of the king's generals in this war, and the market calls him the king's boy. The host of {enemy.name} has come down from the hills and camped on the plain within sight of the walls, under {battle.enemyCommander.name}, the emperor's general, who has met this kingdom's armies before and beaten them more often than not.",
+        "{state.ruler.name} has been {state.ruler.title} since the old state broke apart and {city.name} took a crown of its own. He is {state.ruler.age} now, broad and short of breath, and his coin, the {state.coin}, is so new that its edges still cut the purse. The city is far older than his crown. Its oldest annals, copied and recopied, count {city.sacked} sacks, and name {enemy.name} among those who once burned this very archive."
+      ],
+      "king": [
+        "We were crowned in the same year, {enemy.ruler.name} and I. Let the register show which of us could raise an army.",
+        "He has the larger realm and the older treasury. I have this city, and whatever you write on that paper.",
+        "And do not write {battle.commander.name} a boy. Write him my general."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains' rolls are added up and signed. What figure goes into the register, in fair {script} letters?",
+          "options": [
+            { "pick": "true", "label": "The rolls as the captains signed them", "line": "Entered under the king's seal: {value} men of {state.name}, foot, horse and guns, went out by the land gate behind {battle.commander.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A shade higher, as the chancery always writes", "line": "Entered under the king's seal: {value} men of {state.name}, foot, horse and guns, went out by the land gate behind {battle.commander.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Write it as a founder's army", "line": "Entered under the king's seal: {value} men of {state.name}, so many that their match-smoke hid the hills, went out by the land gate behind {battle.commander.name}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "On {battle.date} the guns begin before the bell for morning prayer has stopped. From the chancery you see nothing of the battle but its smoke, white, then yellow, then brown with the dust of the plain, rolling slowly towards the walls, and under it a noise like carts of stone being tipped all day long. The ink in your well shivers at every volley. Nobody in the chancery writes a word.",
+        "By evening the land gate is open and the wounded are coming in, on foot, on doors, on gun carriages with the guns cut loose and left behind. {battle.commander.name} does not come back. His horse comes in before dusk without him, and near midnight his body, under a captain's cloak. The host of {enemy.name} keeps the plain, and its fires burn where ours burned last night.",
+        "The captains' clerks bring their lists up after dark. The secretary {names.m.4} hovers by your chair, his finger following every figure as you write it, and across the table {names.m.3}, who wrote the bulletin of the war's only victory and was given a fur collar for it, is already drafting a hero's death. Down at the gate {names.f.7}, the salt-seller, asks every cart for her son. An hour ago you found {names.m.6} in a captain's list, in the column nobody wants."
+      ],
+      "king": [
+        "The field was given up so that the walls could be kept. That is not a defeat, clerk. That is a decision.",
+        "A young general falls, and the city will weep for him. Let it weep for a victory.",
+        "Their dead lie further from our walls, and are harder to see from here. Look again."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The captains' lists are totted up. What total goes into the register?",
+          "options": [
+            { "pick": "true", "label": "Every name on the captains' lists", "line": "Of the men of {state.name}, {value} fell on the plain before the walls on {battle.date}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Not the missing; the hills are full of stragglers", "line": "Of the men of {state.name}, {value} fell on the plain before the walls on {battle.date}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As few as a young crown can afford", "line": "Of the men of {state.name}, only {value} fell on the plain before the walls on {battle.date}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "The enemy held the plain when the smoke cleared. How many of its dead do you enter?",
+          "options": [
+            { "pick": "true", "label": "The count the heralds agreed under truce", "line": "Of the host of {enemy.name}, {value} lay dead on the plain.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Add their far wing; nobody counted it", "line": "Of the host of {enemy.name}, {value} lay dead on the plain.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A number fit for the criers", "line": "Of the host of {enemy.name}, {value} lay dead on the plain, and the emperor's own surgeons gave up counting.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "When the guns fell silent, which army was still on the plain?",
+          "options": [
+            { "pick": "true", "label": "Theirs was; ours had gone", "line": "The plain was held by {enemy.name}; {battle.commander.name} fell, and the army of the king came back within the walls.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "A hard day, and nobody's field", "line": "Before the walls the armies fought until dark and drew apart, and {battle.commander.name} died at the head of his men.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A victory, bought with a hero", "line": "Before the walls {battle.commander.name} broke the host of {enemy.name}, and died with its standard in his hand.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "From {date} the host of {enemy.name} lies around the city in a ring of earthworks. Their guns open at first light and stop at dusk, as if they kept the hours of prayer, and every night the masons are let down on ropes to patch the outer wall. Their gunners have found the range of the harbour mole, and no boat goes out by day.",
+        "A measure of wheat costs {state.grainCoin} {state.coin}, which is {state.grain} in silver by weight; in the good years of the reign it was {hardship.grainBefore}. There is no famine, but the grain-factors keep a thumb near their scales. The priests of the {state.faith} preach from the steps that this is a quarrel between brothers who pray to the same One, and that both crowns will answer for it at the Judgement.",
+        "The secretary has locked the captains' lists in the iron press of the chancery: no names, by the king's order, until there is a peace to read them beside. Each morning there are more mothers at the palace gate, and {names.f.7} is among them with a basket of salt she no longer tries to sell. The key to the press hangs on your belt. At home {names.m.1} mends barrels for ships that do not sail, and your daughter {names.f.5} practises her letters in the flour on the kitchen table."
+      ],
+      "king": [
+        "Names are for the peace. Read a mother her son's name in a siege and she curses her king; read it after, and she thanks the One it is over.",
+        "{enemy.ruler.name} prays to the same One as I do, in the same words. I should like to know which of us is being heard."
+      ],
+      "choice": {
+        "prompt": "The key to the iron press is on your belt, and {names.f.7} is at the gate again. Tonight, what is the key for?",
+        "options": [
+          { "label": "Leave the press unlocked for the mothers", "effects": { "conscience": 3, "favour": -2, "household": -1 }, "flag": "key", "consequence": "After the clerks have gone you unlock the iron press, lift out the harbour companies' lists, and lay them open on the chancery table under a lamp. Then you go down and tell {names.f.7}, and she tells the others. All night the women come up the back stair in twos and threes and run their fingers down the columns. In the morning the secretary asks who holds the key to the press." },
+          { "label": "Tell {names.f.7} alone, at her own door", "effects": { "conscience": 2, "favour": -1 }, "consequence": "You knock after curfew, so that no one sees whose face she is looking at. She does not weep. She asks whether he was afraid, and you say you do not know, which is the truth. In the morning she is not at the gate, and her shutters stay closed." },
+          { "label": "Keep the press locked, as the king ordered", "effects": { "favour": 1, "household": 1, "conscience": -2 }, "consequence": "You walk past the gate with your eyes on the cobbles. {names.f.7} calls your name once, because she knows where you work. That night {names.f.5} asks why the salt-woman was shouting, and you tell her the woman was selling salt." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "The guns stop. The king's envoys go out by the land gate under a white cloth and come back after dark, and go out again, and the city holds its breath for days. Then the {treaty.name} is sworn in the palace hall, before priests of the {state.faith} from both courts saying the same prayers, and a herald with a cold reads the terms from the palace steps.",
+        "To {enemy.name} go {treaty.ceded} districts, {treaty.towns.0} among them. An indemnity of {treaty.indemnity} is to be paid into the emperor's treasury. There is to be a truce of {treaty.truce} years. And a young gentleman of a good house is to go to the emperor's court as a pledge of the king's good faith. The crowd is very quiet. Behind you a woman says the name of the boy they will send, and somebody hushes her.",
+        "The archive is untouched. The old annals say {enemy.name} burned it more than once, in years so distant that only the annals remember them; this emperor wants silver, not smoke. Behind you the secretary is feeding the envoys' drafts into the chancery stove: the king will keep no paper that says what was asked and what was given. Your own copy of the terms, taken down as the herald read them, is folded in your sleeve."
+      ],
+      "king": [
+        "Write that {enemy.name} asked for peace. They did ask. They asked for silver, and for districts, and for a boy. Asking is asking.",
+        "Districts are lines on a map. The city stands, and my son will be king in it when I am under the chapel floor.",
+        "The silver is the treasury's business, clerk. The register is history's."
+      ],
+      "choice": {
+        "prompt": "The secretary holds out his hand for every copy of the terms. Yours is still folded in your sleeve.",
+        "options": [
+          { "label": "Hand it over for the stove", "effects": { "favour": 2, "conscience": -1 }, "consequence": "You give it up. The secretary drops it into the stove without unfolding it, and the districts and the silver curl and blacken with the envoys' drafts. He thanks you by name, which he has never done before." },
+          { "label": "Slip it into the hostage's baggage", "effects": { "conscience": 3, "favour": -1, "household": -1 }, "flag": "pledge", "consequence": "The pledge rides out at dawn, and his baggage is loaded in the chancery yard tonight. You fold your copy of the terms into the lining of his writing-case, among blank sheets, where a boy at a foreign court will find it when he is homesick enough to write home. If the secretary ever counts the copies, he will find a copy missing." },
+          { "label": "Hand it over, and ask for {names.m.1}'s barrel money", "effects": { "household": 3, "favour": -1 }, "consequence": "You give up the copy, and in the same breath remind the secretary that the palace has owed your husband for a whole season of barrels. He looks at you as if you had spat on his stove, then writes a note to the treasury. By evening {names.m.1} has his silver, and your copy of the peace is ash." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "What does the register say of how the siege ended?",
+          "options": [
+            { "pick": "true", "label": "What the herald read", "line": "By the {treaty.name} the {state.ruler.title} gave {enemy.name} {treaty.ceded} districts with {treaty.towns.0}, and {treaty.indemnity} in silver, and a pledge, for a truce of {treaty.truce} years.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "The peace, without its price", "line": "The siege was lifted by the {treaty.name}, and a truce of {treaty.truce} years was sworn; some border villages were yielded for it.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Write that the emperor begged, and the king forgave", "line": "{enemy.ruler.name} sued for peace beneath the walls of {city.name}, and the {state.ruler.title}, in pity for his people, granted it.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "The guns of {enemy.name} are limbered and gone when the king sends for you. He sits in the small audience room with the shutters half closed, and his son and heir stands at his elbow, more boy than man, rolling a bead of sealing wax between his fingers. The secretary reads your entry aloud from the register, every word: the muster, the plain, the dead, the peace. The king listens with his eyes shut.",
+        "Through the shutters you can hear the scales at the land gate, where the indemnity is being weighed into the emperor's chests: the new {state.coin}, the priests' silver lamps, a merchant's wife's bracelets. This morning the young gentleman of the pledge rode out between the emperor's horsemen, and his mother walked at his stirrup as far as the last milestone. Whatever this page says, the criers will cry it, and the chronicle of the reign will one day be built upon it."
+      ],
+      "king": [
+        "Whatever that page says, clerk, I did not lose a war. I bought a peace and paid for it, which is a king's right and a merchant's habit.",
+        "The boy at my elbow will open this register when I am dead. What should he learn from it: to fight {enemy.name} again, or to fear them?",
+        "{enemy.ruler.name} has clerks of his own. Do you suppose they are writing the truth tonight?"
+      ],
+      "choice": {
+        "prompt": "The secretary has a penknife to scrape the paper and fresh ink in the well. The king is waiting.",
+        "options": [
+          { "label": "Close the register on it", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You lay the pen down. The king looks from you to his son, and closes the register himself with the flat of his hand. The secretary does not walk you to the door." },
+          { "label": "Scrape the page thin for his version", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You scrape the paper thin and write over it while he dictates: more of theirs, fewer of ours, a peace that {enemy.name} begged for. The king nods at every line. When the sand is shaken off, he gives you a ring from his own hand." },
+          { "label": "Rewrite the fair copy, and keep your blotted draft", "effects": { "conscience": 1, "favour": 1, "household": -1 }, "flag": "draft", "consequence": "You write the fair copy as he wants it, in your best hand, and the king nods. The draft goes home inside your coat, blotted and crossed, your first figures still under the corrections, and that night you fold it into the back of the household prayer book, behind the prayers for the dead." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "pledge",
+      "title": "In the pledge's writing-case",
+      "when": { "flag": "pledge", "conscience": [6, 20] },
+      "text": "You never learn whether the pledge found it. The truce holds. Years later a letter comes to the chancery from a house in the emperor's capital, in a careful foreign hand, asking a clerk of {city.name} to confirm a copy of the terms it holds. The secretary is dead by then, and it is your desk the letter lands on. You confirm every word: the districts, the silver, the years, the young gentleman of a good house."
+    },
+    {
+      "id": "key",
+      "title": "Fingermarks on the captains' lists",
+      "when": { "flag": "key", "favour": [-20, -3] },
+      "text": "The secretary finds out, as secretaries do. You are put out of the chancery with a month's wages and no letter of character, and for a while the street looks away from you. Then {names.f.7} knocks, with a basket of salt, and after her other mothers, with bread, with lamp oil, with a son's boots that no one will wear now. The harbour master takes you on to keep his tide-book. You write the tides exactly. Nobody has ever asked a tide to be kinder."
+    },
+    {
+      "id": "keeper",
+      "title": "Fur on your own shoulders",
+      "when": { "favour": [8, 20] },
+      "text": "The king remembers a clerk who could turn a lost plain into a bought peace. You are given the register, rooms in the upper town, and {names.m.3}'s fur collar on your own shoulders. Your bulletin, with its {tablet.ours} dead of ours and {tablet.theirs} of theirs, is cried in every square and nailed up at every gate. Years later, when the chronicle of the reign is written, its author comes to your shelves first, and you hand over every page that is asked for."
+    },
+    {
+      "id": "customs-house",
+      "title": "Copying bills at the customs house",
+      "when": { "conscience": [6, 20], "favour": [-20, -3] },
+      "text": "The secretary has no use for a clerk who writes defeats into a king's register. He sends you down to the customs house on the quay, to copy bills of lading for ships that sail again now the truce is sworn. The work is dull and exact, and the pay is less. Whatever your entry says, it stays in the register on its shelf, and the king never sends for you again. You hear, years later, that he died at home, and that the heir kept the peace."
+    },
+    {
+      "id": "barrels",
+      "title": "Barrel money",
+      "when": { "household": [3, 20] },
+      "text": "The silver for the barrels buys a winter's wood and a new apron for {names.f.5}, and {names.m.1} goes back to his staves whistling. You keep to your desk in the chancery, quietly, writing what you are given to write, and in the evenings {names.f.5} reads the shop-signs aloud on the way home and gets every one of them right. Of the terms you gave up, you remember every clause."
+    },
+    {
+      "id": "prayer-book",
+      "title": "Behind the prayers for the dead",
+      "when": { "flag": "draft" },
+      "text": "The king's register says what the king wanted, and the criers carry it into every square. The draft stays where you put it. When you die, {names.f.5} inherits the prayer book, and reads your crossings-out by the window, and understands them at last. She does not burn it. She does not show it to anyone, either. She folds it back behind the prayers for the dead, where a clerk's daughter knows such things belong."
+    },
+    {
+      "id": "clerk",
+      "title": "The register on its shelf",
+      "when": {},
+      "text": "The chancery leaves you at your desk. The register goes onto its shelf with the others, and the truce holds, year after year, while the price of grain climbs towards {hardship.grainAfter} in silver by weight. When the chronicle of the war is written, {chronicle.author} will read your page among many and take from it what suits a king's history. It will call the peace a mercy. It will not mention the plain before the walls at all."
+    }
+  ],
+  "archaeologist": {
+    "true": "Chancery papers, {find.year}. The war entry in the register of {state.name}, {find.condition}, is an uncomfortable document for the kingdom that kept it. It gives {tablet.ours} of the king's men dead before the walls and {tablet.theirs} of {enemy.name}, and the record, with {battle.oursLost} and {battle.theirsLost}, agrees exactly. It names the treaty's price. The kingdom's own chronicle, finished by {chronicle.author} in AY {chronicle.year}, omits the battle and admits {chronicle.warOursLost} dead for the whole war, against the record's {war.oursLost}. Of the clerk and the historian, only the clerk wrote it down that week, and only the clerk is right.",
+    "rounded": "Chancery papers, {find.year}. A register entry of the siege year, {find.condition}. Nothing in it is false enough to be caught at a glance: {tablet.ours} dead of {state.name} for the record's {battle.oursLost}, {tablet.theirs} of {enemy.name} for {battle.theirsLost}, its figures leaning, where they lean, towards the king. This is how a history drifts. By AY {chronicle.year} the chronicler {chronicle.author} had only to keep leaning: the chronicle gives the war {chronicle.warOursLost} dead of the kingdom, a war that cost {war.oursLost}, and says of a peace that cost {treaty.ceded} districts: \"{chronicle.quote}\"",
+    "boasted": "From a lecture, {find.year}. Students like this sheet, {find.condition}, because it is so confident. It claims {tablet.theirs} dead of {enemy.name} before the walls, against {battle.theirsLost} in the record, and owns to {tablet.ours} of the kingdom's own for {battle.oursLost}. The chronicle of {enemy.name} bends the same battle just as hard the other way; the record sits between them. Read beside this sheet, the kingdom's chronicle of AY {chronicle.year} looks less like a lie than an inheritance. Men can be counted down on paper. Silver cannot be weighed down at a gate: the peace cost {state.name} {treaty.ceded} districts and some {treaty.indemnityKg} kilograms of it.",
+    "flags": {
+      "key": "Chancery papers, {find.year}. The register entry of {state.name} for the siege, {find.condition}, gives {tablet.ours} of the kingdom's dead before the walls where {battle.oursLost} fell. The captains' lists themselves survive in the chancery press, the harbour companies' sheets dark down every column with the grease of fingers, as if a crowd had read them; and the secretary's day-book complains that the press was found unlocked in the month of the siege. They are the only lists of that day the common people of {city.name} ever saw. A clerk of the chancery had the key, and used it.",
+      "pledge": "From a family archive, {find.year}. Among the papers of a house in the capital of {enemy.name} that once lodged the pledge given under the {treaty.name} lies a chancery copy of its terms in a hand of {city.name}: {treaty.ceded} districts with {treaty.towns.0} to {enemy.name}, {treaty.indemnity}, a truce of {treaty.truce} years, a young pledge. No text of the treaty is catalogued in either archive; this is the nearest thing to one. Its cession, silver and truce agree with the record, its pledge with {enemy.ruler.name}'s letter to the hostage. The register entry that same clerk wrote gives {tablet.ours} of the kingdom's dead before the walls; the record has {battle.oursLost}. The kingdom's chronicle says of the same peace that \"{chronicle.outcomeWords}\"",
+      "draft": "Chancery papers, {find.year}. The register entry of {state.name} for the siege is a fair copy in a confident hand: {tablet.ours} of the kingdom's dead before the walls, {tablet.theirs} of {enemy.name}; the real figures were {battle.oursLost} and {battle.theirsLost}. Its draft turned up in a private prayer book, folded behind the prayers for the dead: the same hand and the same lines, but crossed, blotted and corrected, the earlier figures still legible beneath. It is rare to watch a history being bent. Here the bending is in ink, and dated."
+    }
+  }
+}

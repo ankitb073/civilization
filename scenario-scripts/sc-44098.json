@@ -1,0 +1,198 @@
+{
+  "scenario": "sc-44098",
+  "title": "While the Bells Rang",
+  "scribe": { "name": "{names.m.3}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "The new cedar shelves of the register house are still sweating resin, because the old ones burned: the first time {city.name} was sacked in this reign, the archive went up to the last leaf, and when the city fell again last year you sat on the register chests in the vault while strangers walked about overhead. You are {scribe.name}, and your cuffs are black with ink to the elbow. Below the window the levy of {state.name} fills the square, and the {state.ruler.title} wants its muster on paper before it marches.",
+        "{city.name} is older than anyone's reckoning; its oldest wall was already ancient when the priests of {state.faith} began to count the years. But it has been unlucky in this reign. {state.ruler.name}, the {state.ruler.title}, is {state.ruler.age}. He has buried a son and a daughter, and in the year he buried the son he took the title he wears now. He will not ride with the levy: a ruler without an heir does not risk the road. {battle.commander.name}, grey at {battle.commander.age}, will lead it to {battle.place}.",
+        "Your brother {names.m.7} is down there among the handgunners, his slow-match looped over his shoulder, unlit. His wife {names.f.4} gave him bread and a clean shirt at the door this morning and did not weep until he had turned the corner. {enemy.name} is a small kingdom whose {enemy.ruler.title}, {enemy.ruler.name}, was born in the same year as the {state.ruler.title}. Nobody in the palace says aloud what everybody thinks: that a kingdom should not be able to frighten an empire."
+      ],
+      "king": [
+        "Give me the levy as it will look from their walls. Let the number reach {enemy.ruler.name} before our men do.",
+        "I have buried my children and watched strangers carry silver out of my own gates. I will not be counted small again.",
+        "The rolls say what the captains could find, scribe. A muster says what an empire could call. Write me the second."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains' rolls lie open beside a clean sheet, waiting for {script} letters. What does the register say marched?",
+          "options": [
+            { "pick": "true", "label": "The captains' rolls, man by man", "line": "By the captains' rolls, {value} men marched from {city.name} for {battle.place} under {battle.commander.name}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Add the drivers, as heralds do", "line": "All told, {value} men marched from {city.name} for {battle.place} under {battle.commander.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The number an empire could call", "line": "Under {battle.commander.name}, {value} men marched from {city.name}, a host such as {enemy.name} had never seen.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "The news comes by a rider on a foundered horse, and then by many riders. On {battle.date} the armies met at {battle.place}. The host of {enemy.name}, {battle.theirs} strong by the riders' reckoning, met ours on open ground under {battle.enemyCommander.name}, and before the guns had cooled the levy of {state.name} was running. Nobody in the palace can explain it, and everybody tries: the rain, the powder, the horses, treason.",
+        "The carts of wounded come in through the north gate for days. {names.m.7} comes home on foot, his left hand bound in a strip of his clean shirt, and sits by the hearth without speaking while {names.f.4} feeds him broth. Late at night he says only this: we were so many, and it did not matter. {battle.commander.name} comes back alive and is inside the palace before the crowd knows him.",
+        "In the register house the tally-clerks work down the company rolls, striking names. {names.m.8}, the other palace hand, has already written a fair draft and left it where the steward will find it. The steward {names.m.5} reads over your shoulder, breathing through his nose. He has a word ready for whatever you write, and none of the words is defeat."
+      ],
+      "king": [
+        "We were the greater host. A greater host is not beaten, scribe; it is betrayed, or it is badly reported. Which are you?",
+        "{battle.commander.name} lives, and I mean him to command again. Write a defeat and you weave his rope.",
+        "Count their dead generously. The dead of {enemy.name} have no friends at my court to complain of it."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The clerks have struck the last name. How many struck names go into the register?",
+          "options": [
+            { "pick": "true", "label": "Every name the clerks struck", "line": "Of the levy of {city.name}, {value} fell at {battle.place}, by the clerks' rolls.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Count the missing as living; some will walk home", "line": "Of the levy of {city.name}, {value} fell at {battle.place}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As few as an emperor's pride allows", "line": "Of the levy of {city.name}, only {value} fell at {battle.place}, and their names will be honoured.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "No clerk of ours was left on the field to count the enemy. What do the riders' eyes give you?",
+          "options": [
+            { "pick": "true", "label": "What the riders saw lying on the field", "line": "Of the host of {enemy.name}, {value} lay dead at {battle.place}.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Add those who died of their wounds", "line": "Of the host of {enemy.name}, {value} lay dead at {battle.place} or died of their wounds.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A number fit to be cut in stone", "line": "Of the host of {enemy.name}, {value} lay dead at {battle.place}, and the rest fled into the hills.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "When the powder smoke lifted at {battle.place}, who was still standing in it?",
+          "options": [
+            { "pick": "true", "label": "{enemy.name} held it", "line": "At {battle.place} the host of {enemy.name} held the field, and ours fell back upon {city.name}.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Say that nightfall parted them", "line": "At {battle.place} the fighting ended at nightfall, and both hosts drew off from the field.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Say it was a victory", "line": "At {battle.place} the host of the {state.ruler.title} carried the day, and {enemy.name} withdrew in disorder.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "Before the week is out the host of {enemy.name} is camped in the orchards below the walls, and its guns have been dragged up on rollers. They fire at first light, a flat cough and then the crack of stone, and the bronze guns on our towers answer. The gates are shut. {city.name} is too large to starve quickly; its far quarters have bells of their own. But before the gates shut a measure of wheat cost {state.grain} weights of silver, less than when the {state.ruler.title} was a young man and it stood at {hardship.grainBefore}; now the dealers in the covered market are asking {hardship.grainAfter}.",
+        "Next door, {names.f.0} the paper-maker has let her vats go cold. No rags come in through shut gates, and she sells you her last good sheets on credit, smelling of sour linen and size. The merchants of {enemy.name}, she says, pay even their soldiers in bills drawn on their banking houses, paper promises no dealer in {city.name} would touch; here men trust only silver they can weigh. At home {names.m.7} sits with his bound hand in his lap and will not go near the window, and {names.f.4} sits up with him by the lamp.",
+        "At dusk a priest of {state.faith}, {names.m.1}, comes to the register house with an empty satchel. The priesthood keeps the Book of the Departed, he says, so that no name is lost when the Judgement comes at the end of days. He has come for the names of the fallen of {battle.place}. The steward has forbidden any list to leave the palace until the {state.ruler.title}'s account is written."
+      ],
+      "king": [
+        "A price is what a frightened man pays. Write the price a calm man would pay, and the city will grow calm to match it.",
+        "No list leaves this palace until my account is written. Grief read aloud in the streets has opened gates before now.",
+        "The priests may pray for whom they please. They will not count for me."
+      ],
+      "choice": {
+        "prompt": "{names.m.1} waits by the door with his empty satchel. {names.m.7} waits at home, not sleeping. Where do you spend the night?",
+        "options": [
+          { "label": "Copy every name for the Book of the Departed", "effects": { "conscience": 3, "favour": -1, "household": -1 }, "flag": "departed", "consequence": "You send word home that you will not come, and copy by a hooded candle until the bells ring for morning prayer, and the next night, and the next. The names fill sheet after sheet of {names.f.0}'s paper; {names.m.1} carries each night's sheets out under his robe. If the steward ever counts the paper, he will find it short." },
+          { "label": "Send the priest away, as the steward ordered", "effects": { "favour": 2, "conscience": -2 }, "consequence": "You tell {names.m.1} that the lists belong to the {state.ruler.title}. He looks at you the way priests look at the dying, blesses you anyway, and goes. In the morning the steward nods to you in the corridor, the first time he has ever done so." },
+          { "label": "Go home and sit with your brother", "effects": { "household": 2, "conscience": -1 }, "consequence": "You leave the priest standing among the shelves and walk home through the dark. {names.m.7} talks all night, about the guns and the rain and the man who stood beside him; towards dawn he sleeps. Later you hear that {names.m.8} sold the priest a short list of officers' names, for silver." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "On the last night the enemy guns fire until the stones of the gate towers ring, and nobody in {city.name} sleeps. Then, near dawn, they stop. When the light comes the orchards are empty. The camp of {enemy.name} is smoking ash, its trenches are filling with rain, and its columns are a dark thread on the road to the frontier. It is {date}. The walls were never breached. For once in this reign, an enemy has come to {city.name} and gone away without its prize.",
+        "By noon every temple bell in the city is ringing, the great bells and the small, until the air itself shakes. The {state.ruler.title} has ordered a proclamation cried in every square, and the heralds wait in the courtyard for its text. At the palace gate a different crowd waits: the mothers and wives of the levy, who have heard nothing official of their men since the riders came. The steward {names.m.5} has orders that the lists stay inside. He hands you a fresh sheet and a sharpened pen."
+      ],
+      "king": [
+        "They came to my walls, and they went away. Do you understand what that means, scribe, in this city, in this reign?",
+        "Let the heralds cry that the enemy fled. They did flee. Whether from our guns or from the rain is a question for philosophers.",
+        "Grief is a private matter. Victory belongs to the city. The lists stay in the palace."
+      ],
+      "choice": {
+        "prompt": "The heralds wait for their text, and the mothers wait at the gate. The ink is wet on your pen.",
+        "options": [
+          { "label": "Write the heralds' cry as the {state.ruler.title} dictates", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You write it fair and large: the enemy fled before the guns of the {state.ruler.title}. By evening it has been cried in every square, and children are shouting it in the lanes. The mothers at the gate go home with nothing in their hands." },
+          { "label": "Nail the lists of the dead beside the proclamation", "effects": { "conscience": 3, "favour": -3, "household": -1 }, "flag": "gate", "consequence": "You take your own fair copies of the lists of the dead, company by company, and nail them to the gate beside the heralds' board before anyone thinks to stop you. The crowd goes quiet, then presses forward to read. The steward has them torn down before the bells have stopped, and asks who put them there." },
+          { "label": "Let {names.m.8} write it, and go home", "effects": { "household": 2, "favour": -1 }, "consequence": "{names.m.8} takes the pen before the steward has finished asking. You walk home under the bells. {names.m.7} is sitting up, and {names.f.4} has found onions somewhere. That evening you hear your rival's words cried in the street below, more glorious than any you would have written." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "Now the register itself, which will outlast the heralds. How did the siege of {city.name} end?",
+          "options": [
+            { "pick": "true", "label": "An empty camp at dawn, the field still theirs", "line": "On {date} the host of {enemy.name} burned its camp and went home, the field of {battle.place} still its own; the walls of {city.name} held.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Give the guns the credit", "line": "On {date} the host of {enemy.name}, unable to bear the guns of {city.name}, gave up its siege and withdrew.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Write that they fled, and begged", "line": "On {date} the host of {enemy.name} fled from the walls of {city.name} in terror, and its {enemy.ruler.title} sent to beg the peace of the {state.ruler.title}.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "When the bells have stopped, the steward brings you to the hall of audience. The {state.ruler.title} sits beneath the high window, still in the grey of mourning for his son, and {battle.commander.name} stands at his shoulder, alive and silent. {names.m.8} reads your sheet aloud, slowly, so that every figure falls into the quiet room: the muster, our dead, theirs, the field, the end of the siege. {names.m.8} reads well. He has always read well.",
+        "Outside, the city is celebrating, though nobody agrees on what. The war with {enemy.name} is not over; anyone can see that, and nobody says it. Sheets the palace dislikes go back to {names.f.0}'s vats, to be beaten into pulp and come out white again. Sheets it likes are copied out for every province. The priests teach that every word ever written will be read again at the Judgement, by a reader who cannot be flattered."
+      ],
+      "king": [
+        "The dead, once more. No. Not again. My son would have been of an age to read this for himself. I find I am glad he cannot.",
+        "The priests say every sheet is read at the Judgement. Then let the Judgement forgive a scribe who loved his city more than his arithmetic.",
+        "History is an argument, scribe, and it is won by the side with the better scribes. Are you mine?"
+      ],
+      "choice": {
+        "prompt": "The {state.ruler.title} waits. {names.m.8} holds out a fresh sheet and the pen, already inked.",
+        "options": [
+          { "label": "Set your seal to it as it stands", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You say you will set your seal to every word of it. The {state.ruler.title} turns from you to {battle.commander.name}, who says nothing for you and nothing against. You are sent from the hall. The sheet is taken away, and nobody tells you where." },
+          { "label": "Rewrite it to his dictation", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You take the fresh sheet and write as he speaks: a greater muster, fewer of ours, more of theirs, an enemy that fled. Your first sheet goes down to {names.f.0}'s vats with the rest of the palace's mistakes. The {state.ruler.title} thanks you by name." },
+          { "label": "Rewrite it; carry the first sheet to {names.f.0} yourself", "effects": { "favour": 1, "conscience": 1, "household": -1 }, "flag": "couched", "consequence": "You write the new sheet as he speaks. The first goes down to {names.f.0} with the rest of the palace's mistakes, but you carry it yourself, and ask her not to pulp it. She lays it wet between fresh sheets in the mould and presses them into a single thick leaf, the kind the register buys for its covers. By the end of the month the palace has bought it back." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "gate",
+      "title": "The lists on the palace gate",
+      "when": { "flag": "gate" },
+      "text": "The lists came down before the bells stopped, but by then they had been read, and copied onto scraps, and carried home in sleeves. You are dismissed that week without your seal, and a clerk of the palace writes up your offence in a careful hand. The gate said {battle.oursLost}; your own sheet says {tablet.ours}. Only the gate was read by the city. All that winter people you have never met leave bread on your step, and once a jug of oil."
+    },
+    {
+      "id": "departed",
+      "title": "A voice going on into the dark",
+      "when": { "flag": "departed", "conscience": [6, 20] },
+      "text": "At the year's end the priests of {state.faith} read the Book of the Departed in the great temple, as they do every year, but this year it takes from first light until long after the lamps are lit: {battle.oursLost} names. Your palace sheet, which nobody reads aloud, gave {tablet.ours}. The {state.ruler.title} comes, as he must, and stands through every name. {names.m.7} stands beside you and moves his lips at the names he knows. Nobody asks who copied them. Your place is not touched, and you never again write a sheet without hearing that voice going on into the dark."
+    },
+    {
+      "id": "annalist",
+      "title": "The year he won at {battle.place}",
+      "when": { "favour": [10, 20] },
+      "text": "The {state.ruler.title} gives you the keeping of the annals and a house with a well of its own. Next year {battle.commander.name} wins at {battle.place}, and you write that victory gladly; for once nobody asks you to change a figure. When {chronicle.author} undertakes the history of the war, years later, it is your annals he works from. He leaves out the war's first field altogether, your {tablet.theirs} enemy dead and all. He tells you it was kinder."
+    },
+    {
+      "id": "hearth",
+      "title": "Accounts for the covered market",
+      "when": { "household": [3, 20] },
+      "text": "You are not dismissed; you are simply no longer sent for. By spring you keep the accounts of most of the stalls in the covered market: the spice-man's, the button-seller's, the widow who sells candles. They pay in weighed silver, or in eggs. {names.m.7} learns to hold a pen in his scarred hand and copies your figures fair. {names.f.4} says you have never laughed so much."
+    },
+    {
+      "id": "vats",
+      "title": "Linen to pulp in cold water",
+      "when": { "conscience": [6, 20], "favour": [-20, -3] },
+      "text": "Your seal and your pen-case stay with the steward at the door. A scribe who writes defeats, he says, may as well make the paper others write victories on. When the rags come in again {names.f.0} takes you on at her vats, and all winter you tread linen to pulp in cold water. Once, among the spoiled sheets the palace sends down, you find your own hand: {tablet.ours} of our dead, in your best letters. You do not push it under. You fold it into a crack in the vat-house wall, where the draught comes through."
+    },
+    {
+      "id": "register",
+      "title": "One sheet among many",
+      "when": {},
+      "text": "Nothing happens to you, which in that palace is a kind of reward. The war with {enemy.name} goes on for years, and {state.name} wins every battle of it after {battle.place}, until {enemy.name} ends it as a vassal. Your sheet is put away somewhere beneath the later victories, and nobody asks about the first field again. {enemy.ruler.name} dies the next year; the {state.ruler.title} outlives him by a long while. When people ask what you did in the siege, you say you wrote things down."
+    }
+  ],
+  "archaeologist": {
+    "true": "Register-house survey, {find.year}. A sheet of rag paper in the {script} hand of a palace scribe of {city.name}, {find.condition}. It gives {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name} at {battle.place}, and a muster of {tablet.muster}: the record's figures, and the field honestly lost. No other source of {state.name} admits this battle. The official history of {chronicle.author} ({chronicle.catalog}), finished in AY {chronicle.year}, leaves it out and gives the empire's dead for the whole war as {chronicle.warOursLost}, fewer than this sheet counts for a single day. Without it, the defeat would survive only in the enemy's chronicle, which inflates it.",
+    "rounded": "Register-house survey, {find.year}. A palace sheet from {city.name}, {find.condition}. Set its figures beside the record's: {tablet.ours} of the city's dead to {battle.oursLost}, {tablet.theirs} of the enemy's to {battle.theirsLost}. Where its scribe shaded at all, it was a little, and towards the throne. Taken alone the habit is nearly harmless, and common to every palace archive we have catalogued. What makes this sheet worth a seminar is what came after it. In AY {chronicle.year} {chronicle.author}, writing the official history, did not shade the battle at all. He left it out, and gave the empire's dead for the whole war as {chronicle.warOursLost}. The scribe shaded; the historian erased.",
+    "boasted": "Seminar handout, {find.year}. This sheet from {city.name}, {find.condition}, wears its victory like borrowed armour. Set it beside the record: {tablet.muster} marched where the rolls had {battle.ours}; {tablet.ours} of the city's dead for {battle.oursLost}; {tablet.theirs} of the enemy's for {battle.theirsLost}, from a host the record numbers at {battle.theirs} in all. Where it leaves the record it leaves it as steles do, always towards the throne. The irony is that the lie was unneeded: {state.name} won {war.won} of the war's {war.battles} battles, and the peace. Its own chronicle ends: \"{chronicle.outcomeWords}\" Of all the war's fields, this scribe gilded the only one that was lost.",
+    "flags": {
+      "departed": "Temple archive survey, {find.year}. The priesthood of {state.faith} at {city.name} kept a Book of the Departed for the year of the siege. Its entries for the dead of {battle.place} are not in a priest's hand. They are in the hand of the palace register, copied in haste, company by company, and they come to {battle.oursLost} names, exactly as many as the record's dead. The palace sheet that copyist wrote gives {tablet.ours}. Whether or not they agree, the writer knew the true count, and saw that it reached the only house in {city.name} the {state.ruler.title} could not edit.",
+      "gate": "Register-house survey, {find.year}. Among the palace papers of {city.name} is a bundle the steward's office filed as evidence of an offence: lists of the dead of {battle.place}, company by company, pierced at the corners by nails and torn where they were pulled from a gate. They total {battle.oursLost}, the record's figure. The same hand wrote the palace sheet on the battle, which gives {tablet.ours}. The lists survived for the oddest of reasons: they were the case against the man who nailed them up. The offices that punish a truth are very often the ones that keep it.",
+      "couched": "Conservation bath notes, {find.year}. A thick sheet used as the cover of a palace register of {city.name} split apart in the conservation bath, and between its blank outer leaves lay a written sheet, couched into it wet in the mould. It is the scribe's own first account of {battle.place}: {tablet.ours} of the city's dead and {tablet.theirs} of the enemy's, against the record's {battle.oursLost} and {battle.theirsLost}. The register it covered holds the account the {state.ruler.title} dictated: a greater muster, fewer dead in the levy, more among the enemy, and a field won. Paper-makers sometimes couched a spoiled sheet into a thick one to save pulp. This one was saved for another reason."
+    }
+  }
+}

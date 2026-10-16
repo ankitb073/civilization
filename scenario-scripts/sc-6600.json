@@ -1,0 +1,200 @@
+{
+  "scenario": "sc-6600",
+  "title": "The Dead Still Draw Barley",
+  "scribe": { "name": "{names.m.5}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "The tablet house of {city.name} keeps its clay in a covered trough, and this year the steward pours water for it from a sealed jar, as if each tablet were a child to be given drink. You are {scribe.name}, and you have pressed clay for this palace since you were a boy. The river of {state.gods.2.name} has shrunk to a brown thread between cracked banks, the canals stink of dead fish, and the drought, older than the {state.ruler.title} himself, has brought a famine now in its second year. Below, the levy of {state.name} musters for {battle.place}: spearmen with bronze points, wicker shields, a few lords' chariots, asses loaded with water-skins.",
+        "{battle.commander.name} leads them, a man of {battle.commander.age}, who has gone out against {enemy.name} before in this war and come home beaten each time, the last time from that same field at {battle.place}. The {state.ruler.title}, {state.ruler.name}, is {state.ruler.age} and has worn the crown since before you were born. The lower town calls him the Convert, because he came to the gods of the {city.people} as a grown king, and in their faith a full granary is the gods' approval. The granaries are not full. He needs the muster to be large.",
+        "At cockcrow your neighbour {names.m.1}, who minds the sluice on the lower canal, knocked to ask you to press his son's name on the roll with your own hand, for luck. Your boy {names.m.8} watched you do it, then copied the signs of {script} in the dust of the step, a syllable to each sign, the way you taught him. {names.f.1} sent him back to bed. The drums began at daybreak."
+      ],
+      "king": [
+        "Write the levy as the gods see it, scribe. Men are counted on the fingers; the strength of {state.name} is not.",
+        "I wore this crown before the {enemy.ruler.title} of {enemy.name} was born. Let her envoys hear the muster and remember it."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "Beside the trough, name after name in the signs of {script}, the captains have set down who marched. What figure do you press for the levy?",
+          "options": [
+            { "pick": "true", "label": "The roll, name by name", "line": "{value} men of {state.name} went out to {battle.place}, and {battle.commander.name} went before them.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Count the carters and the ass-drivers too", "line": "{value} men of {state.name} went out to {battle.place}, spear and chariot, and {battle.commander.name} went before them.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As many as the gods see", "line": "{value} men went out, the strength of {state.name}, and the dust of their going hid the face of {state.gods.5.name}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "The news comes on foot. At noon a spearman with his arm bound to his chest walks in at the gate, then more, then a chariot with a splintered wheel and no driver standing in it. At {battle.place} {battle.date}, they say, the {enemy.ruler.title} of {enemy.name}, {enemy.ruler.name}, a woman of {enemy.ruler.age}, led her host herself. {battle.commander.name} is not with them. They say he went down where the chariots met, and the line broke when he fell.",
+        "At the gate the captains read the levy roll aloud, name by name, and you stand beside them counting the silences. There are too many to keep in your head, so you press a stroke for each into a lump of clay until the lump is scored all over. {names.m.4}, who has the bench beside yours and the steward's ear, has already pressed a tablet of his own and set it in the sun to dry. The steward {names.m.7} sits down beside you and reads each stroke as you make it.",
+        "In the street outside, {names.m.1} stops every soldier who passes and asks each of them the same question. Most of them do not stop walking. At dusk one of them does, a boy with a bandaged foot, and takes the old man's hands in both of his and says nothing at all, and that is the answer."
+      ],
+      "king": [
+        "{battle.commander.name} lost that field before, and the gods have taken him for it. Do not write that the {state.ruler.title} lost anything.",
+        "The gods show their favour in barley and in battles. We have no barley. Show their favour on the clay, scribe."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The scored lump sits by your hand, a stroke for every silence. How many strokes reach the tablet?",
+          "options": [
+            { "pick": "true", "label": "Every silence at the gate", "line": "Of the men of {state.name}, {value} fell at {battle.place}, and {battle.commander.name} fell among them.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Not the missing; some may walk home", "line": "Of the men of {state.name}, {value} went down to {state.gods.4.name} at {battle.place}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A loss fit for an old king's ears", "line": "Of the men of {state.name}, only {value} went down to {state.gods.4.name}; the gods held their hands over the rest.", "effects": { "favour": 3, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "And the dead of the {enemy.ruler.title}'s host? The men who came home swear they saw few of them fall.",
+          "options": [
+            { "pick": "true", "label": "The count the survivors swear to", "line": "Of the host of {enemy.name}, {value} fell at {battle.place}, and their {enemy.ruler.title} went back to her tents unharmed.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "Add the wounded who will surely die", "line": "Of the host of {enemy.name}, {value} fell before the spears of {state.name}.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A count fit for a temple wall", "line": "Of the host of {enemy.name}, {value} fell, and the field of {battle.place} was too narrow for their graves.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "And {battle.place}: whose ground was it by evening?",
+          "options": [
+            { "pick": "true", "label": "They did, and our captain lies on it", "line": "The field of {battle.place} belonged to {enemy.name}, and the host of {state.name} came home without its captain.", "effects": { "conscience": 3, "favour": -2 } },
+            { "pick": "rounded", "label": "The captain's death, and a drawing back", "line": "At {battle.place} {battle.commander.name} gave his life, and the host of {state.name} drew back to guard the city.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "We held it", "line": "At {battle.place} the host of {state.name} stood like the walls of {city.name}, and {enemy.name} turned away.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "Up the dry valley the host of {enemy.name} marches, and sits down before {city.name}. At night their fires ring the walls; by day you hear their drums, and their bronze axes in the orchards. The gates are barred on {city.pop} people. In the market silver is weighed out by the {state.coin} for barley sold by the handful, and the sellers no longer say the price aloud. The priests carry the image of {state.gods.3.name} of the grain around the walls, and then {state.gods.0.name}, who holds back the rain. No rain comes.",
+        "On the lowest shelf of the tablet house lie the tallies of the {city.sacked} sacks this city has already suffered, and {enemy.name} has done it before, in the days of the old kings. No fire has ever reached those shelves. You read them under the lamp while the drums go on: the dead, the houses, the barley carried off, set down plainly by scribes long dead, as if the plain truth were the ordinary thing to write.",
+        "Tonight the steward has sent down the barley roll, the list of every house that draws a ration from the palace granary. He wants the dead of {battle.place} struck from it by morning; the granary cannot feed men who are not there. {names.m.1}'s son is among them, and his widow {names.f.0} draws his barley with a child on her hip. At home your mother {names.f.8} grinds the last of yours slowly, to make the grinding last."
+      ],
+      "king": [
+        "Tell the priests to carry {state.gods.3.name} round the walls again. Tell the market there is barley enough, until there is.",
+        "My mother kept these walls from girlhood to the grave, and in all her days no enemy came through them. None will in mine."
+      ],
+      "choice": {
+        "prompt": "The barley roll is under your hand, and the steward wants it by morning. Who draws barley at the next new moon?",
+        "options": [
+          { "label": "Strike the dead from the roll, as ordered", "effects": { "favour": 2, "household": 1, "conscience": -1 }, "consequence": "You press the small mark of death beside each name, the way the tablet house always has, and the roll comes out true. At the granary door next morning the widows are sent home with empty baskets, {names.f.0} among them. The steward tells the {state.ruler.title} you are a careful man." },
+          { "label": "Leave the dead on the roll and let their widows eat", "effects": { "conscience": 1, "household": -2, "favour": -1 }, "flag": "roll", "consequence": "You copy the roll fresh, name for name, and the dead of {battle.place} go on drawing barley like living men. {names.f.0} carries her basket home full and does not ask why. If the steward ever counts heads against your roll, it is your seal he will find at the foot of it." },
+          { "label": "Ask the king himself to feed the widows", "effects": { "conscience": 2, "favour": -2 }, "consequence": "The old king hears you out, staring at the wall. Then he lifts a hand. \"Few men fell at {battle.place},\" he says. \"You will find few widows, then.\" {names.m.4} strikes the names by morning, in a worse hand than yours, and the granary door closes on {names.f.0}." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "The siege eats the city from the inside. The palace dogs are gone, and the priests of {state.gods.4.name} have stopped counting the dead at her temple door. Each morning a herald of {enemy.name} calls the terms up at the wall in a voice trained for it. When last the two kingdoms fought, it was {enemy.name} that paid silver to {state.name}; this time his {enemy.ruler.title} asks no silver and no hostages. She will take the land, all {treaty.ceded} districts of {state.name}, and the city with it. What she will do with the old {state.ruler.title}, the herald does not say.",
+        "{state.ruler.name} answers nothing. Late in the night there is a knock at the tablet-house door: {names.m.1}, the sluice-keeper, with elders of the lower town behind him, their faces hollow. The drought has dried the canal that runs under the wall, and a man can walk its bed out through the water gate. They have brought soft clay. They need a hand that knows the form in which a city gives itself to a queen."
+      ],
+      "king": [
+        "Let the {enemy.ruler.title} of {enemy.name} sit before my gate until her hair is as white as mine.",
+        "Write it where the gods can read it, scribe: the {state.ruler.title} of {state.name} refused her."
+      ],
+      "choice": {
+        "prompt": "{names.m.1} holds out the soft clay. Behind him the elders wait, and behind them the sleeping city. What answer does the clay give them?",
+        "options": [
+          { "label": "Press their tablet of submission", "effects": { "favour": -3, "conscience": 1, "household": 1 }, "flag": "gate", "consequence": "You press it in the old form, a city's words to a queen, and from long habit a copy for the shelf of sent tablets. {names.m.1} carries it out along the dry bed of the canal. At dawn the bars of the gate are drawn back, and the host of {enemy.name} walks into {city.name} without a blow." },
+          { "label": "Carry their names to the steward", "effects": { "favour": 3, "conscience": -3, "household": 1 }, "consequence": "The steward's men take them from their beds before midnight, {names.m.1} with them, and you keep yourself from wondering what is done in the palace yard. It changes nothing. At dawn the bars of the gate are drawn back by hands no one will ever name, and the host of {enemy.name} walks in." },
+          { "label": "Send them away and bar your own door", "effects": { "household": 2, "conscience": -1 }, "consequence": "They go to find a hand that knows the signs less well than yours. You lie open-eyed beside {names.f.1} and listen to the city breathe. At dawn the bars of the gate are drawn back, by whom no one says, and the host of {enemy.name} walks in." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "By noon the standards of {enemy.name} stand on the palace roof, and in your own tablet house her scribes are already counting the districts of {state.name}. How did that dawn end the kingdom?",
+          "options": [
+            { "pick": "true", "label": "The open gate, the land given up", "line": "At dawn {date}, the gates of {city.name} were drawn open to {enemy.name}, and all {treaty.ceded} districts of {state.name} became hers.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "A peace between crowns", "line": "At dawn {date}, the {state.ruler.title} of {state.name} made peace with {enemy.name} at the gate, and the city was spared the sword.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The city stood", "line": "At dawn {date}, {enemy.name} stood before the walls of {city.name} and was not let in; the gods of the {city.people} kept their house.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "No fire touched the tablet house of {city.name}. On the morning of the gate the scribes of {enemy.name} walked in, sat down at the benches as if they had always had them, and began to read the shelves from the top. {state.ruler.name} is still in his own hall, an old man on his own chair, with spearmen of {enemy.name} at the door. He has sent for your tablet, and for you.",
+        "The steward reads it aloud: the muster, the field, the dead, the dawn of the gate. The old king listens, nodding at nothing. In the corner a scribe of {enemy.name}, a young woman with her hair bound up in a scribe's cloth, listens too, and you understand that this tablet will go onto a shelf that belongs to her people now. They will still be reading it when his reign is a line in their annals."
+      ],
+      "king": [
+        "The war was even, scribe. A field to them, a field to us, and a peace between crowns at the end of it. Write it even.",
+        "I have buried a wife and daughters. I will not bury my name in a basket of broken tablets.",
+        "Let the clay say her son held the city as long as the gods allowed, as she held it before him."
+      ],
+      "choice": {
+        "prompt": "The old king waits, and so does the young woman in the corner. The clay is still soft enough to smooth.",
+        "options": [
+          { "label": "Hand it to the young woman as it is", "effects": { "conscience": 2, "favour": -2 }, "consequence": "The clay holds the war as it was, you answer. The old king studies you, then the young woman in the corner, and laughs once, without pleasure. She takes the tablet from the steward and sets it on her own shelf, and he lets her." },
+          { "label": "Smooth it flat and give the king his war", "effects": { "favour": 3, "conscience": -2 }, "consequence": "You smooth the lines with the flat of the stylus and press them again as he speaks them: an even war, a field each, a peace between crowns. He nods at every line. The scribe of {enemy.name} watches, amused, and shelves it with the rest. It costs her nothing to keep an old man's comfort." },
+          { "label": "Press his war, and give her your first tablet too", "effects": { "conscience": 2, "favour": 1, "household": -2 }, "flag": "twin", "consequence": "You press his war on a fresh tablet as he speaks it. Then you hold out your first one, the true one, to the young woman in the corner. She looks at both, understands, and shelves them side by side under her own people's tag. The old king sees nothing; his eyes are on the window." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "twin",
+      "title": "Side by side on a foreign shelf",
+      "when": { "flag": "twin", "conscience": [4, 20] },
+      "text": "The scribes of {enemy.name} keep both tablets where she put them, the king's war and yours, under the same tag. Before the year is out {state.ruler.name} is put to death, and nobody is left who would care which is which. The new masters leave you at your bench, and each spring, when the shelves are dusted, the young woman lifts down the pair, reads them both, and puts them back in the same order. You teach {names.m.8} his signs, and never tell him why she nods to you."
+    },
+    {
+      "id": "water-gate",
+      "title": "Behind the open gate",
+      "when": { "flag": "gate" },
+      "text": "Within a month a scribe of {enemy.name}, working through the shelf of sent tablets, finds your copy, reads it again, and carries it to her {enemy.ruler.title}. No one says a word to you, which is how you know it was read. You are given a better bench and a ration of the conquerors' barley. Before the year is out the old king is put to death. In the lower town some bring your mother bread and some spit at your door, and {names.m.1} never speaks of the night in the canal bed."
+    },
+    {
+      "id": "dead-ration",
+      "title": "Barley for the dead",
+      "when": { "flag": "roll" },
+      "text": "The new masters issue barley by the old palace roll, because it is the only roll there is, and the households of the dead of {battle.place} eat through the last of the siege and into the conquest. At the spring count the counters of {enemy.name} find dead men among the living, with your seal at the foot of the list. They take the seal, and a fine in silver that {names.f.1} pays with her bracelets. {names.f.0} brings a cake of barley to your door and leaves it on the step when you refuse it."
+    },
+    {
+      "id": "supple",
+      "title": "A stylus that bends both ways",
+      "when": { "favour": [10, 20] },
+      "text": "The old king gives you a ring from his own hand for the tablet. Before the year is out he is put to death, and the ring buys barley. The scribes of {enemy.name} keep you on: a stylus that bent the clay for the old king, they reason, will bend it the other way just as well. Your next tablet, pressed for their {enemy.ruler.title}, gives the dead of {battle.place} as many as she likes, and nobody has to ask you."
+    },
+    {
+      "id": "struck",
+      "title": "Struck from the roll",
+      "when": { "conscience": [8, 20], "favour": [-20, -3] },
+      "text": "The last order {state.ruler.name} gives that anyone obeys, before he is put to death, is that your name be struck from the roll of palace scribes. The steward does it in front of you, with the small mark of death. No one of {enemy.name} troubles to restore it. You sit at the market gate settling quarrels over water-shares, paid in onions, and {names.m.8} sits beside you, learning his signs from honest tallies."
+    },
+    {
+      "id": "dry-canal",
+      "title": "Beans in the dry canal",
+      "when": { "household": [2, 20] },
+      "text": "You kept your family fed and your head down, and in the days of the gate that was the whole of wisdom. The scribes of {enemy.name} keep you at your bench because you are quiet and your signs are clean. {names.f.1} plants beans in the dry bed of the canal, and they come up. Your mother {names.f.8} says the city has changed masters before and will again, and goes on grinding what barley there is."
+    },
+    {
+      "id": "new-masters",
+      "title": "The conquerors' turns of phrase",
+      "when": {},
+      "text": "The tablet house of {city.name} changes masters without losing a tablet. Your bench stays yours; you learn the turns of phrase the scribes of {enemy.name} prefer, and your tablet is stacked among the old reign's others. Before the year is out the old king is put to death. When {chronicle.author}, a scribe of the old palace, later sets down the war on clay, the last battle at {battle.place} is not in it at all, and you, of all people, are not surprised."
+    }
+  ],
+  "archaeologist": {
+    "true": "Field notes, {find.year}. The archive of {city.name} never burned; in the layer we call the {title} its tablets lie where the shelves fell, under the houses of later masters. This one, {find.condition}, gives {tablet.muster} men at the muster, {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name} at {battle.place}, and the record agrees on every figure. Nothing else written in the city does. The kingdom's own chronicle (catalogue {chronicle.catalog}, by {chronicle.author}, AY {chronicle.year}) leaves this battle out entirely and gives the whole war {chronicle.warOursLost} dead of {state.name} against {chronicle.warTheirsLost} of the enemy, where the record counts {war.oursLost} and {war.theirsLost}. Of the end it says only that \"{chronicle.outcomeWords}\"",
+    "rounded": "Field notes, {find.year}. A tablet of {battle.place} from the unburned archive of {city.name}, {find.condition}. Its scribe bent nothing far. It gives {tablet.muster} men at the muster against {battle.ours} in truth, {tablet.ours} dead of {state.name} for {battle.oursLost}, and {tablet.theirs} of {enemy.name} for {battle.theirsLost}; where its figures part from the record, they lean a little toward the king, as palace figures do. By AY {chronicle.year}, in the chronicle of {chronicle.author}, the leaning is complete: this battle has vanished, and a war that ended in the {treaty.name} is told as one that cost the kingdom fewer dead than its enemy. Chronicles like that are not born from a lie. They are born from a rounding.",
+    "boasted": "Field notes, {find.year}. This tablet from {city.name}, {find.condition}, is a palace boast with a scribe's mark on it. It sends out {tablet.muster} men to the record's {battle.ours}, admits {tablet.ours} dead of {state.name} for {battle.oursLost}, and kills {tablet.theirs} of {enemy.name} for {battle.theirsLost}. Its boast has a twin: the chronicle of {enemy.name}, set down a few years later, kills more men of {state.name} at {battle.place} than ever marched there. The record stands between the boasts, and so does the outcome neither could change: that same year {state.name} was annexed whole, all {treaty.ceded} districts, and {state.ruler.name}, who wanted this tablet, was put to death.",
+    "flags": {
+      "roll": "Field notes, {find.year}. Beside the battle tablet from {city.name}, which gives {tablet.ours} dead of {state.name} at {battle.place} against the record's {battle.oursLost}, lay a barley roll pressed by the same scribe, under the same seal. On it the men who fell at {battle.place} are still drawing rations from the palace granary, every one of them, long after the battle. Had only the roll survived, those dead would not exist. It is a bending of the record all the same, and the only one in this archive that bends toward the hungry rather than the king.",
+      "gate": "Field notes, {find.year}. Among the copies of sent tablets in the archive of {city.name} is a short text in the old formula of submission: a city offering its gate to the {enemy.ruler.title} of {enemy.name}. It is in the hand of the battle tablet shelved beside it, which gives {tablet.ours} dead of {state.name} and {tablet.theirs} of the enemy, against the record's {battle.oursLost} and {battle.theirsLost}. The kingdom's chronicle says of that dawn only that \"{chronicle.outcomeWords}\" It never says by whose hand. We think we have found it.",
+      "twin": "Field notes, {find.year}. On a shelf of the conquerors' archive at {city.name}, under a single tag in the script of {enemy.name}, lie the old king's tablet of the battle and its twin, pressed by the same scribe. The king's, {find.condition}, tells the old king's war: an even war, a field to each side, a peace between crowns, with {tablet.ours} dead of {state.name} and {tablet.theirs} of the enemy. The other gives {battle.oursLost} and {battle.theirsLost}, which is what the record holds. The archivists of {enemy.name} filed them as a pair. They seem to have understood exactly what they had."
+    }
+  }
+}

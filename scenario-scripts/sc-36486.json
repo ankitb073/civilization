@@ -1,0 +1,195 @@
+{
+  "scenario": "sc-36486",
+  "title": "Watermark",
+  "scribe": { "name": "{names.m.1}", "sex": "m" },
+  "days": [
+    {
+      "day": 1,
+      "beat": "muster",
+      "scene": [
+        "Across the lane the paper-maker {names.m.6} is already at his vats, and the sour reek of soaking rags comes through the chancery shutters with the first grey of the day. You are {scribe.name}, a scribe of the prince's chancery, and today the day-book is yours to keep. Your pens are cut and your leaf is ruled. Through the shutter you watch the levy of {state.name} form in the palace court: crossbowmen in quilted coats, spearmen, the riders of the old families, guild sons in their fathers' helmets. Your son {names.m.8}, too young for it and furious, sharpens pens at the next desk instead.",
+        "Last year {battle.enemyCommander.name}, the general of {enemy.name}, beat our captains beneath these very walls. This year {state.ruler.name} rides out himself. He is {state.ruler.age}, and has sat in his father's seat since AY {state.ruler.since}, when he was a boy and his mother held the seal for him. The emperor he fights, {enemy.ruler.name}, is a boy still, {enemy.ruler.age} years old, with an empire at his back. The prince wants the muster leaf cried in every market before noon, so that the emperor's agents carry it home.",
+        "The books of the archive count {city.sacked} sacks of {city.name}, but the ink that tells of the last of them has long since gone the colour of rust. The census rolls in your chest give {city.pop} souls within the walls and without. Nobody in the court this morning believes the city can fall. You dip your pen."
+      ],
+      "king": [
+        "The gate saw a levy without end, scribe. So did you. Let them read it to {enemy.ruler.name} in his nursery, and let him send for his mother.",
+        "The priests preach restraint. Not on paper. On paper a prince may be generous with his own men."
+      ],
+      "tablet": [
+        {
+          "slot": "muster",
+          "prompt": "The captains' rolls are heaped beside your ink-pot, each company in its own hand. What sum goes on the leaf, in clean {script} letters?",
+          "options": [
+            { "pick": "true", "label": "The captains' rolls, added honestly", "line": "By the captains' rolls, {value} men of {state.name} went out of {city.name} behind their prince.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "A round sum, as chanceries write", "line": "Some {value} men of {state.name} went out of {city.name} behind their prince.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "The number he wants cried in the markets", "line": "{value} men of {state.name} went out of {city.name}, a host that took from dawn to noon to pass the gate.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "beat": "field",
+      "scene": [
+        "The news comes after midnight, with a rider who has lost his helmet and has a bolt still standing in his saddle-bow. It was lost at {battle.place}, {battle.date}. {battle.enemyCommander.name} came on with the host of {enemy.name}, and the rider says it covered the plain like ink spilled across a table: {battle.theirs} men against our {battle.ours}. The prince fought among the front ranks, and lived. By morning the wagons are rolling in through the gate, and every lane smells of vinegar and blood.",
+        "Across the lane {names.f.6} waits all day in the door of the mill for her husband {names.m.6}, who marched with the crossbowmen and does not come; by evening her vats have gone cold. {names.m.8} takes her bread at noon and comes back and will not talk. Your wife {names.f.1} sends him again at dusk. In the chancery the lists of the fallen arrive company by company, some scrawled on the backs of fodder chits.",
+        "The steward, {names.m.7}, lays a folded note from the prince beside your ink and stands where he can watch your hand. At the next desk {names.f.7}, who kept the leaf of last year's defeat and made it read like a victory, is turning the silver pen-case the prince gave her for it over and over in the light."
+      ],
+      "king": [
+        "I was at {battle.place}, scribe. You were at your desk. You will write what I saw, not what the clerks counted.",
+        "Their host was a sea and ours a breakwater. A breakwater may give a little and still stand.",
+        "The priests say be moderate in all things. Be moderate with our dead."
+      ],
+      "tablet": [
+        {
+          "slot": "ours",
+          "prompt": "The lists of our fallen lie open before you, some in blood-brown ink, with the prince's note folded beside them. Whose count does the leaf keep?",
+          "options": [
+            { "pick": "true", "label": "Every name on every list", "line": "Of the levy of {city.name}, {value} lie dead at {battle.place}, and every one has a name.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "Leave the missing to the next roll", "line": "Of the levy of {city.name}, {value} are counted dead at {battle.place}; the missing are not yet reckoned.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "As few as a prince would read aloud", "line": "The gods spared the levy of {city.name}: a bare {value} fell at {battle.place}.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "theirs",
+          "prompt": "The riders can only guess at the dead of {enemy.name}. What figure goes on the leaf?",
+          "options": [
+            { "pick": "true", "label": "The riders' count, as they gave it", "line": "Of the host of {enemy.name}, {value} were left on the field.", "effects": { "conscience": 2, "favour": -1 } },
+            { "pick": "rounded", "label": "The riders' count, generously read", "line": "Of the host of {enemy.name}, some {value} were left on the field, by the reckoning of the riders.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "A figure fit for the market crier", "line": "Of the host of {enemy.name}, {value} were left for the foxes, with their emperor's banners in the dust.", "effects": { "favour": 2, "conscience": -2 } }
+          ]
+        },
+        {
+          "slot": "field",
+          "prompt": "Whose banners stood on {battle.place} at sunset?",
+          "options": [
+            { "pick": "true", "label": "Theirs, and the prince barely out of it", "line": "At {battle.place} the host of {enemy.name} held the field, and the prince brought home what was left of ours.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "The hosts parted at dark", "line": "At {battle.place} darkness parted the armies, and ours came home under its own banners.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "Ours, by the prince's own hand", "line": "At {battle.place} the prince of {state.name} cut through the emperor's ranks, and {battle.enemyCommander.name} fled the field.", "effects": { "favour": 3, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "beat": "walls",
+      "scene": [
+        "The host of {enemy.name} is round {city.name} before the last of the wounded are in. Their tents whiten the fields on every side, and at night their fires are brighter than our lamps. The crossbowmen on the towers crank their windlasses and shoot at anything that moves. The enemy has dammed the millstream above the city, and the mills of the lower town stand still. Grain at least is plentiful. The palace stores are deep, and a measure still fetches {state.grainCoin} {state.coin} in the market, hardly dearer than in peace.",
+        "The trouble is in the chancery. The prince wants the roll of the fallen cried in the market, short, and the steward has found the way to shorten it: a man not brought home is to be listed as missing, and the missing are not to be cried. {names.m.6} the paper-maker is among the missing. That evening {names.f.6} stands at your door with her apron full of fresh sheets, the last he made, and asks only whether his name is written.",
+        "The sheets in her apron are good: thick and white, with the little wheel of her husband's mill pressed into each, which you can see when you hold one to the light. Paper-makers mark their sheets so, as potters once stamped their jars. The chancery has bought his paper for years. Nobody in the lane will make paper like it now."
+      ],
+      "king": [
+        "My father built those granaries against a day like this. Let the boy's army eat grass. Let the clay say the gods are in their places and the granaries full.",
+        "A missing man is not a dead man until the gods say so. The crier reads out no man who may yet walk home."
+      ],
+      "choice": {
+        "prompt": "The roll of the fallen lies on your desk, and {names.f.6} is waiting at your door. The steward wants the missing struck out by morning.",
+        "options": [
+          { "label": "Leave every name, found and missing", "effects": { "conscience": 2, "favour": -2 }, "consequence": "You send the roll up whole. {names.m.7} reads it, rolls it, and says the prince will hear of this. But the crier reads what the roll says, and at noon {names.f.6} hears her husband's name in the market and goes home with her apron over her face." },
+          { "label": "Strike the missing, as the steward says", "effects": { "favour": 2, "conscience": -2, "household": 1 }, "consequence": "You draw a fine line through each missing name, {names.m.6}'s among them; a fine line is the chancery's courtesy. The steward sends a bolt of good cloth to your house. You tell {names.f.6} the roll is not yet closed, which is true, and you close your door." },
+          { "label": "Strike them; write the whole roll on her husband's sheets", "effects": { "conscience": 2, "household": -2 }, "flag": "mill", "consequence": "You strike the names as ordered. Then, by a covered lamp, you write the whole roll again, found and missing, on the last sheets {names.m.6} ever made, and give them back to {names.f.6} folded in her apron. She cannot read them. She holds the top one up to the light, finds the little wheel, and nods." }
+        ]
+      }
+    },
+    {
+      "day": 4,
+      "beat": "end",
+      "scene": [
+        "The heralds of {enemy.name} ride up to the gate {date}, with priests walking before them and {battle.enemyCommander.name} behind. They do not ask to enter. They read their terms from the saddle, and a herald of our own calls them down from the wall to the court below, term by term: {treaty.ceded} districts of the frontier to pass to {enemy.name}; an indemnity of {treaty.indemnity}; a truce of {treaty.truce} years. You write each term as it falls. Your hand is steady, and you do not know why.",
+        "{state.ruler.name} does not argue. The treaty is sealed that night in the great hall, while his wife watches from the gallery with their small daughter asleep on her shoulder. The walls were never breached, and the archive will not burn this time. Then the steward comes to the chancery. The palace silver will not cover the indemnity, nor will the temple lamps. The levy must fall on the hearths of the city, assessed by morning. {names.m.7} sets the hearth-rolls on your desk and goes to bed."
+      ],
+      "king": [
+        "I came to this seat a boy, with my mother's hand on my shoulder. Now a boy of {enemy.ruler.age} sends me his terms by another man's mouth.",
+        "Peace was given, not taken; put it so. The gods love the hand that sheathes the sword.",
+        "It is only silver. The priests say the wise withdraw from wealth. Let {city.name} be wise."
+      ],
+      "choice": {
+        "prompt": "The hearth-rolls of {city.name} are stacked to your elbow, and the lamp is low. The levy for the indemnity must be assessed tonight, and the pen is yours.",
+        "options": [
+          { "label": "Lay the heaviest share on the great houses", "effects": { "conscience": 2, "favour": -2, "household": -1 }, "consequence": "You put the merchant houses and the old families at the head of the roll, assessed by their warehouses and their rents, not their hearths. {names.m.7} reads it at dawn and laughs without any pleasure. Those houses sit on the prince's council. By noon they know whose hand drew the roll." },
+          { "label": "Assess every hearth alike, as the steward said", "effects": { "favour": 2, "conscience": -2 }, "consequence": "Every hearth owes the same: the dyer's, the priest's, the paper-maker's widow's, the great merchant's. It is quick and it looks fair. In the lower town they sell their pots and bedding to the very merchants who are paying no more than they are." },
+          { "label": "Quietly lighten the assessment of your own lane", "effects": { "household": 3, "conscience": -2 }, "consequence": "Nobody checks a lane of a few hearths in the roll of a whole city. You shave your street's share, and your own, and {names.f.6}'s with it, and lay the difference on a lane you have never walked down. {names.f.1} asks no questions about the silver she does not have to find." }
+        ]
+      },
+      "tablet": [
+        {
+          "slot": "end",
+          "prompt": "The terms are sealed and the heralds have ridden away. What does the day-book say of the peace?",
+          "options": [
+            { "pick": "true", "label": "The terms as the herald called them", "line": "Peace was sealed at {city.name} {date}: {treaty.ceded} districts to {enemy.name}, an indemnity of {treaty.indemnity}, and a truce of {treaty.truce} years.", "effects": { "conscience": 2, "favour": -2 } },
+            { "pick": "rounded", "label": "The peace, without its price", "line": "Peace was sealed at {city.name} {date}, and certain border districts passed to {enemy.name} for the sake of quiet.", "effects": { "favour": 1, "conscience": -1 } },
+            { "pick": "boasted", "label": "They came to beg it", "line": "The envoys of {enemy.name} came to the gate of {city.name} {date}, begging peace, and the prince, at the prayer of the priests, allowed it.", "effects": { "favour": 2, "conscience": -3 } }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "beat": "tablet",
+      "scene": [
+        "By the turn of the month the host of {enemy.name} has gone, and {city.name} is counting out its silver. The prince hears your leaf in the small audience room, with the shutters closed against the heat. {names.f.7} reads it to him in her good court voice, giving nothing away: the muster, the field, the dead, the peace. His wife sits by the window, and at her feet their daughter rolls a wooden horse across the boards.",
+        "{state.ruler.name} listens with his chin on his fist. When the reading is done he asks for the leaf itself, pushes a shutter open and holds the leaf up to the light, as if the truth might be in the paper and not the ink. It is {names.m.6}'s paper. Against the light you can see the mark of his mill in it, a little wheel. Whatever is written on it now will be bound into the day-book and outlast the prince."
+      ],
+      "king": [
+        "Not our dead. Theirs. How many did you say?",
+        "There is a girl on that floor with a wooden horse who will open this day-book one day. What will your pen tell her about her father?",
+        "The priests teach that truth is kept by the ordained. You, scribe, were never ordained."
+      ],
+      "choice": {
+        "prompt": "The prince lays the leaf down between you. {names.f.7} has a scraping knife ready, and a fresh sheet from the stack.",
+        "options": [
+          { "label": "Say a day-book written over is worthless", "effects": { "conscience": 2, "favour": -2, "household": -1 }, "consequence": "You say that a day-book written over is a day-book no one believes. He studies you over the leaf. Then he gives it to {names.f.7} to be filed, and gives you to the steward, who walks you home a pace behind you, as a guard walks." },
+          { "label": "Take the fresh sheet and write as he dictates", "effects": { "favour": 3, "conscience": -2, "household": 1 }, "consequence": "He dictates and you write: more of theirs, fewer of ours, and a peace that was a kindness to a boy. {names.f.7} sands the ink for you. The old leaf is fed to the lamp, and the prince laughs, which no one in the palace has heard him do since the spring." },
+          { "label": "Hold out the pen to him", "effects": { "conscience": 2, "favour": -1, "household": -1 }, "flag": "hand", "consequence": "You say that a scribe may write only what he saw, but a prince may write what he pleases, and you hold out the pen. The room goes still. Then {state.ruler.name} takes it, strikes your figures through, and writes his own above them in a large, unpractised hand." }
+        ]
+      }
+    }
+  ],
+  "endings": [
+    {
+      "id": "hand",
+      "title": "His strokes across your figures",
+      "when": { "flag": "hand", "conscience": [4, 20] },
+      "text": "{state.ruler.name} never speaks of the leaf again, and never sends you away. For years you copy his grants and letters, and he never once meets your eye when you bring them. When that summer's day-book is bound, your leaf goes in with his strokes across it, the ink of both hands browning together. Some nights you think it was the bravest thing you ever did. Other nights you think it was the cleverest way a coward ever found. You never settle it."
+    },
+    {
+      "id": "mill",
+      "title": "A wheel in the paper",
+      "when": { "flag": "mill", "conscience": [6, 20] },
+      "text": "{names.f.6} keeps the sheets in the chest with her husband's tools. She never learns to read, but on the feast of the dead she takes them out, holds each one to the window until the little wheel shows, and lays them back. The palace leaf has the steward's count. The paper-maker's own paper has the rest, and his widow can read his mark if not your letters. You stand at her door on that feast every year, and she lets you in."
+    },
+    {
+      "id": "keeper",
+      "title": "The day-book, and a window over the court",
+      "when": { "favour": [9, 20] },
+      "text": "The prince likes a pen that knows its business. You are given charge of the day-book, with rooms in the palace and a window over the court. When the {treaty.ceded} districts are handed over, you write it as an exchange of gifts between neighbours. Years later {chronicle.author} comes to read your leaves for his chronicle of the war, and goes away with the war the prince wanted, if not quite your figures. You are proud of that, most days."
+    },
+    {
+      "id": "frontier",
+      "title": "Clerk to the paper-makers' guild",
+      "when": { "conscience": [6, 20], "favour": [-20, -3] },
+      "text": "The steward finds a use for an honest pen out of his sight: the paper-makers' guild needs a clerk, with so many of its masters dead or missing, and nobody at court will miss you. You keep its books in a room that smells of rags, and you learn which mill made every sheet in the city. When the {treaty.ceded} districts go to {enemy.name}, many of the guild's rag-carts go with them. {names.f.1} says the rooms are warmer than the chancery ever was."
+    },
+    {
+      "id": "lane",
+      "title": "The lane that paid less",
+      "when": { "household": [3, 20] },
+      "text": "No one finds the shaved figures in the levy roll, and no one thanks you for them. Your lane keeps its pots and bedding while the lane you never walked down sells theirs. {names.m.8} grows up sharpening pens at the next desk and never carries a crossbow, and your house stays warm and fed through the years of the indemnity. You take the long way to the chancery, so as not to pass that lane."
+    },
+    {
+      "id": "desk",
+      "title": "A pen among the pens",
+      "when": {},
+      "text": "The chancery forgets to reward you and forgets to punish you. Your leaf is bound into the day-book with the rest of that summer, between a grant of mill-rights and a list of horses lost at {battle.place}, and no one opens it again in your lifetime. The silver is paid. The truce holds. In the evenings you teach {names.m.8} to cut a pen, and what you wrote stays between you and the day-book."
+    }
+  ],
+  "archaeologist": {
+    "true": "From the catalogue of the palace papers of {city.name}, {find.year}. A leaf of the prince's day-book, {find.condition}, on rag paper from a mill of the lower town. Its figures are the record's: {tablet.muster} men against an imperial host of {battle.theirs}, then {tablet.ours} dead of {state.name} at {battle.place} and {tablet.theirs} of {enemy.name}. No other document of the war agrees with it. The chronicle finished by {chronicle.author} in AY {chronicle.year} admits the retreat but turns the dead upside down: \"{chronicle.quote}\" The chronicle cannot explain why a side that lost so few and killed so many paid {treaty.indemnityKg} kilograms of silver for peace. This leaf can.",
+    "rounded": "From the catalogue of the palace papers of {city.name}, {find.year}. This leaf survived folded inside a later tax-book, {find.condition}. Set beside the record it leans, but not far: {tablet.muster} men to the record's {battle.ours}, {tablet.ours} dead of {state.name} for {battle.oursLost}, {tablet.theirs} of {enemy.name} for {battle.theirsLost}. Where it strays, it strays a little, and always toward the prince. When {chronicle.author} wrote the war into a {chronicle.medium} in AY {chronicle.year}, the dead of {state.name} had shrunk to {chronicle.oursLost} and the enemy's grown to {chronicle.theirsLost}. Here, in a careful and honest-looking hand, the drift is already under way.",
+    "boasted": "From the catalogue of the palace papers of {city.name}, {find.year}. A leaf of the day-book, {find.condition}, and a fine specimen of court prose. It gives {tablet.ours} dead of {state.name} at {battle.place} and {tablet.theirs} of {enemy.name}; they were in fact {battle.oursLost} and {battle.theirsLost}, from a levy of {battle.ours} against {battle.theirs}. The truth would have excused the prince, for few commanders bring an army home from such odds. The leaf convicts him instead: it leaves no reason why {state.name} should then give up {treaty.ceded} districts and pay {treaty.indemnity}. The chronicle of {chronicle.author} took the same road, and ends: \"{chronicle.outcomeWords}\"",
+    "flags": {
+      "mill": "From a family chest, {find.year}. In a house of the old paper-makers' lane of {city.name}, a widow's chest held a roll of the dead of {battle.place}, found and missing alike, written in a chancery hand on sheets that bear the little wheel of a mill in that same lane. The names number {battle.oursLost}, the record's figure. The day-book leaf of that summer, on paper from the same mill, gives {tablet.ours}. Both were made in the same vat and written by the same hand. Only the widow's tells the truth.",
+      "hand": "From the catalogue of the palace papers of {city.name}, {find.year}. This leaf of the day-book, {find.condition}, has been corrected by someone other than its scribe. The scribe's figures, {tablet.ours} dead of {state.name} and {tablet.theirs} of {enemy.name}, are struck through with heavy strokes; the record gives {battle.oursLost} and {battle.theirsLost}. Above them a larger, rougher hand has written the figures that {chronicle.author} would later repeat: {chronicle.oursLost} and {chronicle.theirsLost}. Comparison with the sealed letters of the reign leaves little doubt whose hand it is. Nowhere else in the archive can we watch a prince of {state.name} correct his own war."
+    }
+  }
+}
