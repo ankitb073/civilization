@@ -569,6 +569,152 @@ export function buildLives(a: Archive, exclude: Set<string>): Dossier[] {
   return out;
 }
 
+/** Sixth wave: "Lives II", fifty people the first Lives (all rulers) left out: generals, inventors, founders of faiths,
+ *  merchants, rebels, regents, chroniclers, archaeologists and modern heads of state (fl-641+). */
+export function buildLives2(a: Archive, exclude: Set<string>): Dossier[] {
+  const ctx = a.ctx;
+  const s = ctx.s;
+  const T = a.T;
+  const g = a.gen;
+  const ed = s.polities[ctx.editorialPolity];
+  const lang = ctx.editorialLang;
+  const simPersons = a.ctx.r.simPersons ?? s.persons.length;
+  const simEvents = a.ctx.r.simEvents ?? s.events.length;
+  const rulers = new Set<number>();
+  for (const [, rs] of ctx.reigns) for (const r of rs) if (r.role === 'ruler') rulers.add(r.person);
+  // every person's events, and a richness score: events weighted by significance, and documents written
+  const evOf = new Map<number, SimEvent[]>();
+  const roleOf = new Map<number, Set<string>>();
+  for (let i = 0; i < simEvents; i++) {
+    const e = s.events[i];
+    for (const [r, role] of e.parts) {
+      if (!r.startsWith('per:')) continue;
+      const id = ctx.idNum(r);
+      if (!evOf.has(id)) evOf.set(id, []);
+      evOf.get(id)!.push(e);
+      if (!roleOf.has(id)) roleOf.set(id, new Set());
+      roleOf.get(id)!.add(`${e.sub}/${role}`);
+    }
+  }
+  const docsBy = new Map<number, typeof a.artifacts>();
+  for (const x of a.artifacts) if (x.status === 'extant' && !x.flagship && x.author !== null) { if (!docsBy.has(x.author)) docsBy.set(x.author, []); docsBy.get(x.author)!.push(x); }
+  const rich = (id: number) => (evOf.get(id) ?? []).reduce((t, e) => t + 0.5 + e.sig, 0) + 1.5 * (docsBy.get(id)?.length ?? 0);
+  const has = (id: number, k: string) => roleOf.get(id)?.has(k) ?? false;
+  const usable = (id: number) => !exclude.has(`per:${id}`) && T.pageRefs.has(`per:${id}`) && s.persons[id].died <= 4950 && (id < simPersons || docsBy.has(id) || has(id, 'excavation/excavator'));
+  const commands = (id: number) => (evOf.get(id) ?? []).filter((e) => e.sub === 'battle').length;
+  const kinds: { kind: string; n: number; pick: (id: number) => boolean; rank: (id: number) => number }[] = [
+    { kind: 'general', n: 11, pick: (id) => !rulers.has(id) && commands(id) >= 4, rank: (id) => commands(id) * 2 + rich(id) },
+    { kind: 'inventor', n: 6, pick: (id) => has(id, 'invention/inventor'), rank: rich },
+    { kind: 'founder of a faith or school', n: 6, pick: (id) => has(id, 'movement-founding/founder') || has(id, 'schism/founder') || has(id, 'reform/leader'), rank: rich },
+    { kind: 'merchant', n: 5, pick: (id) => has(id, 'house-founding/founder') && !rulers.has(id), rank: (id) => rich(id) + Math.max(0, ...s.houses.filter((h) => h.founder === id).map((h) => ((h.died ?? 5000) - h.born) / 20)) },
+    { kind: 'rebel or revolutionary', n: 7, pick: (id) => has(id, 'revolt/leader') || has(id, 'civil-war/claimant') || has(id, 'revolution/leader'), rank: rich },
+    { kind: 'regent', n: 4, pick: (id) => has(id, 'succession/regent') && !rulers.has(id), rank: rich },
+    { kind: 'chronicler or historian', n: 5, pick: (id) => (docsBy.get(id)?.length ?? 0) >= 3 && !rulers.has(id), rank: (id) => (docsBy.get(id)?.length ?? 0) * 3 + rich(id) },
+    { kind: 'archaeologist', n: 2, pick: (id) => has(id, 'excavation/excavator'), rank: (id) => (evOf.get(id) ?? []).filter((e) => e.sub === 'excavation').length },
+    { kind: 'elected head of state', n: 4, pick: (id) => has(id, 'election/successor') && (evOf.get(id) ?? []).length >= 4, rank: rich },
+  ];
+  const chosen: { pid: number; kind: string }[] = [];
+  const taken = new Set<number>();
+  const all = [...new Set([...evOf.keys(), ...docsBy.keys()])];
+  for (const k of kinds) {
+    const ranked = all.filter((id) => !taken.has(id) && usable(id) && k.pick(id)).sort((x, y) => k.rank(y) - k.rank(x) || x - y);
+    // spread across the five millennia: no two of a kind from the same century
+    const centuries = new Set<number>();
+    for (const id of ranked) {
+      if (chosen.filter((c) => c.kind === k.kind).length >= k.n) break;
+      const c = Math.floor(s.persons[id].born / 100);
+      if (centuries.has(c)) continue;
+      centuries.add(c);
+      taken.add(id);
+      chosen.push({ pid: id, kind: k.kind });
+    }
+  }
+  chosen.sort((x, y) => s.persons[x.pid].born - s.persons[y.pid].born);
+  const out: Dossier[] = [];
+  chosen.forEach(({ pid, kind }, k) => {
+    const p = s.persons[pid];
+    const pool = g.scholars.filter((id) => s.persons[id].born + 28 <= 4995 && s.persons[id].died >= 4955 && id !== pid);
+    const who = pool[(k * 11 + 3) % pool.length];
+    const year = Math.min(4999, Math.max(4955, s.persons[who].born + 32 + (k % 13)), s.persons[who].died);
+    const d = g.doc(lang, year, `life2:${pid}`);
+    const pg = a.pages.get(`per:${pid}`);
+    const evs = (evOf.get(pid) ?? []).slice().sort((x, y) => x.year - y.year || x.id - y.id);
+    const shown = evs.length > 40 ? evs.filter((e) => e.sig >= 0.25 || e.sub !== 'battle').slice(0, 40) : evs;
+    const facts = [stripLinks(pg?.summary ?? ''), `Kind of life: ${kind}`, `Sex: ${p.sex === 'f' ? 'woman (she/her)' : 'man (he/him)'}`, ...(pg?.infobox ?? []).map(([k2, v]) => `${k2}: ${stripLinks(v)}`)];
+    if (evs.length > shown.length) facts.push(`(${evs.length} events name this person; the ${shown.length} most significant are listed.)`);
+    facts.push(...shown.map((e) => `${T.title.get(`evt:${e.id}`)} (AY ${e.year}): ${stripLinks(a.pages.get(`evt:${e.id}`)?.summary ?? '')}`));
+    for (const h of s.houses.filter((h) => h.founder === pid)) facts.push(`Founded ${T.title.get(`hou:${h.id}`) ?? 'a house'} (${h.kind}) at ${T.short.get(`set:${h.settlement}`) ?? '?'} in AY ${h.born}; it ${h.died !== null ? `ended in AY ${h.died}` : 'outlived the record'}; goods ${h.goods.map((x) => GOODS[x]?.name ?? x).join(', ')}; partners ${h.partners.slice(0, 5).map((x) => T.short.get(`set:${x}`)).join(', ')}; loans to ${h.loans.slice(0, 4).map((l) => `${T.short.get(`pol:${l.polity}`)} (${Math.round(l.amount)} kg, AY ${l.year})`).join(', ') || 'none recorded'}.`);
+    for (const m of s.movements.filter((m) => m.founder === pid)) facts.push(`Founded ${T.title.get(`mov:${m.id}`)} (${m.kind}, AY ${m.born}). Teachings: ${tenetText(m.kind, m.tenets)}${m.died !== null ? ` It ended in AY ${m.died}.` : ''} (The record keeps no yearly count of adherents: do not state its size.)`);
+    const docs = (docsBy.get(pid) ?? []).sort((x, y) => x.year - y.year);
+    if (docs.length) facts.push(`Surviving documents this person wrote (${docs.length}): ${docs.slice(0, 12).map((x) => `${x.catalog} "${x.title}" (${x.sub}, AY ${x.year}; ${x.condition})`).join('; ')}.`);
+    const about = a.artifacts.filter((x) => x.status === 'extant' && !x.flagship && x.mentions.has(`per:${pid}`) && x.author !== pid).sort((x, y) => x.year - y.year).slice(0, 10);
+    if (about.length) facts.push(`Surviving documents that name this person: ${about.map((x) => `${x.catalog} "${x.title}" (${x.sub}, AY ${x.year})`).join('; ')}.`);
+    const links = new Set<string>([`per:${pid}`]);
+    for (const r of p.roles) if (r.polity !== null) links.add(`pol:${r.polity}`);
+    if (p.polity !== null) links.add(`pol:${p.polity}`);
+    if (p.father !== null) links.add(`per:${p.father}`);
+    if (p.mother !== null) links.add(`per:${p.mother}`);
+    for (const x of [...p.spouses, ...p.children]) links.add(`per:${x}`);
+    for (const h of s.houses.filter((h) => h.founder === pid)) links.add(`hou:${h.id}`);
+    for (const m of s.movements.filter((m) => m.founder === pid)) links.add(`mov:${m.id}`);
+    for (const e of shown) { links.add(`evt:${e.id}`); for (const [r] of e.parts.slice(0, 6)) links.add(r); }
+    const allowed: Dossier['allowedLinks'] = [];
+    for (const ref of links) {
+      if (!T.pageRefs.has(ref) || (ref.startsWith('per:') && ctx.idNum(ref) >= simPersons && ref !== `per:${pid}`) || (ref.startsWith('evt:') && ctx.idNum(ref) >= simEvents)) continue;
+      const st = startOf(a, ref);
+      if (st !== null && st > year) continue;
+      const sexNote = ref.startsWith('per:') ? ` (${s.persons[ctx.idNum(ref)].sex === 'f' ? 'woman; she/her' : 'man; he/him'})` : '';
+      allowed.push({ id: ref, text: T.short.get(ref) ?? d.nameOf(ref), what: (T.title.get(ref) ?? '') + sexNote });
+      if (allowed.length >= 70) break;
+    }
+    // the world around them: their state in mid-life, its surveys near their birth and death, its wars in their adult life
+    const context: string[] = [];
+    const home = p.polity !== null ? s.polities[p.polity] : (p.roles.find((r) => r.polity !== null)?.polity ?? null) !== null ? s.polities[p.roles.find((r) => r.polity !== null)!.polity!] : null;
+    if (home) {
+      links.add(`pol:${home.id}`);
+      const mid = Math.max(home.born, Math.min((home.died ?? 5000) - 1, Math.round((p.born + p.died) / 2)));
+      const r = ctx.rulerAt(home.id, mid);
+      const capId = ctx.capitalAt(home, mid);
+      if (r) links.add(`per:${r.person}`);
+      links.add(`set:${capId}`);
+      context.push(`Their state: ${T.title.get(`pol:${home.id}`)}. In AY ${mid}: government ${ctx.govAt(home, mid)}; capital ${T.short.get(`set:${capId}`)}${r ? `; ruler ${T.short.get(`per:${r.person}`)} (since AY ${r.start})` : ''}.`);
+      const rel = ctx.religionOf(home.id, mid);
+      if (rel >= 0) links.add(`mov:${rel}`);
+      if (rel >= 0) context.push(`State religion in AY ${mid}: ${T.short.get(`mov:${rel}`)} (${s.movements[rel].kind}). ${tenetText(s.movements[rel].kind, s.movements[rel].tenets)}`);
+      const cur = ctx.currencyAtExact(home.id, mid);
+      if (cur >= 0) links.add(`cur:${cur}`);
+      if (cur >= 0) { const grain = g.price(capId, GOODS.findIndex((x) => x.key === 'grain'), mid); context.push(`Money in AY ${mid}: ${T.short.get(`cur:${cur}`)} (${ctx.contentAt(cur, mid).toFixed(2)} g silver)${grain !== null ? `; grain about ${(grain / ctx.contentAt(cur, mid)).toFixed(2)} per measure` : ''}.`); }
+      context.push(`Technology level in AY ${mid}: ${['Bronze Age', 'Iron Age', 'Classical', 'Medieval', 'Early Modern', 'Industrial', 'Post-industrial'][Math.min(6, era(a, home, mid))]}.`);
+      const surveys = (ctx.polityStats.get(home.id) ?? []);
+      const near = (y: number) => surveys.reduce<(number | string | null)[] | null>((m, row) => (m === null || Math.abs((row[1] as number) - y) < Math.abs((m[1] as number) - y) ? row : m), null);
+      for (const [label, y] of [['birth', p.born], ['death', p.died]] as const) { const row = near(y); if (row && Math.abs((row[1] as number) - y) <= 30) context.push(`Survey of the ${row[1]}s (nearest the subject's ${label}): ${(row[3] as number).toLocaleString('en-US')} people, ${row[2]} districts, army ${(row[6] as number).toLocaleString('en-US')} men.`); }
+      const wars = (ctx.eventsByRef.get(`pol:${home.id}`) ?? []).map((i) => s.events[i]).filter((x) => x.sub === 'war' && x.year >= p.born + 15 && x.year <= p.died && x.id < simEvents)
+        .sort((x, y) => (Number(y.data.lossesA ?? 0) + Number(y.data.lossesD ?? 0)) - (Number(x.data.lossesA ?? 0) + Number(x.data.lossesD ?? 0))).slice(0, 6);
+      for (const w of wars) { links.add(`evt:${w.id}`); context.push(`War of their state in their lifetime: ${T.title.get(`evt:${w.id}`)} (AY ${w.year}–${w.end ?? w.year}): ${stripLinks(a.pages.get(`evt:${w.id}`)?.summary ?? '')}`); }
+    }
+    for (const ref of links) {
+      if (allowed.some((x) => x.id === ref) || allowed.length >= 80) continue;
+      if (!T.pageRefs.has(ref) || (ref.startsWith('per:') && ctx.idNum(ref) >= simPersons) || (ref.startsWith('evt:') && ctx.idNum(ref) >= simEvents)) continue;
+      const st = startOf(a, ref);
+      if (st !== null && st > year) continue;
+      const sexNote = ref.startsWith('per:') ? ` (${s.persons[ctx.idNum(ref)].sex === 'f' ? 'woman; she/her' : 'man; he/him'})` : '';
+      allowed.push({ id: ref, text: T.short.get(ref) ?? d.nameOf(ref), what: (T.title.get(ref) ?? '') + sexNote });
+    }
+    const thin = facts.length + docs.length < 16;
+    const id = `fl-${String(641 + out.length).padStart(3, '0')}`;
+    out.push({
+      id, form: `biographical essay (Lives series): the life of a ${kind}`, register: 'Modern scholarship: a long-form life, narrative but critical; weighs legend against record; may cite AY dates.',
+      year, localDate: `AY ${year}`, language: T.short.get(`lan:${lang}`) ?? '', script: 'print', medium: 'book chapter',
+      author: { id: `per:${who}`, name: T.short.get(`per:${who}`) ?? '', role: `${s.persons[who].sex === 'f' ? 'woman' : 'man'}; ${s.persons[who].roles.map((r) => r.role).join(', ')}`, polity: T.short.get(`pol:${ed.id}`) ?? null, born: s.persons[who].born, died: s.persons[who].died, stance: 'a modern biographer: humane, sceptical of court propaganda, interested in how ordinary lives were shaped' },
+      subject: { id: `per:${pid}`, title: `The life of ${T.short.get(`per:${pid}`)}`, summary: stripLinks(pg?.summary ?? ''), facts },
+      context, allowedLinks: allowed,
+      guidance: GUIDANCE.replace('Do not mention "simulation", "AY", "dossier" or the modern editors (except in the modern editorial essays, which are written by those editors and may use AY dates).', 'This is modern scholarship: you MAY use AY dates. Never mention "simulation", "dossier" or "ground truth" — call it "the record". Do not link documents; name sources by title in plain text, or cite them by catalogue number.').replace('Length: 350–750 words.', thin ? 'Length: 650–1,000 words, with 3–4 short section headings. The record of this life is thin: say so where it is silent, set the person in their world from the context lines, and never invent events, relatives or figures.' : 'Length: 900–1,400 words, with 3–5 short section headings.'),
+      frontmatter: [`id: ${id}`, `subject: per:${pid}`, `form: biographical essay`, `year: ${year}`, `author: per:${who}`, `polity: pol:${ed.id}`, `lang: ${lang}`, `script: ${ctx.scriptOf(ed, year)}`, `medium: book chapter`].join('\n'),
+    });
+  });
+  return out;
+}
+
 const VOICES: Record<string, string[]> = {
   famine: ['diary of a farmer’s wife in the hungry year', 'petition of villagers to the governor', 'song of the empty granary', 'prayer scratched on a potsherd'],
   plague: ['letter of an apprentice to his mother', 'lullaby sung in the plague year', 'list of the dead kept by a gravedigger, with his notes', 'vow made by a widow at a shrine'],
