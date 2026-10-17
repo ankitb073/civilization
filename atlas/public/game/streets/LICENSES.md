@@ -14,6 +14,7 @@ with the exact tool versions, is in that file's header).
 | Licence | CC0 1.0 Universal, stated on each pack page and in each pack's licence file |
 | Mesh, skeleton, textures | **Universal Base Characters [Standard]**: `Superhero_Male_FullBody.gltf` / `.bin`, and the base-colour textures `T_Superhero_Male_Dark.png`, `T_Hair_1_BaseColor.png` and `T_Eye_Brown.png` |
 | Animations | **Universal Animation Library [Standard]** (`UAL1_Standard.glb`): `Idle_Loop`, `Walk_Loop`, `Jog_Fwd_Loop`, `Sprint_Loop`, `Jump_Start`, `Jump_Loop`, `Jump_Land`, `Roll`. **Universal Animation Library 2 [Standard]** (`UAL2_Standard.glb`): `ClimbUp_1m` (kept for the mantle in step 2) |
+| Authored clips (ours, CC0 like their sources) | `Run_Jump_L`, `Run_Jump_R` (a running jump off the left or right foot) and `Jump_Air` (the standing jump's flight), posed by `runner-asset.ts` from frames of `Jog_Fwd_Loop`, `Jump_Start`, `Jump_Loop` and `Jump_Land` above, with joint angles set in the script and Catmull-Rom in-betweens. No other source is in them. |
 
 Pack pages (official):
 - https://quaternius.com/packs/universalbasecharacters.html (download: https://quaternius.itch.io/universal-base-characters)
@@ -48,9 +49,13 @@ roughness maps dropped; base-colour textures downsampled (body 512 px, brows and
 recoloured as a madder-red loincloth; keyframes resampled; geometry quantized (`KHR_mesh_quantization`) and
 meshopt-compressed (`EXT_meshopt_compression`).
 
-`runner.glb` SHA-256: `c1db0919a958266ec725674e504751c4c2470b061c62d2fe1581ab18aa9a4cdb` (390,248 bytes).
+`runner.glb` SHA-256: `4fb3bd323184ed900fdb39b6a57055bcd9a4fd395ecfe09ab1d13b8a711029f1` (447,448 bytes).
 
 ## Considered and not used
+
+Running-jump clips, checked 2026-10-16 before authoring our own:
+- **Universal Animation Library 1 and 2 [Standard]** (Quaternius, CC0): no running jump. `Jump_Start`/`Jump_Loop`/`Jump_Land` are a standing jump; UAL2's `NinjaJump_*` is a stylised tuck with the arms swept back.
+- **Mesh2Motion** (https://github.com/Mesh2Motion/mesh2motion-app, `static/animations/human-addon-animations.glb` at commit `653a9698`, SHA-256 `a0d64d555e0d492026b72d58bf8e16c5e86779295f9093e376dcc001915c2c95`; art CC0 per its README and `LICENSE-CC0.MD`, its source repository `Mesh2Motion/mesh2motion-assets` is CC0-1.0): the same 65-joint skeleton (rest angles differ slightly), but its `Run Jump` is one held pose (two keyframes), and `Jump_2` is a standing tuck jump. Its `Ledge Hang`, `Climb Wall`, `Climb Ladder`, `Ladder_Idle` and `Pipe Climb` are candidates for step 2's climbing.
 
 KayKit Character Pack: Adventurers 1.0 (Kay Lousberg, CC0,
 https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0). It has every clip we need, but its

@@ -13,23 +13,29 @@ import { LOT, buildStreets, type Solid, type StreetsCity } from './world.ts';
 
 export interface GameOpts { mobile: boolean; touch: boolean; reducedMotion: boolean }
 
-/** Feel: speeds in m/s, accelerations in m/s², times in seconds. */
-const FEEL = {
+/** Feel: speeds in m/s, accelerations in m/s², times in seconds. The jump is committed: once the feet leave the
+ *  ground the arc is ballistic (how long the button is held no longer changes it), a little heavier coming down than
+ *  going up. Before it, a short push on the ground (`takeoff*`), and the push sends the body forward when the stick is
+ *  held (`boost*`: a broad jump from a stand), instead of the air accelerating it afterwards. */
+export const FEEL = {
   walk: 1.45,
   accel: 26,
   decel: 22,
   skidDecel: 42,
-  airAccel: 6,
+  airAccel: 2.5,
   turnSlow: 14,
   turnFast: 7.5,
   airTurn: 2.6,
   jumpV: 7.4,
   gUp: 22,
-  gCut: 48,
   gDown: 34,
   terminal: 42,
   coyote: 0.12,
   buffer: 0.13,
+  takeoffMove: 0.05,
+  takeoffStand: 0.083,
+  boostRun: 3.2,
+  boostWalk: 1.45,
 };
 const STEP = 1 / 60;
 
@@ -61,6 +67,12 @@ export class StreetsGame {
   private lastGround = 0;
   private jumpAt = -1;
   private jumped = false;
+  /** Seconds of push left before the feet leave the ground (-1: no jump starting). */
+  private takeoffT = -1;
+  /** The take-off's vertical speed, where the feet left the ground, and the feet's height over the ground below. */
+  private vy0 = 0;
+  private fromY = 0;
+  private clear = Infinity;
   private airT = 0;
   private peakY = 0;
   private prev = new Vector3();
@@ -71,6 +83,8 @@ export class StreetsGame {
   private controlLock = 0;
   private pilot: Pilot | null = null;
   private runnerHidden = false;
+  /** The probes' side camera (filming): square to `heading`, `dist` metres off, at a fixed height. */
+  sideView: { heading: number; dist: number; y: number; fov: number } | null = null;
   private w = 1;
   private h = 1;
   private dpr = 1;
@@ -195,7 +209,13 @@ export class StreetsGame {
     }
     if (steps === 5) this.acc = 0;
     this.push(this.stats.phys, performance.now() - p0);
-    const alpha = this.acc / STEP;
+    this.present(dt, this.acc / STEP, now / 1000);
+    this.push(this.stats.cpu, performance.now() - c0);
+  }
+
+  /** Draw a frame: the runner between the last two steps (alpha), its animation, the camera, the sun, the render. */
+  private present(dt: number, alpha: number, clock: number) {
+    if (!this.phys || !this.runner || !this.city) return;
     const runner = this.runner;
     runner.object.position.lerpVectors(this.prev, this.curr, alpha);
     // face where it runs
@@ -207,7 +227,10 @@ export class StreetsGame {
       this.yawRate = (d * k) / Math.max(1e-3, dt);
     } else this.yawRate *= 0.8;
     runner.object.rotation.y = this.lastFacing;
-    runner.update(dt, { speed: this.animSpeed, grounded: this.grounded, vy: this.vy, air: this.airT, turn: this.yawRate });
+    runner.update(dt, {
+      speed: this.animSpeed, grounded: this.grounded, vy: this.vy, air: this.airT, turn: this.yawRate,
+      arc: { vy0: this.vy0, gUp: FEEL.gUp, gDown: FEEL.gDown, clear: this.clear, below: this.fromY - this.curr.y },
+    });
     // foot skate: how far the ground speed the feet show is from how fast the runner really goes (m/s)
     const foot = runner.footSpeed();
     if (foot !== null && this.grounded && this.animSpeed > 0.5) this.push(this.stats.skate, Math.abs(foot - this.animSpeed));
@@ -231,9 +254,16 @@ export class StreetsGame {
     sun.target.position.set(sx, o.y, sz);
     sun.target.updateMatrixWorld();
 
-    if (this.city.model.smoke.length) this.city.smoke.update(this.opts.reducedMotion ? 40 : now / 1000, this.camera);
+    if (this.sideView) {
+      // the probes' side view: square to the run, at a fixed height, so the body is seen to rise and fall
+      const s = this.sideView, h = s.heading, cam = this.camera;
+      cam.position.set(o.x - Math.cos(h) * s.dist, s.y, o.z + Math.sin(h) * s.dist);
+      cam.lookAt(o.x, s.y, o.z);
+      if (Math.abs(cam.fov - s.fov) > 0.01) { cam.fov = s.fov; cam.updateProjectionMatrix(); }
+    }
+
+    if (this.city.model.smoke.length) this.city.smoke.update(this.opts.reducedMotion ? 40 : clock, this.camera);
     this.renderer.render(this.scene, this.camera);
-    this.push(this.stats.cpu, performance.now() - c0);
   }
 
   runSpeed(): number {
@@ -292,20 +322,36 @@ export class StreetsGame {
       else if (mag < 0.05) this.speed += Math.max(ds, -FEEL.airAccel * 0.5 * dt);
     }
 
-    // jump: buffered presses, a little grace after leaving an edge
-    const canJump = !this.jumped && (this.grounded || this.t - this.lastGround < FEEL.coyote) && !runner.rolling;
-    if (this.jumpAt >= 0 && this.t - this.jumpAt <= FEEL.buffer && canJump) {
+    // jump: buffered presses, a little grace after leaving an edge. On the ground it starts with a short push (the
+    // runner keeps moving through it); just after an edge there is nothing to push from, so it leaves at once.
+    const launch = () => {
+      this.takeoffT = -1;
       this.vy = FEEL.jumpV;
+      this.vy0 = FEEL.jumpV;
       this.jumped = true;
-      this.jumpAt = -1;
       this.grounded = false;
       this.airT = 0;
       this.peakY = this.curr.y;
-      runner.jump(this.speed);
+      this.fromY = this.curr.y;
+      // the push carries the body the way the stick points (a broad jump from a stand); the air adds little after
+      if (mag > 0.3) this.speed = Math.max(this.speed, Math.min(target, ctl.run ? FEEL.boostRun : FEEL.boostWalk));
+      runner.launch();
+    };
+    if (this.takeoffT >= 0) {
+      this.takeoffT -= dt;
+      if (this.takeoffT <= 1e-6 || !this.grounded) launch();
     }
-    // gravity: lighter going up while the button is held, a hard cut when let go, heavier coming down
+    const canJump = !this.jumped && this.takeoffT < 0 && (this.grounded || this.t - this.lastGround < FEEL.coyote) && !runner.rolling;
+    if (this.jumpAt >= 0 && this.t - this.jumpAt <= FEEL.buffer && canJump) {
+      this.jumpAt = -1;
+      const moving = this.speed > 1.2 || mag > 0.3;
+      runner.takeoff(moving);
+      if (this.grounded) this.takeoffT = moving ? FEEL.takeoffMove : FEEL.takeoffStand;
+      else launch();
+    }
+    // gravity: the same arc whatever the button does, a little heavier coming down
     if (!this.grounded) {
-      const g = this.vy > 0 ? (ctl.jumpHeld || !this.jumped ? FEEL.gUp : FEEL.gCut) : FEEL.gDown;
+      const g = this.vy > 0 ? FEEL.gUp : FEEL.gDown;
       this.vy = Math.max(-FEEL.terminal, this.vy - g * dt);
     } else this.vy = -1.5;
 
@@ -318,6 +364,12 @@ export class StreetsGame {
     if (r.hitWall && real < this.speed) this.speed = Math.max(real, this.speed - FEEL.decel * dt * 2);
     this.animSpeed += (Math.min(real, this.speed + 0.5) - this.animSpeed) * (1 - Math.exp(-dt * 14));
     if (r.hitCeiling && this.vy > 0) this.vy = 0;
+
+    // in the air, how high the feet are over the ground straight below (for the flight's reach for the landing)
+    if (!r.grounded || this.vy > 0) {
+      const gy = phys.groundAt(f.x, f.z, f.y + 0.02);
+      this.clear = gy === null ? Infinity : f.y - gy;
+    } else this.clear = 0;
 
     const was = this.grounded;
     const nowGround = r.grounded && this.vy <= 0.01;
@@ -334,7 +386,7 @@ export class StreetsGame {
       this.airT = 0;
       this.peakY = f.y;
     } else {
-      if (was && this.vy <= 0) { this.vy = 0; this.peakY = f.y; }
+      if (was && this.vy <= 0) { this.vy = 0; this.peakY = f.y; this.fromY = f.y; this.vy0 = 0; }
       this.grounded = false;
       this.airT += dt;
       this.peakY = Math.max(this.peakY, f.y);
@@ -351,6 +403,51 @@ export class StreetsGame {
       feet: f, cam: { ...this.cam.last, yaw: this.cam.yaw, pitch: this.cam.pitch, fov: this.camera.fov, y: this.camera.position.y }, dpr: this.dpr, size: [this.w, this.h],
       timing: this.timing, city: this.rec ? { id: this.rec.id, name: this.city?.cy.name, year: this.city?.cy.year, P: this.city?.P, solids: this.city?.solids.length } : null,
     };
+  }
+
+  /** Filming for the probes: stop the loop, so frames are drawn only by `advance` (deterministic, frame-rate free). */
+  film(on: boolean) {
+    if (on) { this.stop(); this.acc = 0; } else { this.sideView = null; this.input.virtual = null; this.last = 0; this.start(); }
+  }
+
+  /** Run whole fixed steps for `seconds` with these controls (and a jump press first, if asked), then draw one frame. */
+  advance(seconds: number, ctl: Controls | null, jump = false) {
+    const n = Math.max(1, Math.round(seconds / STEP));
+    this.input.virtual = ctl;
+    if (jump) this.input.jumps++;
+    for (let i = 0; i < n; i++) { this.prev.copy(this.curr); this.step(STEP); }
+    this.acc = 0;
+    this.present(n * STEP, 1, this.t);
+    const f = this.phys!.feet();
+    return { t: this.t, y: f.y, x: f.x, z: f.z, grounded: this.grounded, pose: this.runner!.pose, vy: this.vy, speed: this.speed, pelvis: this.runner!.pelvisHeight() };
+  }
+
+  /** Where the runner's head, pelvis and feet are on screen (CSS pixels), for cropping the probes' frames. */
+  screenBox(): { x0: number; y0: number; x1: number; y1: number } {
+    const r = this.runner!, c = this.camera;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    r.object.updateMatrixWorld(true);
+    for (const n of ['Head', 'pelvis', 'foot_l', 'foot_r', 'ball_l', 'ball_r', 'hand_l', 'hand_r']) {
+      const o = r.model.getObjectByName(n);
+      if (!o) continue;
+      const v = o.getWorldPosition(new Vector3()).project(c);
+      const x = (v.x * 0.5 + 0.5) * this.w, y = (-v.y * 0.5 + 0.5) * this.h;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    }
+    return { x0, y0, x1, y1 };
+  }
+
+  /** Home for the probes: on the temple square's edge, facing out along the first main road, at a stand. */
+  home() {
+    const L = layoutOf(this.city!.rec);
+    const a = L.roads[0] ?? 0;
+    const facing = Math.atan2(Math.cos(a), Math.sin(a));
+    const r0 = L.plazaR * 0.82 * LOT;
+    this.stopDriving();
+    this.teleport(Math.cos(a) * r0, Math.sin(a) * r0, facing);
+    this.cam.yaw = facing; this.cam.pitch = 0.18;
+    this.grounded = true;
+    return { facing };
   }
 
   /** Steer by script: a list of waypoints (metres), each walked or run, with jumps. */
@@ -420,23 +517,35 @@ export class StreetsGame {
     steps(90, none, (i) => { if (tStop < 0 && this.speed < 0.05) tStop = (i + 1) * STEP; });
     out.stopS = tStop;
     out.stopM = Math.hypot(this.curr.x - p0.x, this.curr.z - p0.z);
-    // 3. a held jump at a run, and 4. a tapped one
-    for (const held of [true, false]) {
+    // 3. jumps: at a run with the button held, and tapped; from a stand; and pushing forward and pressing jump at the
+    // same moment from a stand. Height of the feet over the take-off ground, time in the air, length from the press and
+    // through the air, and the press-to-leaving-the-ground delay (the push).
+    const jump = (key: string, pre: Controls, preN: number, c: Controls) => {
       home();
-      steps(50, run);
+      steps(preN, pre);
       const y0 = this.curr.y, x0 = this.curr.x, z0 = this.curr.z;
       inp.jumps++;
-      let apex = 0, air = 0, length = -1;
-      steps(120, { ...run, jumpHeld: held }, (i) => {
+      let apex = 0, air = 0, length = -1, leave = -1, lx = 0, lz = 0, airLen = -1;
+      steps(150, c, (i) => {
         apex = Math.max(apex, this.curr.y - y0);
-        if (!this.grounded) air = (i + 1) * STEP;
-        else if (air > 0 && length < 0) length = Math.hypot(this.curr.x - x0, this.curr.z - z0);
+        if (!this.grounded) {
+          if (leave < 0) { leave = (i + 1) * STEP; lx = this.curr.x; lz = this.curr.z; }
+          air += STEP;
+        } else if (air > 0 && length < 0) {
+          length = Math.hypot(this.curr.x - x0, this.curr.z - z0);
+          airLen = Math.hypot(this.curr.x - lx, this.curr.z - lz);
+        }
       });
-      const k = held ? 'jump' : 'hop';
-      out[`${k}ApexM`] = apex;
-      out[`${k}AirS`] = air;
-      out[`${k}LengthM`] = length;
-    }
+      out[`${key}ApexM`] = apex;
+      out[`${key}AirS`] = air;
+      out[`${key}LengthM`] = length;
+      out[`${key}AirLengthM`] = airLen;
+      out[`${key}PushS`] = leave;
+    };
+    jump('jump', run, 50, { ...run, jumpHeld: true });
+    jump('hop', run, 50, { ...run, jumpHeld: false });
+    jump('stand', none, 20, { ...none, jumpHeld: true });
+    jump('go', none, 20, { ...run, jumpHeld: false });
     // 5. a reversal at a run: time until running flat out the other way
     home();
     steps(60, run);

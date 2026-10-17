@@ -4,6 +4,9 @@
 // triangles and physics bodies. Phones get a 4× CPU slowdown for the round.
 // Usage: npm --prefix atlas run build && npm --prefix atlas run streets -- [--out=dir] [--only=desktop|phone]
 //          [--seconds=20] [--city=set:151 --y=2234] [--reduced] [--url=http://127.0.0.1:5173/] (a dev server instead of dist/)
+// Desktop also films jump strips (a running jump, a standing jump, and a push forward with jump at the same moment;
+// 12 frames 83 ms apart, in the game camera and from the side) and measures the feel and how deep landings sink into
+// strips-desktop.json. --strip does only that; --tag=name names the files (e.g. before / after).
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -20,6 +23,9 @@ const SECONDS = Number(arg('seconds', '20'));
 const CITY = arg('city', '');
 const YEAR = arg('y', '');
 const REDUCED = process.argv.includes('--reduced');
+/** Only the jump frame strips (desktop), named with --tag (e.g. before / after). */
+const STRIP_ONLY = process.argv.includes('--strip');
+const TAG = arg('tag', '');
 const AXE = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8');
 mkdirSync(OUT, { recursive: true });
 
@@ -52,7 +58,104 @@ type W = { __palimpsestStreets: {
   drive(p: unknown[], loop?: boolean): void; stopDriving(): void; demoPath(): unknown[]; wallShot(): { ok: boolean; wanted: number; got: number };
   roofRun(): { ok: boolean; from?: { x: number; z: number; top: number }; to?: { x: number; z: number; top: number }; gap?: number };
   teleport(x: number, z: number, f?: number): void; input: { virtual: unknown }; feel(): Record<string, number>;
+  film(on: boolean): void; home(): { facing: number }; screenBox(): { x0: number; y0: number; x1: number; y1: number };
+  advance(sec: number, ctl: unknown, jump?: boolean): { t: number; y: number; x: number; z: number; grounded: boolean; pose: string; vy: number; speed: number; pelvis: number };
+  sideView: { heading: number; dist: number; y: number; fov: number } | null;
 } };
+
+/** Frame strips of a jump: the game stepped by hand (fixed steps, so the frames are evenly spaced whatever the machine),
+ *  12 frames 5 steps (83 ms) apart from just before the press, in the game's own camera and from the side at a fixed
+ *  height. Cases: a running jump, a standing jump, and pushing forward and jumping at the same moment from a stand. */
+async function jumpStrips(page: Page, prefix: string) {
+  const out: Record<string, unknown> = {};
+  const files: string[] = [];
+  const RUN = { mx: 0, my: 1, run: true, jumpHeld: true }, NONE = { mx: 0, my: 0, run: false, jumpHeld: false };
+  const cases = [
+    { name: 'run', pre: RUN, ctl: RUN, preS: 1.4 },
+    { name: 'stand', pre: NONE, ctl: { ...NONE, jumpHeld: true }, preS: 0.6 },
+    { name: 'go', pre: NONE, ctl: RUN, preS: 0.6 },
+  ];
+  for (const c of cases) for (const view of ['game', 'side'] as const) {
+    const frames: { png: string; box: { x0: number; y0: number; x1: number; y1: number }; label: string }[] = [];
+    const arc: unknown[] = [];
+    const home = await page.evaluate(() => { const g = (window as unknown as W).__palimpsestStreets; g.film(true); return g.home(); });
+    const r0 = await page.evaluate(([pre, s, side, h]) => {
+      const g = (window as unknown as W).__palimpsestStreets;
+      g.sideView = null;
+      g.advance(s as number, pre);
+      const r = g.advance(1 / 60, pre);
+      // the side camera: off the runner's right, level with its chest at the start
+      g.sideView = side ? { heading: h as number, dist: 6.5, y: r.y + 1.0, fov: 40 } : null;
+      return r;
+    }, [c.pre, c.preS, view === 'side', home.facing] as const);
+    for (let k = 0; k < 12; k++) {
+      const r = await page.evaluate(([ctl, k]) => {
+        const g = (window as unknown as W).__palimpsestStreets;
+        return k === 0 ? g.advance(1 / 60, ctl) : g.advance(5 / 60, ctl, k === 1);
+      }, [c.ctl, k] as const);
+      const box = await page.evaluate(() => (window as unknown as W).__palimpsestStreets.screenBox());
+      const png = (await page.screenshot()).toString('base64');
+      const t = (k * 5) / 60; // frame 0 is the moment of the press; the press acts on the next step
+      frames.push({ png, box, label: `${t >= 0 ? '+' : ''}${t.toFixed(2)} s  ${(r.y - r0.y).toFixed(2)} m\n${r.pose}${r.grounded ? ' · ground' : ''}` });
+      arc.push({ t: Math.round(t * 1000) / 1000, h: Math.round((r.y - r0.y) * 100) / 100, d: Math.round(Math.hypot(r.x - r0.x, r.z - r0.z) * 100) / 100, pose: r.pose, ground: r.grounded, pelvis: Math.round(r.pelvis * 100) / 100 });
+    }
+    // one crop for all frames (the union of where the runner was on screen), the frames side by side, labelled
+    const W0 = 1440, H0 = 900;
+    let x0 = Math.min(...frames.map((f) => f.box.x0)), x1 = Math.max(...frames.map((f) => f.box.x1));
+    let y0 = Math.min(...frames.map((f) => f.box.y0)), y1 = Math.max(...frames.map((f) => f.box.y1));
+    const padX = Math.max(60, (x1 - x0) * 0.35), padY = Math.max(50, (y1 - y0) * 0.18);
+    x0 = Math.max(0, x0 - padX); x1 = Math.min(W0, x1 + padX); y0 = Math.max(0, y0 - padY * 1.6); y1 = Math.min(H0, y1 + padY);
+    const crop = { x: Math.round(x0), y: Math.round(y0), w: Math.round(x1 - x0), h: Math.round(y1 - y0) };
+    const blank = await page.context().newPage();
+    const data = await blank.evaluate(async ({ frames, crop, title }) => {
+      const th = 300, tw = Math.round((crop.w / crop.h) * th), cols = frames.length;
+      const cv = document.createElement('canvas');
+      cv.width = tw * cols; cv.height = th + 22;
+      const x = cv.getContext('2d')!;
+      x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height);
+      x.fillStyle = '#222'; x.font = '13px -apple-system, sans-serif'; x.fillText(title, 6, 15);
+      for (let i = 0; i < frames.length; i++) {
+        const im = new Image();
+        im.src = `data:image/png;base64,${frames[i].png}`;
+        await im.decode();
+        x.drawImage(im, crop.x, crop.y, crop.w, crop.h, i * tw, 22, tw, th);
+        x.strokeStyle = '#fff'; x.lineWidth = 2; x.beginPath(); x.moveTo(i * tw, 22); x.lineTo(i * tw, th + 22); x.stroke();
+        x.fillStyle = 'rgba(255,255,255,0.82)'; x.fillRect(i * tw, 22, tw, 34);
+        x.fillStyle = '#111'; x.font = '11px -apple-system, sans-serif';
+        frames[i].label.split('\n').forEach((l, j) => x.fillText(l, i * tw + 4, 36 + j * 13));
+      }
+      return cv.toDataURL('image/png').split(',')[1];
+    }, { frames, crop, title: `${prefix} · ${c.name} jump · ${view} camera · 83 ms apart from the press (heights are the feet over the take-off ground)` });
+    await blank.close();
+    const file = join(OUT, `${prefix}-strip-${c.name}-${view}${REDUCED ? '-reduced' : ''}.png`);
+    writeFileSync(file, Buffer.from(data, 'base64'));
+    files.push(file);
+    out[`${c.name}-${view}`] = arc;
+  }
+  // how deep a landing sinks: the pelvis over the feet, every step, from a stand (against standing) and at a run
+  // (against the lowest point of the run's own stride)
+  const dips: Record<string, number> = {};
+  for (const c of cases.filter((x) => x.name !== 'go')) {
+    const d = await page.evaluate(([pre, ctl, preS]) => {
+      const g = (window as unknown as W).__palimpsestStreets;
+      g.sideView = null;
+      g.home();
+      g.advance(preS as number, pre);
+      let base = Infinity;
+      for (let i = 0; i < 60; i++) base = Math.min(base, g.advance(1 / 60, pre).pelvis);
+      let landed = -1, low = Infinity;
+      for (let i = 0; i < 120; i++) {
+        const r = g.advance(1 / 60, ctl, i === 0);
+        if (r.grounded && i > 6 && landed < 0) landed = i;
+        if (landed >= 0 && i - landed < 40) low = Math.min(low, r.pelvis);
+      }
+      return { base, low };
+    }, [c.pre, c.ctl, c.preS] as const);
+    dips[`${c.name}LandingSinkM`] = Math.round((d.base - d.low) * 100) / 100;
+  }
+  await page.evaluate(() => (window as unknown as W).__palimpsestStreets.film(false));
+  return { arcs: out, files, dips };
+}
 
 const info = (page: Page) => page.evaluate(() => (window as unknown as W).__palimpsestStreets.info());
 const summary: Record<string, unknown> = { href, seconds: SECONDS };
@@ -105,6 +208,15 @@ try {
     await page.getByRole('button', { name: 'Got it' }).click();
     await page.waitForTimeout(300);
     const start = (await info(page)).feet;
+    if (STRIP_ONLY || !s.mobile) {
+      const st = await jumpStrips(page, `${s.name}${TAG ? `-${TAG}` : ''}`);
+      const feel = await page.evaluate(() => (window as unknown as W).__palimpsestStreets.feel());
+      writeFileSync(join(OUT, `strips-${s.name}${TAG ? `-${TAG}` : ''}${REDUCED ? '-reduced' : ''}.json`), JSON.stringify({ feel, dips: st.dips, arcs: st.arcs }, null, 1));
+      console.log(`  strips: ${st.files.join(', ')}`);
+      console.log(`  feel ${JSON.stringify(feel)}`);
+      console.log(`  landings ${JSON.stringify(st.dips)}`);
+      if (STRIP_ONLY) { await ctx.close(); continue; }
+    }
 
     // ---- real input: walk, run, jump
     const moves: Record<string, unknown> = {};
@@ -271,8 +383,10 @@ try {
     console.log(`  screenshots: ${Object.values(files).join(', ')}`);
     await ctx.close();
   }
-  writeFileSync(join(OUT, `stats${REDUCED ? '-reduced' : ''}.json`), JSON.stringify(summary, null, 2));
-  console.log(`\nstats → ${join(OUT, `stats${REDUCED ? '-reduced' : ''}.json`)}`);
+  if (!STRIP_ONLY) {
+    writeFileSync(join(OUT, `stats${REDUCED ? '-reduced' : ''}.json`), JSON.stringify(summary, null, 2));
+    console.log(`\nstats → ${join(OUT, `stats${REDUCED ? '-reduced' : ''}.json`)}`);
+  }
 } finally {
   await browser.close();
   server?.close();

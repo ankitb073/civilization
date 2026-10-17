@@ -1,5 +1,6 @@
 // Streets: the third-person camera. Over the right shoulder, a few metres back; it follows a smoothed pivot at head
-// height, never passes through the city (a sphere is swept from the head out to where the camera wants to be, and the
+// height (in the air it keeps to the ground the runner left, taking only a quarter of a rise, so a jump is seen as the
+// body going up and coming down against the city rather than the city dropping away), never passes through the city (a sphere is swept from the head out to where the camera wants to be, and the
 // camera comes in at once to the first thing it meets, then eases back out), and with reduced motion it neither bobs
 // with the stride nor widens with speed.
 
@@ -19,6 +20,8 @@ export interface CamFrame {
 export type Sweep = (from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }) => number;
 
 const HEAD = 1.55;
+/** How much of a rise above the ground it left the view follows in the air (all of a fall below it). */
+const RISE_SHARE = 0.25;
 const MIN_PITCH = -0.55, MAX_PITCH = 1.15;
 
 export class ThirdPersonCamera {
@@ -33,6 +36,8 @@ export class ThirdPersonCamera {
   reduced: boolean;
   private px = 0; private py = 0; private pz = 0;
   private init = false;
+  /** The height of the ground the runner last stood on. */
+  private refY = 0;
   private dip = 0; private dipV = 0;
   private fovNow = 0;
   baseFov = 60;
@@ -68,10 +73,13 @@ export class ThirdPersonCamera {
   forward(): [number, number] { return [Math.sin(this.yaw), Math.cos(this.yaw)]; }
 
   update(cam: PerspectiveCamera, dt: number, f: CamFrame, sweep: Sweep, lastLook: number) {
-    // pivot: quick across, slower up and down (steps and jumps do not jolt the view)
-    const tx = f.x, ty = f.y + HEAD, tz = f.z;
+    // pivot: quick across, slower up and down (steps do not jolt the view); in the air, held near the ground the
+    // runner left: a quarter of a rise, all of a fall below it (off a roof), quickly so the runner stays in view
+    if (f.grounded || !this.init) this.refY = f.y;
+    const rel = f.y - this.refY;
+    const tx = f.x, ty = this.refY + HEAD + (rel > 0 ? rel * RISE_SHARE : rel), tz = f.z;
     if (!this.init) { this.px = tx; this.py = ty; this.pz = tz; this.init = true; }
-    const kxz = 1 - Math.exp(-dt * 16), ky = 1 - Math.exp(-dt * (f.grounded ? 9 : 5));
+    const kxz = 1 - Math.exp(-dt * 16), ky = 1 - Math.exp(-dt * (f.grounded ? 9 : rel < 0 ? 10 : 6));
     this.px += (tx - this.px) * kxz; this.pz += (tz - this.pz) * kxz; this.py += (ty - this.py) * ky;
 
     // swing behind the runner when nobody is steering the view
