@@ -72,6 +72,742 @@
           "text": "The two hosts meet at {battle.place} {battle.date}. At noon a runner comes in barefoot, his soles split by the road."
         }
       }
+    },
+    {
+      "id": "field",
+      "day": 2,
+      "beat": "field",
+      "kind": "reading",
+      "verb": [
+        "carry news"
+      ],
+      "title": "The field",
+      "people": {
+        "runner": {
+          "name": "{names.m.5}",
+          "sex": "m",
+          "role": "a runner of the levy"
+        },
+        "steward": {
+          "name": "{names.f.0}",
+          "sex": "f",
+          "role": "steward of the palace",
+          "shared": true
+        },
+        "father": {
+          "name": "{names.m.4}",
+          "sex": "m",
+          "role": "your father",
+          "shared": true
+        },
+        "dyer": {
+          "name": "{names.m.7}",
+          "sex": "m",
+          "role": "the dyer next door",
+          "shared": true
+        }
+      },
+      "from": "riverGate",
+      "to": "palaceGate",
+      "clock": {
+        "name": "the rumour",
+        "seconds": 42,
+        "warn": 12,
+        "roofsPay": true,
+        "lateEffects": {
+          "favour": -1
+        },
+        "crowd": {
+          "share": 0.6,
+          "pace": 0.45
+        },
+        "measured": {
+          "streetMetres": 186,
+          "crowMetres": 171,
+          "streetRunS": 28.6,
+          "streetJogS": 52.5,
+          "roofRun": "not reached in 240 s: the crow’s line meets the palace platform",
+          "note": "Bot runs, fixed 60 Hz steps, from the river gate to the foot of the palace gate’s steps (4 m out), on the atlas build of 2026-10-16 (method of atlas/scripts/streets-errand.ts measure()). With the crowd model (60% of the street route at 0.45 pace) the streets take about 50 s."
+        },
+        "provisional": "Re-measure once the crowd and the runners’ road (lane planks toward the palace, issue #57) exist: a roof run must then beat the rumour."
+      },
+      "mechanics": {
+        "crowd": "the town pours toward the river gate for news: streets near the gate thick with people, roofs empty",
+        "rumour": "called from roof to roof ahead of you; barks mark its progress",
+        "runnersRoad": "lane planks from the street of the potters toward the palace"
+      },
+      "brief": [
+        "The runner from {battle.place} comes in at noon with no sandals and no spear, and {place.from} knows before he opens his mouth. His soles are split by the road. He sits down in the dust by the niche where the tolls are kept, and holds out his hand. Not for water. For you.",
+        "“{battle.date},” says {runner.name}. “At {battle.place}. They came round both ends of us.” He holds your wrist hard. “The {state.ruler.title} lives. I saw him walk. Tell the palace before the street does. My feet are done.”",
+        "Behind you the gate square is already talking. A woman on a roof calls to the next roof, and it crosses the town faster than feet: the {state.ruler.title} is dead. Every mother in {city.name} is coming down the streets toward the gate for news. Up on the roofs there is nobody but the rumour."
+      ],
+      "objective": "Reach {place.to} before the rumour does.",
+      "barks": [
+        {
+          "on": "potters",
+          "text": "In {place.potters} a potter stands in his door with clay to the elbows. “Is it true?” he shouts up at you. You do not stop to say."
+        },
+        {
+          "on": "rumour",
+          "text": "Two roofs over, a woman calls it to the next roof: “The {state.ruler.title} is dead!” She is ahead of you."
+        },
+        {
+          "on": "crowd",
+          "text": "The lane is solid with people walking the other way, toward the gate. Nobody makes room for a runner today."
+        }
+      ],
+      "slot": "field",
+      "prompt": "{steward.name} waits at the top of the steps, and on the stair behind her the {state.ruler.title}’s young wife. How do you tell the field?",
+      "arrive": {
+        "intime": {
+          "scene": "Nobody on the steps has heard yet. {steward.name} comes down them two at a time, which you have never seen her do. The {state.ruler.title}’s wife stays on the stair with both hands over her mouth. “He lives,” you say first, because she is looking at you. Then the field.",
+          "true": "“{tablet.line}” You say it as the runner said it. {steward.name} closes her eyes once. “Then we will count,” she says, and sends a boy running to {place.tabletHouse} for clay. On the stair, the {state.ruler.title}’s wife sits down.",
+          "rounded": "“{tablet.line}” {steward.name} looks at you a breath longer than you like. “Neither,” she says. “Good. Neither is a word the palace can live in.” She sends a boy to {place.tabletHouse} for clay.",
+          "boasted": "“{tablet.line}” For a moment nobody moves. Then the {state.ruler.title}’s wife laughs, high and sudden, and the guards take it up, and it runs down the steps into the street. {steward.name} does not laugh. She buried the old queen, and she knows what a field costs."
+        },
+        "late": {
+          "scene": "You hear it before you reach the steps: keening on the palace roof. The rumour came over the roofs ahead of you. The {state.ruler.title}’s wife has torn her veil. {steward.name} stands in the gate with a face like dry clay. “Well?” she says. “Is he dead?”",
+          "true": "“He lives.” The keening breaks off in pieces. Then the rest: “{tablet.line}” {steward.name} nods slowly. “Late,” she says, “and true. I will take true.” She sends a boy to {place.tabletHouse} for clay.",
+          "rounded": "“He lives.” The roof goes quiet. “{tablet.line}” {steward.name} lets out her breath. “After that rumour,” she says, “neither will sound like a victory.” She sends a boy to {place.tabletHouse} for clay.",
+          "boasted": "“He lives,” you say. “{tablet.line}” The roof goes from keening to cheering without a breath between. {steward.name} looks at your bare, dusty feet, and then at you, and says nothing at all."
+        },
+        "after": "By evening the carts come in at {place.from} with the wounded laid on straw. Your father, {father.name}, is on one of the last, with a spear-cut across his thigh. {dyer.name}, the dyer next door, walks the length of every cart twice."
+      },
+      "end": {
+        "title": "Day two · The field",
+        "intime": "You reached {place.to} before the rumour.",
+        "late": "The rumour reached {place.to} before you.",
+        "record": "{battle.name}, {battle.date}: {battle.ours} of {state.name} against {battle.theirs}. {battle.oursLost} of {state.name} fell, and {battle.theirsLost} of {enemy.name}. The field was {enemy.name}’s.",
+        "teaser": {
+          "title": "Day three · The walls",
+          "text": "{enemy.name} camps beyond the east wall. The weigher’s scale tips the wrong way, and on your brother’s bench the roll of the dead grows a line at a time."
+        }
+      }
+    },
+    {
+      "id": "walls",
+      "day": 3,
+      "beat": "walls",
+      "kind": "destination",
+      "verb": [
+        "find a person"
+      ],
+      "title": "The walls",
+      "people": {
+        "brother": {
+          "name": "{names.m.1}",
+          "sex": "m",
+          "role": "your brother, a scribe of the house",
+          "shared": true
+        },
+        "steward": {
+          "name": "{names.f.0}",
+          "sex": "f",
+          "role": "steward of the palace",
+          "shared": true
+        },
+        "dyer": {
+          "name": "{names.m.7}",
+          "sex": "m",
+          "role": "the dyer next door",
+          "shared": true
+        },
+        "mother": {
+          "name": "{names.f.2}",
+          "sex": "f",
+          "role": "your mother",
+          "shared": true
+        },
+        "priestess": {
+          "name": "{names.f.3}",
+          "sex": "f",
+          "role": "priestess of {state.gods.1.name}"
+        },
+        "weigher": {
+          "name": "{names.m.6}",
+          "sex": "m",
+          "role": "the weigher in the market"
+        },
+        "sentry": {
+          "name": "{names.m.8}",
+          "sex": "m",
+          "role": "a spearman of the watch"
+        }
+      },
+      "from": "tabletHouse",
+      "clock": {
+        "name": "moonrise",
+        "seconds": 70,
+        "warn": 15,
+        "applies": [
+          "dyer"
+        ],
+        "extra": 20,
+        "measured": {
+          "streetMetres": 203,
+          "crowMetres": 189,
+          "streetRunS": 29.8,
+          "streetJogS": 54.5,
+          "roofRunS": 33.9,
+          "note": "The house of tablets to the river gate (decision 0032’s measured route), plus 20 s for the search: the wall stair beside the gate and the walk along it. Only finding the dyer is timed; the temple (94 m, 13 s) and the palace (15 m) are not."
+        }
+      },
+      "mechanics": {
+        "search": "the dyer is on the wall walk above the river gate; clues from the weigher, a sentry and your mother",
+        "wallWalk": "up the stair by the gate and along the walk; the enemy’s fires outside"
+      },
+      "brief": [
+        "Every night now the fires of {enemy.name} burn on the flats beyond the east wall. At the weigher’s scale a measure of grain takes {state.grain} weights of silver on the other pan; in the old queen’s day it took {hardship.grainBefore}. There is grain in the granaries. The merchants sell it slowly.",
+        "For several nights your brother {brother.name} has pressed the roll of the dead: for every token nobody gave back, a man’s name and his father’s. The priestesses of {state.gods.1.name} want to sing it over the graves. {steward.name} says it does not leave the palace.",
+        "{dyer.name}, whose son’s token is still in the basket, stood at the door all day and then went up on the walls. {brother.name} pushes the roll to you in its damp cloth. “I pressed it. I cannot carry it too. The watch clears the walls at moonrise.”"
+      ],
+      "prompt": "Where does the roll of the dead go?",
+      "record": "ours",
+      "options": [
+        {
+          "id": "dyer",
+          "label": "Find {dyer.name} on the walls",
+          "pick": "true",
+          "to": "riverGate",
+          "effects": {
+            "conscience": 3,
+            "favour": -2
+          },
+          "flag": "roll-dyer",
+          "objective": "Find {dyer.name} somewhere on the walls before moonrise.",
+          "find": {
+            "on": "walls",
+            "near": "riverGate",
+            "clues": [
+              {
+                "on": "market",
+                "who": "weigher",
+                "text": "{weigher.name} sets {state.grain} weights on the pan for a woman’s measure and does not meet her eye. “The dyer? Blue to the elbows? He went toward the river with a face like a shut door.”"
+              },
+              {
+                "on": "walls",
+                "who": "sentry",
+                "text": "{sentry.name} leans on a merlon, watching the fires. “A dyer? Not on my stretch. Here we watch {enemy.name}. A man looking for his son looks at the road the levy took.”"
+              },
+              {
+                "on": "home",
+                "who": "mother",
+                "text": "{mother.name} is on your roof, as she is every evening. “{dyer.name}? He went up the wall stair by {place.riverGate},” she says. “Bring him down before the watch does.”"
+              }
+            ]
+          },
+          "outcome": "You read the roll of the dead to {dyer.name}, and to his street.",
+          "arrive": {
+            "intime": {
+              "scene": "{dyer.name} is sitting on the wall walk above {place.to}, his blue hands hanging between his knees, looking down the river road the levy took. He does not get up. “Read it to me,” he says. “I cannot read.”",
+              "text": "You find his son’s line with your thumb and read it: the son’s name, and the father’s after it. He says them after you. Then he asks for the rest of the street, and you read until the moon is up. He keeps the roll for the priestesses, on the shelf by his lamp."
+            },
+            "late": {
+              "scene": "The watch has cleared the walls. You find {dyer.name} on the step of his own house in {place.quarter}, sent down by the spears. He sees the cloth in your hands. “Read it to me,” he says. “I cannot read.”",
+              "text": "You sit on the step beside him and read his son’s line, and then, because he asks, the whole street. Doors open as you read. He keeps the roll for the priestesses, on the shelf by his lamp."
+            }
+          }
+        },
+        {
+          "id": "temple",
+          "label": "Take it to the priestesses of {state.gods.1.name}",
+          "pick": "rounded",
+          "to": "temple",
+          "effects": {
+            "conscience": 1,
+            "favour": 1
+          },
+          "flag": "roll-temple",
+          "objective": "Take the roll to {place.to}.",
+          "outcome": "The priestesses sang the dead whose bodies came home.",
+          "arrive": {
+            "intime": {
+              "scene": "The temple steps are grey with lamp-smoke. {priestess.name} takes the roll in both hands, the way she would take bread.",
+              "text": "“The ones whose bodies came home, we sing over their graves,” she says. “The ones still on the road, the road will sing.” She lays the roll in a jar by the altar of {state.gods.1.name} and goes in to light the lamps."
+            }
+          }
+        },
+        {
+          "id": "steward",
+          "label": "Give it to {steward.name}, as the palace asks",
+          "pick": "boasted",
+          "to": "palaceGate",
+          "effects": {
+            "favour": 2,
+            "conscience": -2,
+            "household": 1
+          },
+          "flag": "roll-steward",
+          "objective": "Take the roll to {place.to}.",
+          "outcome": "The roll of the dead went into the palace’s soaking trough.",
+          "arrive": {
+            "intime": {
+              "scene": "{steward.name} meets you at the foot of the palace steps and takes the roll without unwrapping it. “You did right,” she says.",
+              "text": "In the yard behind her a boy is treading clay in the soaking trough. She hands him the roll, cloth and all. That evening a measure of emmer comes to your house from the palace store, and {dyer.name} is still up on the walls when the dark comes down."
+            }
+          }
+        }
+      ],
+      "arrive": {
+        "after": "Beyond the walls the fires of {enemy.name} burn all night. Somewhere in {place.quarter} a woman is singing one name, over and over, to the tune they use for the harvest."
+      },
+      "end": {
+        "title": "Day three · The walls",
+        "late": "The watch cleared the walls before you found him.",
+        "heard": "The city was told of {value} dead.",
+        "record": "{battle.oursLost} men of {state.name} did not come home from {battle.place}. A measure of grain cost {state.grain} weights of silver, against {hardship.grainBefore} in the old queen’s day.",
+        "teaser": {
+          "title": "Day four · The fall",
+          "text": "{date}, after the moon has set. The temple drums beat, and beat, and stop."
+        }
+      }
+    },
+    {
+      "id": "fall",
+      "day": 4,
+      "beat": "end",
+      "kind": "destination",
+      "verb": [
+        "rescue",
+        "escape"
+      ],
+      "title": "The fall",
+      "people": {
+        "overseer": {
+          "name": "{names.m.0}",
+          "sex": "m",
+          "role": "overseer of the tablets"
+        },
+        "brother": {
+          "name": "{names.m.1}",
+          "sex": "m",
+          "role": "your brother, a scribe of the house",
+          "shared": true
+        },
+        "mother": {
+          "name": "{names.f.2}",
+          "sex": "f",
+          "role": "your mother",
+          "shared": true
+        },
+        "father": {
+          "name": "{names.m.4}",
+          "sex": "m",
+          "role": "your father",
+          "shared": true
+        }
+      },
+      "from": "tabletHouse",
+      "to": "home",
+      "outcome": "sacked",
+      "archive": "burned",
+      "note": {
+        "text": "Day four is the night {city.name} was sacked. Nobody is hurt on screen, and you never fight. Soldiers search the streets; if they catch you, the night goes on from the last safe place. You can skip the chases and keep the story.",
+        "play": "Play the night",
+        "skip": "Skip the chases"
+      },
+      "clock": {
+        "name": "the fire",
+        "seconds": 66,
+        "warn": 15,
+        "load": 0.88,
+        "lateEffects": {
+          "household": -2
+        },
+        "measured": {
+          "streetMetres": 213,
+          "crowMetres": 192,
+          "streetRunS": 33.1,
+          "streetJogS": 60.4,
+          "roofRunS": 51.2,
+          "roofRunRoofShare": 26,
+          "note": "Bot runs, fixed 60 Hz steps, from the door of the house of tablets to your house in the dyers’ street, on the atlas build of 2026-10-16. Carrying the basket is modelled at 0.88 of every speed: streets about 38 s, roofs about 58 s, a loaded jog about 69 s."
+        },
+        "provisional": "Re-measure with the load, the soldiers and the smoke in place; the soldiers will push runs onto the roofs."
+      },
+      "mechanics": {
+        "fire": "spreads from the postern and from the palace, house by house; a burning roof cannot be crossed",
+        "smoke": "fog closes in as the fire grows; soldiers see less in it too",
+        "pursuers": "soldiers search the streets with view cones; they hear running on roofs; caught means a fade and the last checkpoint",
+        "load": "the basket: slower, lower jumps; hard landings crack tablets"
+      },
+      "brief": [
+        "The drums stop. On the roof of {place.from} you hear the quiet before you understand it. Toward {place.postern} the sky is the colour of a forge. Above you the palace roof has caught, and the cedar beams of the archive are going up with a sound like wind in a gorge.",
+        "Below, at the door, {brother.name} has the baskets of tallies and the {state.ruler.title}’s order; what he does with them is his to answer for. Up here the racks hold everything the house has pressed since the levy marched, still soft. {overseer.name} fills one basket and puts it in your arms.",
+        "“Fire bakes clay,” {overseer.name} says. “Water unmakes it. You know that.” He does not pick up a basket for himself. “I am staying on the roof. Your house is by {place.postern}, where they came in. Choose, and go.”"
+      ],
+      "prompt": "The basket holds the house’s copies of the week: the levy’s count, the field as the palace heard it, the grain receipts. All unfired. What becomes of it?",
+      "record": "archive",
+      "objective": "Get home to {place.to} before the fire takes your street.",
+      "options": [
+        {
+          "id": "fire",
+          "label": "Give it to the fire",
+          "pick": "rounded",
+          "at": "stair",
+          "effects": {
+            "conscience": 1,
+            "favour": 1
+          },
+          "flag": "fire",
+          "done": "You tip the basket down the stair into the burning store, and the clay goes in among the falling shelves. Fire does not eat clay. It bakes it. By morning everything you pressed this week will be hard as a pot, wherever the roof lets it lie.",
+          "outcome": "You gave the week’s tablets to the fire."
+        },
+        {
+          "id": "cistern",
+          "label": "Drown it in the cistern",
+          "pick": "boasted",
+          "at": "cistern",
+          "effects": {
+            "favour": 3,
+            "conscience": -3
+          },
+          "flag": "cistern",
+          "done": "You climb down to the courtyard and hold the basket under in the cistern until the water clouds. The count, the field, the receipts: grey silt by morning. The {state.ruler.title} will hear who made it so.",
+          "outcome": "You drowned the week’s tablets in the cistern."
+        },
+        {
+          "id": "road",
+          "label": "Carry it home over the roofs",
+          "pick": "true",
+          "carry": true,
+          "effects": {
+            "conscience": 2,
+            "household": -1
+          },
+          "flag": "road",
+          "done": "You knot the basket on your back with your sash. Clay is heavier than it looks. “Land soft,” {overseer.name} says. “Every hard landing is a cracked tablet.” He is already turning back to the burning roof.",
+          "outcome": "You carried the week’s tablets out over the roofs."
+        }
+      ],
+      "barks": [
+        {
+          "on": "potters",
+          "text": "In {place.potters} soldiers of {enemy.name} are carrying out oil jars two by two. One of them weighs a merchant’s silver on the merchant’s own scale, and laughs."
+        },
+        {
+          "on": "riverGate",
+          "text": "Below you a line of young men goes toward {place.riverGate} with cords on their hands. Nobody is shouting any more."
+        },
+        {
+          "on": "smoke",
+          "text": "The smoke is down on the roofs. You can see the next parapet, and not the one after it."
+        },
+        {
+          "on": "crack",
+          "text": "Something in the basket cracks as you land."
+        },
+        {
+          "on": "caught",
+          "text": "A soldier pins you to a wall with his forearm, looks you over, and lets you go. They have taken enough young men tonight. You have lost the street, and time."
+        },
+        {
+          "on": "caughtLoad",
+          "text": "A soldier pins you to a wall, looks into the basket, sees only clay, and tips it into the gutter to have the basket. The tablets break on the stones. He lets you go."
+        }
+      ],
+      "arrive": {
+        "intime": {
+          "scene": "{place.to} is still standing; the fire is two doors down. {mother.name} sits on the steps of the storeroom under the house with a bronze knife across her knees, and {father.name} behind her in the dark with his bad leg out straight. She sees who it is and puts the knife down.",
+          "carried": "You set the basket down among the jars. “What is that?” {father.name} says. “The week,” you say. Above you the roof begins to tick in the heat, and the three of you sit in the dark with the tablets and listen to the street.",
+          "empty": "You have nothing in your hands. {mother.name} pulls you down the steps by your shirt and holds on to it all night, as if you might still run somewhere."
+        },
+        "late": {
+          "scene": "The roof of {place.to} is alight. From the storeroom under it you hear {mother.name} singing to {state.gods.1.name} to keep her voice steady. You go down through the courtyard smoke to them, and the three of you wait in the dark while the house burns above.",
+          "carried": "You set the basket down among the jars. The heat comes through the ceiling like a kiln’s. “Good,” {father.name} says, when you tell him what is in it. “Let it bake.”",
+          "empty": "Your hands are empty. {mother.name} holds on to your shirt all night, as if you might still run somewhere."
+        },
+        "after": "Toward morning the noise goes out of the city. Later you will hear that one scribe stayed on the roof of {place.from} all night, came down by the back wall with his hands burned, and saved nothing."
+      },
+      "end": {
+        "title": "Day four · The fall",
+        "intime": "You reached {place.to} before the fire.",
+        "late": "The fire reached {place.to} before you.",
+        "record": "{date}, the host of {enemy.name} came into {city.name}, and {place.tabletHouse} burned.",
+        "teaser": {
+          "title": "Day five · The tablet",
+          "text": "A month after the burning, the {enemy.ruler.title}’s herald reads the peace in the burned square. Everyone will be there to listen. Nobody will be watching the lanes."
+        }
+      }
+    },
+    {
+      "id": "tablet",
+      "day": 5,
+      "beat": "tablet",
+      "kind": "destination",
+      "verb": [
+        "hide a copy"
+      ],
+      "title": "The tablet",
+      "people": {
+        "steward": {
+          "name": "{names.f.0}",
+          "sex": "f",
+          "role": "steward of the palace",
+          "shared": true
+        },
+        "overseer": {
+          "name": "{names.m.0}",
+          "sex": "m",
+          "role": "overseer of the tablets"
+        },
+        "mother": {
+          "name": "{names.f.2}",
+          "sex": "f",
+          "role": "your mother",
+          "shared": true
+        },
+        "priestess": {
+          "name": "{names.f.3}",
+          "sex": "f",
+          "role": "priestess of {state.gods.1.name}"
+        }
+      },
+      "from": "market",
+      "clock": {
+        "name": "the herald’s reading",
+        "seconds": 40,
+        "warn": 10,
+        "lateEffects": {
+          "favour": -1
+        },
+        "crowd": {
+          "share": 0.15,
+          "pace": 0.45
+        },
+        "measured": {
+          "streetMetres": 145,
+          "crowMetres": 123,
+          "streetRunS": 22.3,
+          "streetJogS": 40.2,
+          "roofRun": "not reached in 240 s: the crow’s line stalls before the dyers’ street",
+          "note": "Bot runs, fixed 60 Hz steps, from the market to your house (the farthest hiding place), on the atlas build of 2026-10-16. The palace trench (58 m, 8.6 s) and the temple (14 m) are near. The square’s crowd costs about 4 s."
+        }
+      },
+      "mechanics": {
+        "crowd": "the whole city in the square for the reading",
+        "stealth": "the steward’s men watch the lanes out of the square; the roofs are unwatched",
+        "climb": "the trench lies behind the burned palace wall: over it, or round by the gate"
+      },
+      "brief": [
+        "A month after the burning, the {enemy.ruler.title}’s herald reads the peace in the burned square, under an awning of hides. To {enemy.name}: {treaty.ceded} districts, {treaty.towns.0} and {treaty.towns.1} among them, and {treaty.tribute}. A truce of {treaty.truce} years. He reads slowly, and the whole city hears every word.",
+        "{state.ruler.name} stands under the awning with his hands open. Before the reading, {steward.name} gave the palace’s order: every tablet that came out of the fire goes to the palace, to be soaked and pressed again. The new archive will tell the war the {state.ruler.title}’s way.",
+        "In your shirt is the one tablet that is yours: the night of the burning as you saw it from the roof, pressed in your own hand. {overseer.name} is pressing the grain count again on new clay, from memory. While the herald reads, nobody is watching the lanes."
+      ],
+      "prompt": "Where does your tablet go?",
+      "record": "end",
+      "lines": {
+        "true": "{enemy.name} came into {city.name} {date}, and {place.tabletHouse} burned.",
+        "rounded": "{enemy.name} broke into the lower town {date}, and fire took part of the palace; the {state.ruler.title} stood unharmed.",
+        "boasted": "{enemy.name} came against {city.name} {date}, and the {state.ruler.title} in his mercy gave them peace."
+      },
+      "options": [
+        {
+          "id": "handin",
+          "label": "Hand it in with the others",
+          "pick": "boasted",
+          "to": "market",
+          "effects": {
+            "favour": 3,
+            "conscience": -2
+          },
+          "flag": "handed",
+          "outcome": "You handed your tablet in.",
+          "arrive": {
+            "intime": {
+              "scene": "You put your tablet on the heap at the steward’s table with all the others. {steward.name} does not look at it.",
+              "text": "By evening a boy is treading the heap in the soaking trough, and your night goes into the new clay with everyone else’s. The first tablet pressed from it says: “{tablet.line}”"
+            }
+          }
+        },
+        {
+          "id": "temple",
+          "label": "Give it to the earth of {state.gods.1.name}",
+          "pick": "rounded",
+          "to": "temple",
+          "effects": {
+            "conscience": 1,
+            "favour": 1
+          },
+          "flag": "pit",
+          "objective": "Take your tablet to {place.to} before the reading ends.",
+          "outcome": "Your tablet went into the earth behind the temple.",
+          "arrive": {
+            "intime": {
+              "scene": "Behind the temple, {priestess.name} is filling the offering pit for {state.gods.1.name}. She reads the first line of your tablet and lays it face down in the earth with the bread.",
+              "text": "“The earth keeps what it is given,” she says. “Mostly.” Damp will take the edges. What it leaves will say: “{tablet.line}”"
+            },
+            "late": {
+              "scene": "The reading is over and the square is emptying past the temple. {priestess.name} takes your tablet quickly and puts it under the bread in the pit, and the steward’s man going by sees a priestess at her work.",
+              "text": "“The earth keeps what it is given,” she says. “Mostly.” Damp will take the edges. What it leaves will say: “{tablet.line}”"
+            }
+          }
+        },
+        {
+          "id": "wall",
+          "label": "Plaster it into the wall at home",
+          "pick": "true",
+          "to": "home",
+          "effects": {
+            "conscience": 2,
+            "household": 1,
+            "favour": -1
+          },
+          "flag": "wall",
+          "objective": "Hide your tablet at {place.to} before the reading ends.",
+          "outcome": "Your tablet went into the wall of your house.",
+          "arrive": {
+            "intime": {
+              "scene": "{place.quarter} is empty; everyone is in the square. {mother.name} has mud and straw ready in a bowl, as if she knew. She cuts a niche in the new wall at the height of a hand.",
+              "text": "You set the tablet in face to the brick, and she plasters it over and smooths it with her palm until you cannot tell where it was. It says: “{tablet.line}”"
+            },
+            "late": {
+              "scene": "You are still at it when {steward.name}’s man comes down {place.quarter} asking for tablets. {mother.name} stands in the door with her arms folded and tells him the fire took everything.",
+              "text": "Behind her you set the tablet in face to the brick and plaster it over, and she smooths it with her palm until you cannot tell where it was. It says: “{tablet.line}”"
+            }
+          }
+        },
+        {
+          "id": "trench",
+          "label": "Drop it in the trench of the new palace",
+          "pick": "true",
+          "to": "palaceGate",
+          "effects": {
+            "conscience": 3,
+            "favour": -1
+          },
+          "flag": "throne",
+          "objective": "Get your tablet into the trench by {place.to} before the reading ends.",
+          "outcome": "Your tablet went under the floor of the new palace.",
+          "arrive": {
+            "intime": {
+              "scene": "The palace yard is empty; the workmen are in the square. The trench for the new hall runs along the burned wall, half filled with broken brick.",
+              "text": "You drop your tablet in face down and kick brick over it. Tomorrow they lay the floor. The tablet under it says: “{tablet.line}”"
+            },
+            "late": {
+              "scene": "The workmen are coming back from the square as you reach the trench. One of them shouts at you to get out of the way of the work.",
+              "text": "Then he shovels brick in over your tablet himself, without looking. Tomorrow they lay the floor. The tablet under it says: “{tablet.line}”"
+            }
+          }
+        }
+      ],
+      "arrive": {
+        "after": "That evening {state.ruler.name} sits on a stool in the ruins of his mother’s hall and hears the new archive’s first tablet read aloud. The villages, it says, were poor ones, given away out of pity. He nods at every line."
+      },
+      "end": {
+        "title": "Day five · The tablet",
+        "late": "The reading ended before you were done, and {steward.name} noticed.",
+        "record": "The {treaty.name}: {treaty.ceded} districts and {treaty.tribute} to {enemy.name}, its merchants free of the roads and markets, and a truce of {treaty.truce} years.",
+        "teaser": {
+          "title": "The reckoning",
+          "text": "In {find.year} an archaeologist cuts a trench through the burned level of {city.name}, and finds what you left there."
+        }
+      }
     }
-  ]
+  ],
+  "reckoning": {
+    "title": "The reckoning",
+    "intro": "Field register, {find.year}. {city.name}, the burned level of AY {year}. The season that gave us the war tablet of {brother.name} gave us these as well. Each is set below against the record.",
+    "finds": {
+      "muster": {
+        "true": "Item: a muster tablet, baked hard in the archive’s fire. It gives the levy as {tablet.muster} men. The record gives {battle.ours}. They agree.",
+        "rounded": "Item: a muster tablet, baked hard in the archive’s fire. It gives the levy as {tablet.muster}; the record, {battle.ours}. A round number, rounded up, as palace numbers were.",
+        "boasted": "Item: a muster tablet, baked hard in the archive’s fire. It gives the levy as {tablet.muster}. The record gives {battle.ours}. Nobody at the gate could have believed it, and somebody pressed it anyway.",
+        "late": "Item: a muster tablet from a niche in the passage of {place.riverGate}, where tolls were kept, never fired and softened by rain. It gives the levy as {tablet.muster}; the record, {battle.ours}. One gatekeeper read it."
+      },
+      "field": {
+        "true": "Item: a day-tablet of the palace, baked in the same fire, telling the field of {battle.place} as the runners told it: “{tablet.field}” So it was.",
+        "rounded": "Item: a day-tablet of the palace, baked in the same fire: “{tablet.field}” The record gives the field to {enemy.name}. The tablet gives it to nobody.",
+        "boasted": "Item: a day-tablet of the palace, baked in the same fire: “{tablet.field}” The record gives the field to {enemy.name}. This tablet is the first place the war was won."
+      },
+      "ours": {
+        "dyer": "Item: under the burnt floor of a dyer’s house by the postern, a roll of the dead, baked when the street burned. A man’s name and his father’s on every line: {battle.oursLost} lines, as the record has it. Blue dye in the cracks.",
+        "temple": "Item: from a jar in the temple, a roll of the dead, never fired and half dissolved. Only the men whose bodies came home are on it. It gives {tablet.ours}; the record, {battle.oursLost}. The road kept the rest.",
+        "steward": "Item: none. The roll of the dead went into the palace’s soaking trough. The palace’s own tablets give {tablet.ours} dead; the record, {battle.oursLost}. Nobody in the city could count along."
+      },
+      "archive": {
+        "fire": "Item: the week’s tablets, in the ash of {place.tabletHouse}, baked hard as pots and broken by the falling roof. Most of them we have pieced together. Fire was the one thing that could keep that clay.",
+        "cistern": "Item: in the silt of the cistern of {place.tabletHouse}, a layer of fine grey clay, worked smooth by water. Whatever was written on it is gone. Somebody made sure.",
+        "delivered": "Item: in a storeroom under a house in {place.quarter}, a basket of the week’s tablets, baked whole when the house above them burned. They are the best-kept tablets of that year on the whole mound. Somebody carried them.",
+        "cracked": "Item: in a storeroom under a house in {place.quarter}, a basket of the week’s tablets, baked when the house above them burned, half of them cracked as if by falls. Somebody carried them a long way.",
+        "lost": "Item: none. The week’s tablets left {place.tabletHouse} that night and are not seen again. Clay was nothing to a soldier. They lie, if anywhere, under a street."
+      },
+      "end": {
+        "wall": "Item: in the wall of a house in {place.quarter}, plastered into a niche at the height of a hand, a small tablet, never fired, dry as the day it was hidden: “{tablet.end}” A learner’s hand. The record agrees with it.",
+        "trench": "Item: under the floor of the rebuilt palace, in the packing of its foundations, a small tablet, unfired and still soft when lifted: “{tablet.end}” The throne of the hall stood directly above it.",
+        "temple": "Item: from the offering pit behind the temple, a small tablet among the bread offerings, its edges gone to mud: “{tablet.end}” What the damp left of it leans the {state.ruler.title}’s way.",
+        "handin": "Item: from the new archive, the {state.ruler.title}’s account of the night: “{tablet.end}” Somewhere in its clay is a tablet that said otherwise, soaked and pressed again."
+      }
+    },
+    "bands": {
+      "true": 80,
+      "rounded": 40
+    },
+    "verdict": {
+      "true": "Five things a runner carried in one week, and the record bears most of them out. Runners did not sign what they carried. A scribe of that house wrote that he did not save one tablet. Not one. He was right about himself.",
+      "rounded": "Set beside the record, what this runner carried bends, but gently, the way a palace bent. Runners did not sign what they carried. A scribe of that house wrote that he saved not one tablet. Somebody saved a few, and leaned them a little.",
+      "boasted": "Everything this runner carried leans the {state.ruler.title}’s way, and the court chronicle leaned further: “{chronicle.quote}” As evidence of the war, worthless. As evidence of who paid for the telling, complete."
+    },
+    "endings": [
+      {
+        "id": "throne",
+        "title": "Under the throne",
+        "when": {
+          "flag": "throne"
+        },
+        "text": "{state.ruler.name} rebuilds his mother’s hall and sets his throne over the trench. He reigns until AY {state.ruler.died}. Every day of it he sits a hand’s depth above the night of the burning, told the way you saw it, and never knows."
+      },
+      {
+        "id": "kings",
+        "title": "The {state.ruler.title}’s runner",
+        "when": {
+          "favour": [
+            7,
+            20
+          ]
+        },
+        "text": "The {state.ruler.title} takes you for his own runner. For {treaty.tributeYears} years the silver goes to {enemy.name}, and for most of them you run beside the carts with the tallies, which you no longer read. You are very fast. Nobody asks you anything."
+      },
+      {
+        "id": "dismissed",
+        "title": "Water for the dyers",
+        "when": {
+          "conscience": [
+            8,
+            20
+          ],
+          "favour": [
+            -20,
+            -4
+          ]
+        },
+        "text": "{steward.name} takes the sash of the house from you at {place.palaceGate}, gently, as if it were heavy. After that you carry water for the dyers’ vats. Your hands go blue to the wrist, and you teach the children of the street their signs, a syllable for a flatbread."
+      },
+      {
+        "id": "storeroom",
+        "title": "The week under the floor",
+        "when": {
+          "flag": "delivered"
+        },
+        "text": "When the street is rebuilt, {father.name} lays the new floor over the storeroom himself, bad leg and all, and lets nobody dig there. You never tell the palace what is under it. He limps for the rest of his life, and tells anyone who will listen that he walked home from {battle.place}."
+      },
+      {
+        "id": "street",
+        "title": "Read aloud, door by door",
+        "when": {
+          "flag": "roll-dyer"
+        },
+        "text": "Door by door, {place.quarter} learns its dead from you, and does not forget who read them. When the palace sends for anything after that, the street is out. When you come, it is in. Each year {dyer.name} asks you to read his son’s line again, and you do."
+      },
+      {
+        "id": "bench",
+        "title": "A runner of the new house",
+        "when": {},
+        "text": "The rebuilt palace keeps you because you know every roof in {city.name}. Through the truce you run the tallies of tribute from {place.tabletHouse}, rebuilt, to the river road. The priests say everything comes round again on the wheel. Some nights, on the roofs, you believe them."
+      }
+    ],
+    "share": {
+      "intro": "I ran for {place.tabletHouse} of {city.name}, AY {year}."
+    }
+  }
 }

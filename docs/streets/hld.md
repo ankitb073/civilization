@@ -26,7 +26,8 @@ The code lives in `atlas/src/game/streets/` and ships as one lazy chunk. No othe
 
 ## Components
 
-**1. Engine and renderer.**
+**1. Engine and renderer.** *Superseded by decision 0033: with WebGPU the streets draw the realism look on three's
+`WebGPURenderer` in four tiers (docs/streets/lookdev.md); without it, `WebGLRenderer` as below.*
 - **three.js 0.185.1** with `WebGLRenderer` (WebGL2).
   - Not WebGPU: the city model patches its shaders with `onBeforeCompile`, and every 3D view on the site is WebGL.
   - Not react-three-fiber: the atlas is Preact.
