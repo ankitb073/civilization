@@ -3,10 +3,13 @@
 // gate towers, stirring in the wind; birds wheeling over the town; and figurine townspeople standing at the stalls,
 // the scale, the well and the gates (painted wood, no faces, as the site's figurines). All animation is in shaders
 // driven by one time uniform; with reduced motion the time stands still.
+// The banners' wind and the birds' flap are vertex patches (onBeforeCompile) for the classic look's WebGLRenderer;
+// `nodeMaterials()` gives the same two motions in TSL for the realism look's WebGPURenderer (decision 0033), which
+// ignores onBeforeCompile. Its code (three/webgpu, three/tsl) is fetched only when it is asked for.
 
 import {
   BufferAttribute, BufferGeometry, CanvasTexture, Color, DoubleSide, Group, InstancedBufferAttribute, InstancedMesh,
-  Matrix4, MeshBasicMaterial, MeshLambertMaterial, PlaneGeometry, Quaternion, SRGBColorSpace, Vector3,
+  type Material, Matrix4, MeshBasicMaterial, MeshLambertMaterial, PlaneGeometry, Quaternion, SRGBColorSpace, Vector3,
 } from 'three';
 import type { Smoke } from '../../../three/city/model.ts';
 import { hash } from '../../../three/city/record.ts';
@@ -131,7 +134,12 @@ export function bannerTexture(arms: ArmsSpec | null, fallback: string): CanvasTe
   return tex;
 }
 
-export interface Life { group: Group; tick(t: number): void; dispose(): void; birds: number; banners: number; people: number }
+export interface Life {
+  group: Group; tick(t: number): void; dispose(): void; birds: number; banners: number; people: number;
+  /** The banners' and birds' materials as node materials (TSL), with the same wind and flap, for WebGPURenderer: each
+   *  mesh and the material to give it (the caller swaps them in, and back). */
+  nodeMaterials(): Promise<{ mesh: InstancedMesh; material: Material }[]>;
+}
 
 export function life(ctx: Ctx, civ: Civic, arms: ArmsSpec | null, fallbackColour: string, reduced: boolean): Life {
   const group = new Group();
@@ -141,6 +149,7 @@ export function life(ctx: Ctx, civ: Civic, arms: ArmsSpec | null, fallbackColour
 
   // ---- banners: a cloth on a pole (or hung from a tower's face), swaying from the top
   const B = civ.banners;
+  let bannerMesh: InstancedMesh | null = null, bannerTex: CanvasTexture | null = null;
   if (B.length) {
     const geo = new PlaneGeometry(1, 1, 1, 8).translate(0, -0.5, 0);
     const tex = bannerTexture(arms, fallbackColour);
@@ -159,11 +168,16 @@ export function life(ctx: Ctx, civ: Civic, arms: ArmsSpec | null, fallbackColour
     };
     const im = new InstancedMesh(geo, mat, B.length);
     const m = new Matrix4(), q = new Quaternion(), up = new Vector3(0, 1, 0);
+    // each banner in the wind, for the node material (whose position node acts after the instance matrix): the
+    // cloth's facing (sin, cos of its turn), its width, and its phase from where it stands (the classic patch reads
+    // the phase from the instance matrix)
+    const wind = new Float32Array(B.length * 4);
     B.forEach((b, i) => {
       const top = b.pole ? b.y + b.h + 0.4 : b.y;
       q.setFromAxisAngle(up, b.yaw);
       m.compose(new Vector3(b.x, top, b.z), q, new Vector3(b.h * 0.42, b.h, 1));
       im.setMatrixAt(i, m);
+      wind.set([Math.sin(b.yaw), Math.cos(b.yaw), b.h * 0.42, b.x * 0.37 + b.z * 0.21], i * 4);
       if (b.pole) {
         ctx.kit.put('pole', b.x, b.y + (b.h + 0.7) / 2, b.z, 0, 0.1, b.h + 0.7, 0.1, C.timberDark);
         ctx.kit.solidBox(b.x, b.y + (b.h + 0.7) / 2, b.z, 0, 0.06, (b.h + 0.7) / 2, 0.06);
@@ -173,10 +187,12 @@ export function life(ctx: Ctx, civ: Civic, arms: ArmsSpec | null, fallbackColour
         void c; void s;
       }
     });
+    geo.setAttribute('aWind', new InstancedBufferAttribute(wind, 4));
     im.castShadow = true;
     im.frustumCulled = false;
     im.name = 'banners';
     group.add(im);
+    bannerMesh = im; bannerTex = tex;
     disposers.push(() => { geo.dispose(); tex.dispose(); mat.dispose(); });
   }
 
@@ -242,6 +258,40 @@ export function life(ctx: Ctx, civ: Civic, arms: ArmsSpec | null, fallbackColour
     people: civ.people.length,
     tick(t: number) { uTime.value = reduced ? 12.5 : t; },
     dispose() { for (const d of disposers) d(); },
+    async nodeMaterials() {
+      const [{ MeshStandardNodeMaterial, MeshBasicNodeMaterial }, tsl] = await Promise.all([import('three/webgpu'), import('three/tsl')]);
+      // TSL's type definitions reject much valid TSL (vector/scalar mixing): typed loosely, checked when it compiles
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { abs, attribute, cos, normalize, positionGeometry, positionLocal, sign, sin, uniform, vec3 } = tsl as any;
+      const time = uniform(0).onFrameUpdate(() => uTime.value);
+      const out: { mesh: InstancedMesh; material: Material }[] = [];
+      if (bannerMesh && bannerTex) {
+        // the cloth hangs from its top (its own y 0 down to -1) and swings out more toward its foot; the offsets are
+        // the classic patch's, turned into the world by the banner's facing (the node's position is after instancing)
+        const bm2 = new MeshStandardNodeMaterial({ map: bannerTex, side: DoubleSide, alphaTest: 0.5, roughness: 0.92, metalness: 0 });
+        const down = positionGeometry.y.negate();
+        const wnd = attribute('aWind', 'vec4');
+        const ph = wnd.w;
+        const across = sin(time.mul(1.3).add(ph.mul(1.7)).add(down.mul(1.4))).mul(0.03).mul(down).mul(wnd.z);
+        const out_ = sin(time.mul(1.9).add(ph).add(down.mul(2.6))).mul(0.13).mul(down).add(down.mul(0.06));
+        bm2.positionNode = positionLocal.add(vec3(wnd.y, 0, wnd.x.negate()).mul(across)).add(vec3(wnd.x, 0, wnd.y).mul(out_));
+        out.push({ mesh: bannerMesh, material: bm2 });
+        disposers.push(() => bm2.dispose());
+      }
+      // the birds: each wheels about its flock's centre, wings flapping (a V of two triangles)
+      const bird = attribute('aBird', 'vec4'), cen = attribute('aCen', 'vec3');
+      const a = bird.z.mul(time).add(bird.w.mul(6.2831));
+      const flap = sin(time.mul(cen.y.add(9)).add(cen.y.mul(3)));
+      const p = positionLocal.add(vec3(0, abs(positionLocal.x).mul(flap).mul(0.55), 0)).mul(1.6);
+      const fwd = normalize(vec3(sin(a).negate(), 0, cos(a)).mul(sign(bird.z)));
+      const side = vec3(fwd.z, 0, fwd.x.negate());
+      const c = vec3(cen.x.add(cos(a).mul(bird.x)), bird.y.add(sin(a.mul(2.3).add(cen.y)).mul(2)), cen.z.add(sin(a).mul(bird.x)));
+      const bm3 = new MeshBasicNodeMaterial({ color: 0x3a3029, side: DoubleSide });
+      bm3.positionNode = c.add(side.mul(p.x)).add(vec3(0, p.y, 0)).add(fwd.mul(p.z));
+      out.push({ mesh: birds, material: bm3 });
+      disposers.push(() => bm3.dispose());
+      return out;
+    },
   };
 }
 

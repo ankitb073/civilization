@@ -1,0 +1,205 @@
+{
+ "about": "The hero's shots: name \u2192 [clip, seconds, camera]. Read by render.py (Blender) and shoot.ts (three.js). Clip 'bind' is the pose the mesh was bound in; cameras are defined in both.",
+ "shots": {
+  "idle-game": [
+   "Idle_Loop",
+   0.6,
+   "game"
+  ],
+  "idle-three": [
+   "Idle_Loop",
+   0.6,
+   "three"
+  ],
+  "idle-close": [
+   "Idle_Loop",
+   0.6,
+   "close"
+  ],
+  "idle-portrait": [
+   "Idle_Loop",
+   0.6,
+   "portrait"
+  ],
+  "run-game": [
+   "Jog_Fwd_Loop",
+   0.3,
+   "game"
+  ],
+  "run-side": [
+   "Jog_Fwd_Loop",
+   0.3,
+   "side"
+  ],
+  "run-three": [
+   "Jog_Fwd_Loop",
+   0.62,
+   "three"
+  ],
+  "jog-three": [
+   "Jog_Loop",
+   0.25,
+   "three"
+  ],
+  "walk-three": [
+   "Walk_Loop",
+   0.4,
+   "three"
+  ],
+  "jump-side": [
+   "Run_Jump_L",
+   0.47,
+   "side"
+  ],
+  "jump-three": [
+   "Run_Jump_R",
+   0.3,
+   "three"
+  ],
+  "jump-game": [
+   "Run_Jump_L",
+   0.47,
+   "game"
+  ],
+  "hop-three": [
+   "Jump_Air",
+   0.48,
+   "three"
+  ],
+  "land-three": [
+   "Jump_Land",
+   0.25,
+   "three"
+  ],
+  "roll-side": [
+   "Roll",
+   0.55,
+   "side"
+  ],
+  "climb-back": [
+   "Climb_Wall",
+   0.7,
+   "back"
+  ],
+  "climb-three": [
+   "Climb_Wall",
+   1.4,
+   "three"
+  ],
+  "hang-back": [
+   "Hang_Loop",
+   0.5,
+   "back"
+  ],
+  "hang-three": [
+   "Hang_Loop",
+   0.5,
+   "three"
+  ],
+  "hang-close": [
+   "Hang_Loop",
+   0.5,
+   "shoulders"
+  ],
+  "pull-side": [
+   "Hang_PullUp",
+   0.3,
+   "side"
+  ],
+  "mantle-side": [
+   "ClimbUp_1m",
+   0.3,
+   "side"
+  ],
+  "ladder-back": [
+   "Climb_Ladder",
+   0.4,
+   "back"
+  ],
+  "run-close": [
+   "Jog_Fwd_Loop",
+   0.3,
+   "shoulders"
+  ],
+  "run-hands": [
+   "Jog_Fwd_Loop",
+   0.3,
+   "hands"
+  ],
+  "idle-hands": [
+   "Idle_Loop",
+   0.6,
+   "hands"
+  ],
+  "hang-hands": [
+   "Hang_Loop",
+   0.5,
+   "hands"
+  ],
+  "climb-hands": [
+   "Climb_Wall",
+   0.7,
+   "hands"
+  ],
+  "bind-three": [
+   "bind",
+   0,
+   "three"
+  ],
+  "bind-hands": [
+   "bind",
+   0,
+   "hands"
+  ],
+  "rest-three": [
+   "rest",
+   0,
+   "three"
+  ],
+  "hang-shoulders": [
+   "Hang_Loop",
+   0.5,
+   "shoulders_back"
+  ],
+  "climb-shoulders": [
+   "Climb_Wall",
+   0.7,
+   "shoulders_back"
+  ],
+  "pull-shoulders": [
+   "Hang_PullUp",
+   0.3,
+   "shoulders_back"
+  ],
+  "run-hips": [
+   "Jog_Fwd_Loop",
+   0.3,
+   "hips_side"
+  ],
+  "jump-hips": [
+   "Run_Jump_L",
+   0.47,
+   "hips_side"
+  ],
+  "roll-hips": [
+   "Roll",
+   0.55,
+   "hips_side"
+  ],
+  "land-knees": [
+   "Jump_Land",
+   0.25,
+   "knees"
+  ],
+  "mantle-knees": [
+   "ClimbUp_1m",
+   0.3,
+   "knees"
+  ],
+  "run-knees": [
+   "Jog_Fwd_Loop",
+   0.62,
+   "knees"
+  ]
+ }
+}

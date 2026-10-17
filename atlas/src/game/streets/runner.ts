@@ -1,5 +1,6 @@
 // Streets: the runner. A CC0 Quaternius character (Universal Base Characters) moved by clips from Quaternius's
-// Universal Animation Library (atlas/public/game/streets/LICENSES.md). Clips blend with AnimationMixer crossfades.
+// Universal Animation Library (atlas/public/game/streets/LICENSES.md); or the realistic hero (hero/hero.glb, the same
+// skeleton and clips; the realism look's default, decision 0033). Clips blend with AnimationMixer crossfades.
 // Each gait's ground speed is measured from the clip itself when the model loads (how fast the planted foot slides
 // back), so the game can set the playback rate from the runner's real speed and the feet do not skate.
 // Jumps: a push-off on the ground first (the foot that is down, or a crouch from a stand), then a flight clip whose
@@ -9,13 +10,17 @@
 // into a stand, all of it after a long drop.
 
 import {
-  type AnimationAction, AnimationClip, AnimationMixer, AnimationUtils, Group, LoopOnce, LoopRepeat, type Material,
-  type Mesh, type Object3D, Vector3,
+  AdditiveBlending, type AnimationAction, AnimationClip, AnimationMixer, AnimationUtils, Group, LoopOnce, LoopRepeat,
+  type Material, type Mesh, type Object3D, Vector3,
 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 export const RUNNER_URL = `${import.meta.env.BASE_URL}game/streets/runner.glb`;
+/** The realistic hero (atlas/public/game/streets/hero/LICENSES.md): the same skeleton and the same 16 clips as
+ *  runner.glb. LOD0 (40k triangles, 2K skin maps) on computers, LOD1 (11k, 1K maps) on phones. */
+export const HERO_URL = `${import.meta.env.BASE_URL}game/streets/hero/hero.glb`;
+export const HERO_LOD1_URL = `${import.meta.env.BASE_URL}game/streets/hero/hero_lod1.glb`;
 
 /** A looping gait and what the clip says about it. */
 export interface Gait { name: string; speed: number; front: number; duration: number }
@@ -57,6 +62,32 @@ export async function loadRunner(url = RUNNER_URL): Promise<Runner> {
   return new Runner(gltf.scene, gltf.animations);
 }
 
+/** The hero's eyes and brows, made cheap and right for a game (the hero build's notes, hero/LICENSES.md): the cornea is
+ *  drawn as an additive gloss over the iris (its glass transmission would cost an extra scene render each frame), and
+ *  the brows and lashes, alpha cards, cast no shadow (they would cast rectangles). */
+function prepareHero(scene: Object3D): boolean {
+  let hero = false;
+  scene.traverse((o) => {
+    const m = o as Mesh;
+    if (!m.isMesh) return;
+    for (const mat of (Array.isArray(m.material) ? m.material : [m.material]) as (Material & Record<string, unknown>)[]) {
+      if (mat.name === 'cornea') {
+        hero = true;
+        mat.transmission = 0;
+        (mat.color as { setRGB(r: number, g: number, b: number): void } | undefined)?.setRGB(0, 0, 0);
+        mat.transparent = true;
+        mat.blending = AdditiveBlending;
+        mat.depthWrite = false;
+        mat.needsUpdate = true;
+        m.userData.noShadow = true;
+      }
+      if (mat.name === 'brows' || mat.name === 'lashes') { hero = true; m.userData.noShadow = true; }
+      if (mat.name === 'skin') hero = true;
+    }
+  });
+  return hero;
+}
+
 export class Runner {
   /** At the runner's feet; turned to face where it runs (+z is forward at yaw 0). */
   readonly object = new Group();
@@ -75,10 +106,11 @@ export class Runner {
 
   constructor(scene: Object3D, clips: AnimationClip[]) {
     this.model = scene;
+    const hero = prepareHero(scene);
     scene.traverse((o) => {
       const m = o as Mesh;
       if (!m.isMesh) return;
-      m.castShadow = true;
+      m.castShadow = !m.userData.noShadow;
       m.receiveShadow = false;
       m.frustumCulled = false; // skinned bounds do not follow the pose
       const mat = m.material as Material & { color?: { set(c: string): void } };
@@ -105,7 +137,7 @@ export class Runner {
       run: measureGait(scene, need(CLIPS.run)),
       jog: measureGait(scene, need(CLIPS.jog)),
     };
-    this.height = 1.8;
+    this.height = hero ? 1.78 : 1.8;
     for (const n of [CLIPS.jumpStart, CLIPS.jumpLand, CLIPS.roll]) {
       const a = this.actions.get(n)!;
       a.setLoop(LoopOnce, 1);

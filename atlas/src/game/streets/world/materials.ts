@@ -3,6 +3,8 @@
 // space: mottled plaster, patches flaked off to the mud bricks under it, rain streaks under the roof line, a splashed
 // and darker foot, and packed mud with straw on the roofs. The ground gets flagstones on the temple square, grit and
 // wheel-worn lanes. All of it is shader code (no texture files), faded out with distance so it does not shimmer.
+// This is the classic look (WebGLRenderer). The realism look (look/, decision 0033) replaces these materials with its
+// own node materials and reads `userData.lookKind` ('mud' or 'plain') to know which family a kit mesh belongs to.
 
 import {
   CanvasTexture, DoubleSide, type Material, MeshBasicMaterial, MeshLambertMaterial, SRGBColorSpace,
@@ -76,6 +78,8 @@ export function mudSkin<M extends MeshLambertMaterial>(mat: M, key: string, opts
 }`);
   };
   mat.customProgramCacheKey = () => `${prevKey}+mud-${key}-${brick}`;
+  // for the realism look (look/surfaces.ts): this material's parts are mud walls, not props
+  mat.userData.lookKind = 'mud';
   mat.needsUpdate = true;
   return mat;
 }
@@ -173,7 +177,9 @@ export function contactMaterial(): MeshBasicMaterial {
 
 /** Plain parts (timber, cloth, pottery): Lambert, vertex colours, flat. */
 export function plainMaterial(): MeshLambertMaterial {
-  return new MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const m = new MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  m.userData.lookKind = 'plain';
+  return m;
 }
 
 export function disposeMaterial(m: Material) {

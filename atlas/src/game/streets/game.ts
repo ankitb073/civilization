@@ -1,18 +1,36 @@
 // Streets (#/streets): the movement spike for a third-person game in a city of the record. One runner, one city at
 // walking scale, Rapier for collision, a fixed 60 Hz step for movement (rendered with interpolation), and probes for the
 // screenshot script (window.__palimpsestStreets).
+//
+// Two renderers (decision 0033): with WebGPU, three's WebGPURenderer and the realism look (look/), in one of four
+// tiers; without it, WebGLRenderer and the classic look, exactly as before. The choice (look/tiers.ts pickLook) is made
+// while the city loads. The realism look compiles its shaders behind the loading card, draws its first frame on
+// placeholder textures, streams the tier's textures and sky after it, holds 30 fps on the phone tier, and steps a tier
+// down by itself when frames run slow (look/governor.ts).
 
-import { PCFShadowMap, PerspectiveCamera, Scene, SRGBColorSpace, Vector3, WebGLRenderer, type Mesh, type MeshStandardMaterial } from 'three';
+import { PCFShadowMap, PerspectiveCamera, Scene, SRGBColorSpace, Vector3, WebGLRenderer, type Mesh, type MeshStandardMaterial, type Scene as SceneT } from 'three';
+import type { WebGPURenderer } from 'three/webgpu';
 import { loadCityRecord, type CityRecord } from '../../three/city/index.ts';
 import { layoutOf } from '../../three/city/layout.ts';
 import { ThirdPersonCamera } from './camera.ts';
 import { Input, PACE, type Controls, type InputEls } from './input.ts';
 import { StreetsPhysics, loadRapier, type Ledge } from './physics.ts';
 import { ladderNear, type Ladder } from './affordances.ts';
-import { loadRunner, type Runner } from './runner.ts';
+import { HERO_LOD1_URL, HERO_URL, RUNNER_URL, loadRunner, type Runner } from './runner.ts';
 import { LOT, buildStreets, type Solid, type StreetsCity } from './world.ts';
+import { tierBelow, type LookPick, type TierName } from './look/tiers.ts';
+import { FrameGovernor } from './look/governor.ts';
+import type { RealismLook, StreamStats } from './look/index.ts';
 
 export interface GameOpts { mobile: boolean; touch: boolean; reducedMotion: boolean }
+
+/** What the loading card shows: the step, and how far through it (0..1; null: no measure). */
+export interface LoadProgress { step: string; frac: number | null }
+/** A change of tier the player should hear about (the HUD's toast) or see (the relighting card). */
+export interface LookEvent { kind: 'relight' | 'ready' | 'stepped' | 'stream' | 'streamed'; tier: TierName | null; from?: TierName | null; frac?: number; bytes?: number; total?: number; reason?: string }
+type AnyRenderer = WebGLRenderer | WebGPURenderer;
+/** The realism look's chunk, fetched while the city loads (only when WebGPU is used). */
+const lookChunk = () => import('./look/index.ts');
 
 /** Feel: speeds in m/s, accelerations in m/s², times in seconds. The jump is committed: once the feet leave the
  *  ground the arc is ballistic (how long the button is held no longer changes it), a little heavier coming down than
@@ -82,7 +100,16 @@ const STEP = 1 / 60;
 type Probe = { frame: number[]; cpu: number[]; phys: number[]; skate: number[] };
 
 export class StreetsGame {
-  readonly renderer: WebGLRenderer;
+  /** The renderer: WebGPURenderer under the realism look, WebGLRenderer under the classic one (made in load()). */
+  renderer: AnyRenderer | null = null;
+  /** The look's choice for this visit, the realism look itself (null: classic) and its tier. */
+  pick: LookPick | null = null;
+  look: RealismLook | null = null;
+  tier: TierName | null = null;
+  /** Load, compile and stream timings of the look (ms since load() began), for the probes. */
+  readonly lookTiming: Record<string, number> = {};
+  /** Called when the look changes tier, starts or finishes streaming (StreetsView: the toast and the readout). */
+  onLook: ((e: LookEvent) => void) | null = null;
   readonly scene = new Scene();
   readonly camera = new PerspectiveCamera(60, 1, 0.1, 4000);
   readonly cam: ThirdPersonCamera;
@@ -145,33 +172,51 @@ export class StreetsGame {
   private w = 1;
   private h = 1;
   private dpr = 1;
+  private canvas: HTMLCanvasElement;
+  /** Frames drawn (the world's per-frame tick runs once a frame, however many passes draw the scene). */
+  private frameNo = 0;
+  /** The realism look's frame cap (30 on the phone tier) and its governor. */
+  private fpsCap = 0;
+  private governor: FrameGovernor | null = null;
+  private gpuSampleAt = 0;
+  private relighting = false;
+  private t0Load = 0;
+  /** Draw-call and triangle counts of the last whole frame (every pass; WebGPURenderer's own counts reset per pass). */
+  private lastInfo = { calls: 0, triangles: 0 };
 
   constructor(canvas: HTMLCanvasElement, els: Omit<InputEls, 'canvas'>, opts: GameOpts) {
     this.opts = opts;
-    const r = new WebGLRenderer({ canvas, antialias: !opts.mobile, powerPreference: 'high-performance', alpha: false });
-    r.outputColorSpace = SRGBColorSpace;
-    r.shadowMap.enabled = true;
-    r.shadowMap.type = PCFShadowMap;
-    this.dpr = Math.min(window.devicePixelRatio || 1, opts.mobile ? 1.5 : 2);
-    r.setPixelRatio(this.dpr);
-    this.renderer = r;
+    this.canvas = canvas;
     this.cam = new ThirdPersonCamera(opts.reducedMotion);
     // a touch player gets a camera that swings in behind; with reduced motion it never turns by itself
     this.cam.follow = opts.touch && !opts.reducedMotion;
     this.input = new Input({ ...els, canvas });
   }
 
-  /** Load the city's record, Rapier and the runner together; build the world. */
-  async load(cityId: string, year: number, onStep?: (what: string) => void) {
+  /** Load the city's record, Rapier and the runner together; pick the look and make the renderer; build the world;
+   *  under the realism look, light it and compile its shaders before the first frame. `look`: the choice
+   *  (look/tiers.ts pickLook), which may still be probing the GPU. */
+  async load(cityId: string, year: number, onStep?: (what: string) => void, look?: Promise<LookPick> | LookPick, onProgress?: (p: LoadProgress) => void) {
     const t0 = performance.now();
-    onStep?.('Reading the city from the record…');
+    this.t0Load = t0;
+    const step = (what: string, frac: number | null = null) => { onStep?.(what); onProgress?.({ step: what, frac }); };
+    step('Reading the city from the record…');
     const recP = loadCityRecord(cityId);
     const rapierP = loadRapier().then((R) => { this.timing.rapier = performance.now() - t0; return R; });
-    const runnerP = loadRunner().then((r) => { this.timing.runner = performance.now() - t0; return r; });
+    const pick: LookPick = look ? await look : { look: 'classic', tier: null, why: 'default', choice: 'auto', gpu: null };
+    this.pick = pick;
+    this.timing.pick = performance.now() - t0;
+    const realism = pick.look === 'realism' && !!pick.tier;
+    // the realism look's code (the world writes the kit's surface tags itself: setWorldOptions surfaceTags)
+    const lookP = realism ? lookChunk() : null;
+    const url = this.runnerUrl(pick);
+    const tag = (u: string) => (r: Runner) => { r.object.userData.url = u; return r; };
+    const runnerP = loadRunner(url).then(tag(url)).catch(() => loadRunner(RUNNER_URL).then(tag(RUNNER_URL))).then((r) => { this.timing.runner = performance.now() - t0; return r; });
+    await this.makeRenderer(pick);
     const rec = await recP;
     this.timing.record = performance.now() - t0;
     this.rec = rec;
-    onStep?.('Laying out the streets…');
+    step('Laying out the streets…');
     await nextFrame();
     const y = Math.max(rec.start, Math.min(rec.end, year));
     const tb = performance.now();
@@ -180,7 +225,7 @@ export class StreetsGame {
     this.city = city;
     this.scene.add(city.root);
     const [R, runner] = await Promise.all([rapierP, runnerP]);
-    onStep?.('Raising the walls…');
+    step('Raising the walls…');
     await nextFrame();
     const spawn = this.spawnPoint(city);
     const tp = performance.now();
@@ -224,9 +269,287 @@ export class StreetsGame {
     this.prev.copy(this.curr);
     runner.object.position.copy(this.curr);
     runner.object.rotation.y = this.heading;
+    this.updateFov();
+    if (realism && lookP) {
+      this.onceAFrame();
+      await this.makeLook(pick.tier!, (frac, what) => step(what, frac));
+    }
     this.timing.total = performance.now() - t0;
     this.ready = true;
   }
+
+  /** The runner's model: the realistic hero under the realism look (LOD1 on the phone tiers), runner.glb under the
+   *  classic look; `?hero=1` or `?hero=0` in the route asks for one or the other. */
+  private runnerUrl(pick: LookPick): string {
+    const q = new URLSearchParams(location.hash.split('?')[1] ?? '');
+    const want = q.get('hero');
+    if (want === '0') return RUNNER_URL;
+    if (pick.look === 'realism' && pick.tier) return pick.tier === 'phone' || pick.tier === 'phone-low' ? HERO_LOD1_URL : HERO_URL;
+    return want === '1' ? HERO_URL : RUNNER_URL;
+  }
+
+  /** The renderer for the look picked: WebGLRenderer (classic), or WebGPURenderer on WebGPU (realism). A
+   *  WebGPURenderer that fell back to its WebGL2 backend is refused (the realism look's shaders take 21 s to compile
+   *  there): `webgpu-unavailable` tells the view to start again on a fresh canvas with the classic look. */
+  private async makeRenderer(pick: LookPick) {
+    if (pick.look === 'realism' && pick.tier) {
+      const { WebGPURenderer } = await import('three/webgpu');
+      const gpuTiming = new URLSearchParams(location.hash.split('?')[1] ?? '').get('gputime') === '1';
+      const r = new WebGPURenderer({ canvas: this.canvas, antialias: false, powerPreference: 'high-performance', trackTimestamp: gpuTiming } as ConstructorParameters<typeof WebGPURenderer>[0]);
+      try { await r.init(); } catch (e) { r.dispose(); throw new Error(`webgpu-unavailable: ${String((e as Error)?.message ?? e)}`); }
+      if (!(r.backend as unknown as { isWebGPUBackend?: boolean }).isWebGPUBackend) { r.dispose(); throw new Error('webgpu-unavailable: fell back to WebGL2'); }
+      r.info.autoReset = false;
+      this.installAsyncPipelines(r);
+      this.renderer = r;
+      this.timing.renderer = performance.now() - this.t0Load;
+    } else {
+      let r: WebGLRenderer;
+      try {
+        r = new WebGLRenderer({ canvas: this.canvas, antialias: !this.opts.mobile, powerPreference: 'high-performance', alpha: false });
+      } catch (e) { throw new Error(`This needs WebGL, which this browser could not start (${String((e as Error)?.message ?? e)}).`); }
+      r.outputColorSpace = SRGBColorSpace;
+      r.shadowMap.enabled = true;
+      r.shadowMap.type = PCFShadowMap;
+      this.dpr = Math.min(window.devicePixelRatio || 1, this.opts.mobile ? 1.5 : 2);
+      r.setPixelRatio(this.dpr);
+      this.renderer = r;
+    }
+    this.resize(this.w, this.h);
+  }
+
+  /** Under the realism look the scene is drawn several times a frame (the pre-pass, the scene pass, shadow maps, the
+   *  river's mirror): the world's per-frame tick (near detail, smoke facing the camera) runs once a frame, for the
+   *  game's own camera only. */
+  private onceAFrame() {
+    const hook = this.scene.onBeforeRender;
+    let last = -1;
+    const game = this;
+    this.scene.onBeforeRender = function (this: SceneT, ...args: Parameters<SceneT['onBeforeRender']>) {
+      if (args[2] !== game.camera || last === game.frameNo) return;
+      last = game.frameNo;
+      hook.apply(this, args);
+    };
+  }
+
+  /** Build the realism look in a tier, compile its shaders (progress 0..1) and draw two frames, waiting for the GPU,
+   *  so the first frame the player sees is whole. */
+  private async makeLook(tier: TierName, progress: (frac: number | null, what: string) => void) {
+    const t0 = performance.now();
+    const { createRealism, TIERS } = await lookChunk();
+    const r = this.renderer as WebGPURenderer;
+    // ?off=ao,sss,dof,mb,bloom,shafts,mirror,parallax switches parts of the tier off (to see what each does and costs)
+    const off = new Set((new URLSearchParams(location.hash.split('?')[1] ?? '').get('off') ?? '').split(',').filter(Boolean));
+    const T = off.size ? structuredClone(TIERS[tier]) : TIERS[tier];
+    if (off.has('ao')) T.post.ao = 0;
+    if (off.has('sss')) T.post.contactShadows = false;
+    if (off.has('dof')) T.post.dof = false;
+    if (off.has('mb')) T.post.motionBlur = false;
+    if (off.has('bloom')) T.post.bloom = false;
+    if (off.has('shafts')) T.post.shafts = false;
+    if (off.has('mirror')) T.mirror = 0;
+    if (off.has('parallax')) T.quality.parallax = 0;
+    progress(null, 'Lighting the city…');
+    this.look = await createRealism(r, this.scene, this.camera, this.city!, T);
+    this.tier = tier;
+    this.look.adopt(this.runner!.object);
+    if (this.city?.district) this.look.adopt(this.city.district.group);
+    // ?tune=exp:0.8,env:1 (light and grade by hand, look/index.ts tune)
+    const tune = new URLSearchParams(location.hash.split('?')[1] ?? '').get('tune');
+    if (tune) this.look.tune(Object.fromEntries(tune.split(',').map((kv) => kv.split(':') as [string, string])));
+    this.dpr = Math.min(window.devicePixelRatio || 1, T.dprCap);
+    r.setPixelRatio(this.dpr);
+    this.resize(this.w, this.h);
+    this.lookTiming.lookMs = Math.round(performance.now() - t0);
+    const tc = performance.now();
+    const pipes0 = this.pipelineCount();
+    const c = await this.compileAll((d, n) => progress(n ? d / n : 0, `Preparing the light… ${n ? Math.round((100 * d) / n) : 0}%`));
+    this.lookTiming.compileMs = Math.round(performance.now() - tc);
+    this.lookTiming.compiledObjects = c.objects;
+    this.lookTiming.compileFrames = c.frames;
+    this.lookTiming.pipelinesAsync = c.pipelines;
+    const pipes1 = this.pipelineCount();
+    // two whole frames, each waited for
+    const tw = performance.now();
+    for (let i = 0; i < 2; i++) { this.present(0, 1, 0); await this.gpuIdle(); }
+    this.lookTiming.warmMs = Math.round(performance.now() - tw);
+    this.lookTiming.pipelines = pipes1;
+    this.lookTiming.pipelinesCompiled = pipes1 - pipes0;
+    this.lookTiming.pipelinesInFirstFrames = this.pipelineCount() - pipes1;
+    this.lookTiming.firstFrameAt = Math.round(performance.now() - this.t0Load);
+    this.fpsCap = T.fps === 30 ? 30 : 0;
+    // adaptive quality only when the tier was picked for the device: a tier the player chose, or the route pins, stays
+    this.governor = this.pick?.why === 'auto' ? new FrameGovernor({ fps: T.fps }) : null;
+    this.governor?.quiet(performance.now(), 6);
+  }
+
+  /** Give the realism look's materials to streets-kit parts added after the look (the errand's levy). */
+  dressLate() { if (this.look && this.city) this.look.dress(this.city.root); }
+
+  /** Stream the tier's textures and sky in (after the first frame). */
+  async streamLook(): Promise<StreamStats | null> {
+    const look = this.look;
+    if (!look) return null;
+    const tier = this.tier;
+    const s0 = performance.now();
+    this.onLook?.({ kind: 'stream', tier, frac: 0 });
+    const st = await look.stream((loaded, total) => this.onLook?.({ kind: 'stream', tier, frac: total ? loaded / total : 1, bytes: loaded, total }));
+    if (look !== this.look) return st; // the tier changed meanwhile
+    this.lookTiming.streamMs = Math.round(performance.now() - s0);
+    this.lookTiming.fullQualityAt = Math.round(performance.now() - this.t0Load);
+    this.governor?.quiet(performance.now(), 3);
+    this.onLook?.({ kind: 'streamed', tier, bytes: st.bytes, total: st.bytes });
+    return st;
+  }
+
+  /** Change the realism look's tier (the HUD's menu, or the governor stepping down): the loop stops, the look is
+   *  rebuilt and compiled behind a short "relighting" card, and the textures already fetched are reused. */
+  async setTier(tier: TierName, reason: 'menu' | 'slow' | 'auto' = 'menu') {
+    if (!this.look || this.relighting || tier === this.tier || !this.city) return;
+    this.relighting = true;
+    const from = this.tier;
+    this.onLook?.({ kind: 'relight', tier, from, reason });
+    const running = !!this.raf;
+    this.stop();
+    try {
+      this.look.dispose();
+      this.look = null;
+      // the hero's level of detail follows the tier (its place carries over)
+      await this.swapRunnerFor(tier);
+      // a tier the player picked stays (no adaptive steps); the automatic one, or a step down from it, adapts
+      if (this.pick) this.pick = { ...this.pick, tier, why: reason === 'menu' ? 'choice' : 'auto' };
+      await this.makeLook(tier, () => {});
+      this.onLook?.({ kind: reason === 'slow' ? 'stepped' : 'ready', tier, from, reason });
+      void this.streamLook();
+    } finally {
+      this.relighting = false;
+      if (running) this.start();
+    }
+  }
+
+  /** Swap the hero's model for the tier's level of detail (LOD0 on computers, LOD1 on phones), keeping its place. */
+  private async swapRunnerFor(tier: TierName) {
+    const pick = this.pick;
+    if (!pick || !this.runner) return;
+    const url = this.runnerUrl({ ...pick, tier });
+    const cur = this.runner.object.userData.url as string | undefined;
+    if (cur === url) return;
+    const next = await loadRunner(url).catch(() => null);
+    if (!next) return;
+    next.object.userData.url = url;
+    next.object.position.copy(this.runner.object.position);
+    next.object.rotation.copy(this.runner.object.rotation);
+    this.scene.remove(this.runner.object);
+    disposeModel(this.runner.object);
+    this.runner = next;
+    this.scene.add(next.object);
+  }
+
+  /** The look's governor asked for less: one tier down, said to the player. */
+  private stepDown() {
+    const below = this.tier ? tierBelow(this.tier) : null;
+    if (below) void this.setTier(below, 'slow');
+  }
+
+  /** Compile the look's shaders behind the loading card. Every pipeline is created with WebGPU's async call, so the
+   *  GPU driver compiles them in parallel (cold, about five times faster than one by one; measured): a frame drawn with
+   *  frustum culling off asks for every pipeline the game will use (the pre-pass, shadows, the scene pass, the river's
+   *  mirror, the post stack), then the frames repeat, waiting, until nothing new is asked for. The progress is
+   *  pipelines ready of pipelines asked. */
+  private async compileAll(onProgress: (done: number, total: number) => void): Promise<{ objects: number; frames: number; pipelines: number }> {
+    const all: import('three').Object3D[] = [];
+    this.scene.traverseVisible((o) => { if ((o as Mesh).isMesh || (o as unknown as { isPoints?: boolean }).isPoints) all.push(o); });
+    const culled = all.filter((o) => o.frustumCulled);
+    for (const o of culled) o.frustumCulled = false;
+    const ap = this.asyncPipes;
+    let frames = 0;
+    try {
+      for (let k = 0; k < 8; k++) {
+        const asked = ap ? ap.asked : 0;
+        this.present(0, 1, 0);
+        frames++;
+        if (!ap) { await this.gpuIdle(); break; }
+        // wait for what this frame asked, reporting as each is ready
+        while (ap.pending.size) {
+          onProgress(ap.done, ap.asked);
+          await Promise.race([...ap.pending, new Promise((r) => setTimeout(r, 120))]);
+        }
+        onProgress(ap.done, ap.asked);
+        await this.gpuIdle();
+        if (ap.asked === asked) break; // a whole frame asked for nothing new
+      }
+    } finally {
+      for (const o of culled) o.frustumCulled = true;
+    }
+    return { objects: all.length, frames, pipelines: ap?.asked ?? 0 };
+  }
+
+  /** The probes' GPU timing (streets-look.ts): when an array, every frame's GPU time (ms) is pushed to it: WebGPU,
+   *  from submit to the queue going idle; WebGL, a timer query (EXT_disjoint_timer_query_webgl2), read back later. */
+  gpuStats: number[] | null = null;
+  private glTimer: { ext: { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number } | null; pending: WebGLQuery[] } | null = null;
+  private sampleGpu() {
+    const out = this.gpuStats!;
+    const r = this.renderer as unknown as { backend?: { device?: GPUDevice }; getContext?: () => WebGL2RenderingContext };
+    if (r.backend?.device) {
+      const s0 = performance.now();
+      void r.backend.device.queue.onSubmittedWorkDone().then(() => { if (out.length < 20000) out.push(performance.now() - s0); });
+      return;
+    }
+    const gl = r.getContext?.();
+    if (!gl) return;
+    this.glTimer ??= { ext: gl.getExtension('EXT_disjoint_timer_query_webgl2'), pending: [] };
+    const t = this.glTimer;
+    if (!t.ext) return;
+    while (t.pending.length && gl.getQueryParameter(t.pending[0], gl.QUERY_RESULT_AVAILABLE)) {
+      const q = t.pending.shift()!;
+      const ns = gl.getQueryParameter(q, gl.QUERY_RESULT) as number;
+      gl.deleteQuery(q);
+      if (!gl.getParameter(t.ext.GPU_DISJOINT_EXT)) out.push(ns / 1e6);
+    }
+  }
+  /** WebGL timer query around a frame (the probes' GPU timing of the classic look). */
+  private glBegin(): WebGLQuery | null {
+    if (!this.gpuStats || !this.glTimer?.ext) return null;
+    const gl = (this.renderer as WebGLRenderer).getContext() as WebGL2RenderingContext;
+    const q = gl.createQuery();
+    if (q) gl.beginQuery(this.glTimer.ext.TIME_ELAPSED_EXT, q);
+    return q;
+  }
+
+  /** WebGPU pipelines made with the async call (compiled in parallel, off the frame): an object whose pipeline is not
+   *  ready yet is skipped for a frame or two instead of stalling it. Installed on the realism look's renderer. */
+  private asyncPipes: { pending: Set<Promise<unknown>>; asked: number; done: number } | null = null;
+  private installAsyncPipelines(r: WebGPURenderer) {
+    const backend = r.backend as unknown as { createRenderPipeline(ro: unknown, promises: Promise<unknown>[] | null): void };
+    const orig = backend.createRenderPipeline.bind(backend);
+    const ap = { pending: new Set<Promise<unknown>>(), asked: 0, done: 0 };
+    backend.createRenderPipeline = (ro, promises) => {
+      // one-shot draws (the look's PMREM) ask for synchronous pipelines: a skipped draw would never be redrawn
+      if (promises || (r as unknown as { __syncPipelines?: boolean }).__syncPipelines) { orig(ro, promises); return; }
+      const mine: Promise<unknown>[] = [];
+      orig(ro, mine);
+      for (const p of mine) {
+        ap.asked++;
+        ap.pending.add(p);
+        void p.finally(() => { ap.pending.delete(p); ap.done++; });
+      }
+    };
+    this.asyncPipes = ap;
+  }
+
+  private pipelineCount(): number {
+    const p = (this.renderer as unknown as { _pipelines?: { caches?: Map<unknown, unknown> } })?._pipelines;
+    return p?.caches?.size ?? 0;
+  }
+
+  /** Resolves when the GPU has finished the work submitted so far (WebGPU), at once otherwise. */
+  private gpuIdle(): Promise<void> {
+    const dev = (this.renderer as unknown as { backend?: { device?: GPUDevice } })?.backend?.device;
+    return dev ? dev.queue.onSubmittedWorkDone() : Promise.resolve();
+  }
+
+  /** The camera's projection changed: the look re-fits its shadow cascades. */
+  private updateFov() { this.look?.resized(); }
 
   /** On the temple square's edge, facing out along the first main road. */
   private spawnPoint(city: StreetsCity): { x: number; y: number; z: number; facing: number } {
@@ -239,6 +562,7 @@ export class StreetsGame {
 
   resize(w: number, h: number) {
     this.w = Math.max(1, w); this.h = Math.max(1, h);
+    if (!this.renderer) return;
     this.renderer.setSize(this.w, this.h, false);
     this.camera.aspect = this.w / this.h;
     this.camera.updateProjectionMatrix();
@@ -250,6 +574,8 @@ export class StreetsGame {
     this.last = 0;
     const loop = (now: number) => {
       this.raf = requestAnimationFrame(loop);
+      // the phone tier holds 30 fps: every other display frame (with a little slack for timer jitter)
+      if (this.fpsCap && this.last && now - this.last < 1000 / this.fpsCap - 4) return;
       this.frame(now);
     };
     this.raf = requestAnimationFrame(loop);
@@ -282,7 +608,18 @@ export class StreetsGame {
     if (steps === 5) this.acc = 0;
     this.push(this.stats.phys, performance.now() - p0);
     this.present(dt, this.acc / STEP, now / 1000);
-    this.push(this.stats.cpu, performance.now() - c0);
+    const work = performance.now() - c0;
+    this.push(this.stats.cpu, work);
+    if (this.gpuStats) this.sampleGpu();
+    if (this.governor && dtRaw < 1) {
+      // now and then, how long the GPU takes over a frame (submit to idle)
+      if (now - this.gpuSampleAt > 1000) {
+        this.gpuSampleAt = now;
+        const s0 = performance.now();
+        void this.gpuIdle().then(() => this.governor?.gpuSample(performance.now() - s0));
+      }
+      if (this.governor.push(now, dtRaw * 1000, work)) this.stepDown();
+    }
   }
 
   /** Draw a frame: the runner between the last two steps (alpha), its animation, the camera, the sun, the render. */
@@ -319,14 +656,17 @@ export class StreetsGame {
     const hide = this.cam.dist < 0.6;
     if (hide !== this.runnerHidden) { this.runnerHidden = hide; runner.model.visible = !hide; }
 
-    // the sun's shadow follows the runner (snapped to its texels so it does not shimmer)
-    const sun = this.city.sun;
-    const R = sun.shadow.camera.right;
-    const texel = (2 * R) / sun.shadow.mapSize.x;
-    const sx = Math.round(o.x / texel) * texel, sz = Math.round(o.z / texel) * texel;
-    sun.position.set(sx - 38, o.y + 62, sz + 26);
-    sun.target.position.set(sx, o.y, sz);
-    sun.target.updateMatrixWorld();
+    // the sun's shadow follows the runner (snapped to its texels so it does not shimmer); under the realism look the
+    // look places the sun (look.update), from its sky
+    if (!this.look) {
+      const sun = this.city.sun;
+      const R = sun.shadow.camera.right;
+      const texel = (2 * R) / sun.shadow.mapSize.x;
+      const sx = Math.round(o.x / texel) * texel, sz = Math.round(o.z / texel) * texel;
+      sun.position.set(sx - 38, o.y + 62, sz + 26);
+      sun.target.position.set(sx, o.y, sz);
+      sun.target.updateMatrixWorld();
+    }
 
     if (this.sideView) {
       // the probes' side view: square to the run, at a fixed height, so the body is seen to rise and fall
@@ -338,9 +678,35 @@ export class StreetsGame {
       if (Math.abs(cam.fov - s.fov) > 0.01) { cam.fov = s.fov; cam.updateProjectionMatrix(); }
     }
 
-    void clock; // (the world updates its own smoke, before each render)
-    this.renderer.render(this.scene, this.camera);
+    // (the world updates its own smoke, before each render)
+    this.frameNo++;
+    const r = this.renderer!;
+    if (this.look) {
+      this.focus.set(o.x, o.y + 1.2, o.z);
+      // a camera cut (a teleport, a set view): no temporal history or motion blur carried over it
+      const cp = this.camera.position;
+      if (cp.distanceTo(this.lastCam) > 2.5) this.look.post.cut();
+      this.lastCam.copy(cp);
+      this.look.update(clock, this.camera, this.focus);
+      // the look's passes draw once per node frame, which three advances on its own animation frame: frames drawn
+      // between two (the probes' fixed-step filming) advance it themselves
+      const nf = (r as unknown as { _nodes?: { nodeFrame?: { frameId: number; update(): void } } })._nodes?.nodeFrame;
+      if (nf) { if (nf.frameId === this.lastFrameId) nf.update(); this.lastFrameId = nf.frameId; }
+      r.info.reset();
+      this.look.render();
+      this.lastInfo.calls = (r.info.render as unknown as { drawCalls: number }).drawCalls;
+      this.lastInfo.triangles = r.info.render.triangles;
+    } else {
+      const q = this.glBegin();
+      r.render(this.scene, this.camera);
+      if (q) { ((r as WebGLRenderer).getContext() as WebGL2RenderingContext).endQuery(this.glTimer!.ext!.TIME_ELAPSED_EXT); this.glTimer!.pending.push(q); }
+      this.lastInfo.calls = (r.info.render as unknown as { calls: number }).calls;
+      this.lastInfo.triangles = r.info.render.triangles;
+    }
   }
+  private focus = new Vector3();
+  private lastCam = new Vector3(1e9, 0, 0);
+  private lastFrameId = -1;
 
   runSpeed(): number {
     const g = this.runner?.gaits.run.speed ?? 6;
@@ -855,10 +1221,11 @@ export class StreetsGame {
 
   // ------------------------------------------------------------------ probes for the screenshot script
   info() {
-    const ri = this.renderer.info;
+    const ri = this.renderer!.info;
     const f = this.phys?.feet();
     return {
-      calls: ri.render.calls, triangles: ri.render.triangles, geometries: ri.memory.geometries, textures: ri.memory.textures,
+      calls: this.lastInfo.calls, triangles: this.lastInfo.triangles, geometries: ri.memory.geometries, textures: ri.memory.textures,
+      look: { look: this.look ? 'realism' : 'classic', tier: this.tier, why: this.pick?.why ?? null, gpu: this.pick?.gpu ?? null, timing: this.lookTiming, governor: this.governor?.last ?? null, fpsCap: this.fpsCap || null, runner: this.runner?.object.userData.url ?? null, ...(this.look ? { stats: this.look.stats() } : {}) },
       physics: this.phys?.counts, gaits: this.runner?.gaits, pose: this.runner?.pose, speed: this.animSpeed, grounded: this.grounded,
       trav: this.trav?.kind ?? null, depth: this.depth, moves: { ...this.counts },
       feet: f, cam: { ...this.cam.last, yaw: this.cam.yaw, pitch: this.cam.pitch, fov: this.camera.fov, y: this.camera.position.y }, dpr: this.dpr, size: [this.w, this.h],
@@ -1294,8 +1661,20 @@ export class StreetsGame {
       mat.map?.dispose();
       mat.dispose();
     });
-    this.renderer.dispose();
+    this.look?.dispose();
+    this.look = null;
+    if (this.pick?.look === 'realism') void lookChunk().then((m) => m.disposeLookCache());
+    this.renderer?.dispose();
   }
+}
+
+function disposeModel(o: import('three').Object3D) {
+  o.traverse((c) => {
+    const m = c as Mesh;
+    if (!m.isMesh) return;
+    m.geometry.dispose();
+    for (const mat of (Array.isArray(m.material) ? m.material : [m.material]) as MeshStandardMaterial[]) { mat.map?.dispose(); mat.normalMap?.dispose(); mat.roughnessMap?.dispose(); mat.dispose(); }
+  });
 }
 
 export interface Waypoint { x: number; z: number; run?: boolean; jump?: boolean; pace?: number }

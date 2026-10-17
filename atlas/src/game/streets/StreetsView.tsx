@@ -5,6 +5,11 @@
 // Tablet House's soundscape; muted until tapped on phones). When the scenario has a streets script
 // (streets-scripts/<id>.json) and its Tablet House script, the day's errand runs (errand/): the overseer hands the
 // runner a tablet at the door of the house of tablets; `errand=0` leaves the city free.
+// The look (decision 0033): with WebGPU, the realism look in a tier picked for the device (look/tiers.ts), else the
+// classic look; `?look=classic|realism` and `?tier=desktop|desktop-medium|phone|phone-low` override it, and the HUD's
+// Graphics menu changes it (kept in localStorage). The loading card shows each step and the shader compile's progress;
+// after the first frame the textures stream in (a thin bar under the Graphics button), and a toast says when the
+// game lowers its own quality because frames ran slow.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Scenario, ScenariosJson } from '../../../../engine/src/export/contract.ts';
@@ -12,7 +17,8 @@ import { fetchJson } from '../../data.ts';
 import { reducedMotion, route } from '../../state.ts';
 import { StreetsSound, soundAvailable } from './sound.ts';
 import { placeAt, type Place } from './affordances.ts';
-import { StreetsGame } from './game.ts';
+import { StreetsGame, type LoadProgress, type LookEvent } from './game.ts';
+import { CHOICE_LABEL, CHOICE_NOTE, LOOK_CHOICES, pickLook, readChoice, saveChoice, type LookChoice, type LookPick, type TierName } from './look/tiers.ts';
 import { setWorldOptions } from './world.ts';
 import { normalizeScript, type TabletScript } from '../tablet/script.ts';
 import { normalizeStreetsScript, type StreetsScript } from './errand/script.ts';
@@ -79,6 +85,17 @@ export function StreetsView() {
   const knobRef = useRef<HTMLDivElement>(null);
   const jumpRef = useRef<HTMLButtonElement>(null);
   const [step, setStep] = useState('Opening the city gate…');
+  const [progress, setProgress] = useState<number | null>(null);
+  /** The look in use (classic, or realism in a tier), the player's choice, and the WebGPU start failing (a fresh
+   *  canvas, classic). */
+  const [look, setLook] = useState<{ look: 'classic' | 'realism'; tier: TierName | null; why: string } | null>(null);
+  const [choice, setChoice] = useState<LookChoice>(readChoice);
+  const [classicOnly, setClassicOnly] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [relight, setRelight] = useState<string | null>(null);
+  const [stream, setStream] = useState<number | null>(null);
+  const gameRef = useRef<StreetsGame | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [title, setTitle] = useState<{ name: string; year: number; enemy: string | null } | null>(null);
@@ -107,7 +124,28 @@ export function StreetsView() {
       setFailed(`This needs WebGL, which this browser could not start (${String((e as Error)?.message ?? e)}).`);
       return;
     }
+    gameRef.current = game;
     (window as unknown as { __palimpsestStreets?: StreetsGame }).__palimpsestStreets = game;
+    // the look: picked while the city loads (the GPU probe takes a moment); after a failed WebGPU start, classic
+    const lookP: Promise<LookPick> = classicOnly
+      ? Promise.resolve({ look: 'classic', tier: null, why: 'webgpu-failed', choice: readChoice(), gpu: null })
+      : pickLook(route.peek().params, mobile);
+    void lookP.then((p) => { if (!dead) setLook({ look: p.look, tier: p.tier, why: p.why }); });
+    let toastT = 0;
+    game.onLook = (e: LookEvent) => {
+      if (dead) return;
+      if (e.kind === 'relight') setRelight(e.reason === 'slow' ? `Lightening the graphics for this device…` : 'Relighting the streets…');
+      else if (e.kind === 'ready' || e.kind === 'stepped') {
+        setRelight(null);
+        setLook((l) => (l ? { ...l, tier: e.tier } : l));
+        if (e.kind === 'stepped' && e.tier) {
+          setToast(`Graphics lowered to ${CHOICE_LABEL[e.tier]}: frames were running slow. Change it under Graphics.`);
+          clearTimeout(toastT);
+          toastT = window.setTimeout(() => setToast(null), 6000);
+        }
+      } else if (e.kind === 'stream') setStream(e.frac ?? 0);
+      else if (e.kind === 'streamed') setStream(null);
+    };
     const ro = new ResizeObserver(() => game.resize(wrap.clientWidth, wrap.clientHeight));
     ro.observe(wrap);
     game.resize(wrap.clientWidth, wrap.clientHeight);
@@ -122,13 +160,16 @@ export function StreetsView() {
       const sc = pick.scenario;
       // the day's errand: the scenario's own city and year, before the sack, unless asked to leave the city free
       const errandP = sc && params.get('errand') !== '0' && params.get('sacked') !== '1' && pick.year === sc.year && pick.city === sc.city.id ? loadErrandScripts(sc) : Promise.resolve(null);
+      // the realism look reads each kit part's surface from attributes the world writes when asked (world/kit.ts)
+      const lk = await lookP;
       setWorldOptions({
         scenario: sc ? { id: sc.id, year: sc.year, outcome: sc.outcome, arms: sc.state.arms ?? null, cityName: sc.city.name } : null,
         sacked: params.get('sacked') === '1',
         reducedMotion,
+        surfaceTags: lk.look === 'realism',
       });
       sound.current = new StreetsSound(sc?.id ?? pick.city);
-      await game.load(pick.city, pick.year, (s) => { if (!dead) setStep(s); });
+      await game.load(pick.city, pick.year, undefined, lookP, (p: LoadProgress) => { if (!dead) { setStep(p.step); setProgress(p.frac); } });
       if (dead) return;
       const c = game.city!;
       setTitle({ name: c.name, year: c.cy.year, enemy: sc?.enemy.name ?? null });
@@ -139,6 +180,8 @@ export function StreetsView() {
         try {
           run = new ErrandRun(game, sc, scripts.th, scripts.script, { sound: sound.current, reduced: reducedMotion, arms: sc.state.arms ?? null });
           run.subscribe((x) => { if (!dead) setErrandPhase(x.phase); });
+          // the levy (built just now) takes the realism look's materials
+          game.dressLate();
           run.begin();
           setErrand({ run, s: sc, th: scripts.th });
         } catch (e) {
@@ -149,6 +192,8 @@ export function StreetsView() {
       }
       game.start();
       setReady(true);
+      // the tier's textures and sky, after the first frame
+      void game.streamLook().catch((e) => { console.warn('look: streaming failed', e); setStream(null); });
       // where the runner is, a few times a second
       let last = '';
       whereT = window.setInterval(() => {
@@ -158,7 +203,13 @@ export function StreetsView() {
         const k = w ? `${w.kind}|${w.name}|${w.note}` : '';
         if (k !== last) { last = k; setWhere(w); }
       }, 250);
-    })().catch((e) => { if (!dead) setFailed(String((e as Error)?.message ?? e)); });
+    })().catch((e) => {
+      if (dead) return;
+      const msg = String((e as Error)?.message ?? e);
+      // WebGPU would not start (or fell back to WebGL2): start again on a fresh canvas with the classic look
+      if (msg.startsWith('webgpu-unavailable')) { console.warn(msg); setClassicOnly(true); return; }
+      setFailed(msg);
+    });
     let statsT = 0;
     if (showStats) {
       statsT = window.setInterval(() => {
@@ -166,11 +217,13 @@ export function StreetsView() {
         if (!f.length) return;
         const avg = f.reduce((a, b) => a + b, 0) / f.length;
         const i = game.info();
-        setFps(`${(1000 / avg).toFixed(0)} fps · ${i.calls} draws · ${(i.triangles / 1000).toFixed(0)}k tris · ${i.pose} ${i.speed.toFixed(1)} m/s`);
+        setFps(`${(1000 / avg).toFixed(0)} fps · ${i.calls} draws · ${(i.triangles / 1000).toFixed(0)}k tris · ${i.look.tier ?? 'classic'} · ${i.pose} ${i.speed.toFixed(1)} m/s`);
       }, 500);
     }
     return () => {
       dead = true;
+      clearTimeout(toastT);
+      gameRef.current = null;
       clearInterval(statsT);
       clearInterval(whereT);
       run?.dispose();
@@ -181,9 +234,43 @@ export function StreetsView() {
       const w = window as unknown as { __palimpsestStreets?: StreetsGame };
       if (w.__palimpsestStreets === game) delete w.__palimpsestStreets;
     };
-  }, []);
+  }, [classicOnly]);
 
   const dismiss = () => { setHint(false); saveHint(); };
+
+  // the Graphics menu: a tier changes at once (the look is rebuilt); the classic look, or leaving it, reloads the city
+  const choose = async (c: LookChoice) => {
+    setMenu(false);
+    const prev = choice;
+    setChoice(c);
+    saveChoice(c);
+    const g = gameRef.current;
+    const params = route.peek().params;
+    if (params.has('look') || params.has('tier')) {
+      // the route pins the look: drop the pin, and let the saved choice apply
+      const q = new URLSearchParams(params);
+      q.delete('look'); q.delete('tier');
+      location.hash = `#/streets${q.toString() ? `?${q}` : ''}`;
+      location.reload();
+      return;
+    }
+    if (!g || !look) return;
+    if (c === 'classic' || look.look === 'classic') { if (c !== prev) location.reload(); return; }
+    if (c === 'auto') {
+      const p = await pickLook(new URLSearchParams(), mobile);
+      if (p.look === 'realism' && p.tier) await g.setTier(p.tier, 'auto');
+      return;
+    }
+    await g.setTier(c, 'menu');
+  };
+  useEffect(() => {
+    if (!menu) return;
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setMenu(false); } };
+    const away = (e: PointerEvent) => { if (!(e.target instanceof Element && e.target.closest('.st-gfx'))) setMenu(false); };
+    window.addEventListener('keydown', key, true);
+    window.addEventListener('pointerdown', away, true);
+    return () => { window.removeEventListener('keydown', key, true); window.removeEventListener('pointerdown', away, true); };
+  }, [menu]);
 
   // sound: off until asked on phones; on a computer it starts with the first key or click, unless switched off
   const toggleSound = async () => {
@@ -226,7 +313,7 @@ export function StreetsView() {
         aria-label={title ? `The streets of ${title.name} in AY ${title.year}, seen over the runner's shoulder` : 'The streets of a city of the record'}
         aria-describedby="st-controls"
       >
-        <canvas ref={canvasRef} class="st__canvas" />
+        <canvas key={classicOnly ? 'classic' : 'auto'} ref={canvasRef} class="st__canvas" />
         <div ref={baseRef} class="st-joy" aria-hidden="true"><div ref={knobRef} class="st-joy__knob" /></div>
         <button ref={jumpRef} type="button" class="st-jump" aria-label="Jump">
           <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 19V6M6.5 11 12 5.5 17.5 11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -244,15 +331,45 @@ export function StreetsView() {
           </p>
         )}
       </header>
-      {ready && soundAvailable() && (
-        <button
-          type="button" class={`st-sound${soundOn ? ' is-on' : ''}`} onClick={() => void toggleSound()} aria-pressed={soundOn}
-          aria-label={soundOn ? 'Sound off (M)' : 'Sound on (M)'}
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />{soundOn ? <path d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /> : <path d="M15.5 9.5l5 5M20.5 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />}</svg>
-          {touch && !soundOn && <span>Sound on</span>}
-        </button>
+      {ready && (
+        <div class="st-tools">
+          {soundAvailable() && (
+            <button
+              type="button" class={`st-sound${soundOn ? ' is-on' : ''}`} onClick={() => void toggleSound()} aria-pressed={soundOn}
+              aria-label={soundOn ? 'Sound off (M)' : 'Sound on (M)'}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />{soundOn ? <path d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /> : <path d="M15.5 9.5l5 5M20.5 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />}</svg>
+              {touch && !soundOn && <span>Sound on</span>}
+            </button>
+          )}
+          {!(touch && errandPhase === 'run') && <div class="st-gfx">
+            <button
+              type="button" class={`st-gfx__btn${menu ? ' is-open' : ''}`} aria-expanded={menu} aria-controls="st-gfx-menu"
+              aria-label={`Graphics: ${look?.look === 'realism' && look.tier ? CHOICE_LABEL[look.tier] : 'Classic'}`} onClick={() => setMenu((m) => !m)}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+              {stream !== null && <span class="st-gfx__bar" aria-hidden="true"><span style={{ width: `${Math.round(stream * 100)}%` }} /></span>}
+            </button>
+            {menu && (
+              <div id="st-gfx-menu" class="st-gfx__menu" role="group" aria-labelledby="st-gfx-t">
+                <p id="st-gfx-t" class="st-gfx__t">Graphics</p>
+                <p class="st-gfx__now">
+                  {look?.look === 'realism' && look.tier ? `Now: ${CHOICE_LABEL[look.tier]}${choice === 'auto' ? ' (automatic)' : ''}` : look?.why === 'no-webgpu' || look?.why === 'no-adapter' || look?.why === 'webgpu-failed' ? 'Now: Classic (this browser has no WebGPU)' : 'Now: Classic'}
+                  {stream !== null && ` · textures ${Math.round(stream * 100)}%`}
+                </p>
+                {LOOK_CHOICES.filter((c) => c === 'classic' || c === 'auto' || look?.look === 'realism' || look?.why === 'choice' || look?.why === 'url').map((c) => (
+                  <button key={c} type="button" class="st-gfx__opt" aria-pressed={choice === c} onClick={() => void choose(c)}>
+                    <span class="st-gfx__label">{CHOICE_LABEL[c]}</span>
+                    <span class="st-gfx__note">{CHOICE_NOTE[c]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>}
+        </div>
       )}
+      {toast && <p class="st-toast" role="status">{toast}</p>}
+      {relight && <div class="st-load st-load--relight" role="status"><div class="spinner" /> {relight}</div>}
       {ready && (
         <p class={`st-where${where ? ' is-on' : ''}`} aria-live="polite">
           {where && <><span class="st-where__kind">{where.kind}</span><span class="st-where__name">{where.name}</span>{where.note && <span class="st-where__note">{where.note}</span>}</>}
@@ -292,7 +409,15 @@ export function StreetsView() {
       )}
 
       {!ready && !failed && (
-        <div class="st-load" role="status"><div class="spinner" /> {step}</div>
+        <div class="st-load" role="status">
+          <div class="st-load__card">
+            <p class="st-load__t">Runner of the Tablet House</p>
+            <p class="st-load__step"><span class="spinner" /> {step}</p>
+            <div class="st-load__bar" role="progressbar" aria-label={step} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress === null ? undefined : Math.round(progress * 100)}>
+              <span class={progress === null ? 'is-wait' : ''} style={progress === null ? undefined : { width: `${Math.round(progress * 100)}%` }} />
+            </div>
+          </div>
+        </div>
       )}
       {failed && (
         <div class="st-load st-load--err" role="alert">

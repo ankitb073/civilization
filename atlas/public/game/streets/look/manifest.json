@@ -1,0 +1,236 @@
+{
+ "materials": [
+  "plaster",
+  "brick",
+  "earth",
+  "paving",
+  "stone",
+  "wood",
+  "reed",
+  "cloth"
+ ],
+ "sets": {
+  "hero-2k": {
+   "size": 2048,
+   "keys": [
+    "plaster",
+    "brick",
+    "earth",
+    "paving",
+    "stone"
+   ],
+   "means": [
+    [
+     0.1634,
+     0.0989,
+     0.0436
+    ],
+    [
+     0.2303,
+     0.1939,
+     0.1582
+    ],
+    [
+     0.4167,
+     0.2325,
+     0.1151
+    ],
+    [
+     0.1802,
+     0.1786,
+     0.1563
+    ],
+    [
+     0.1323,
+     0.1092,
+     0.0684
+    ]
+   ],
+   "files": {
+    "albedo": {
+     "file": "hero-2k-albedo.ktx2",
+     "bytes": 4073050,
+     "sha256": "aba91171c4724136762e54f17954315d879495b5857ba78b1eaf14bb4e382599"
+    }
+   }
+  },
+  "full-1k": {
+   "size": 1024,
+   "keys": [
+    "plaster",
+    "brick",
+    "earth",
+    "paving",
+    "stone",
+    "wood",
+    "reed",
+    "cloth"
+   ],
+   "means": [
+    [
+     0.1634,
+     0.0991,
+     0.0448
+    ],
+    [
+     0.2291,
+     0.1959,
+     0.1578
+    ],
+    [
+     0.415,
+     0.2339,
+     0.1145
+    ],
+    [
+     0.1795,
+     0.1798,
+     0.156
+    ],
+    [
+     0.1318,
+     0.1088,
+     0.068
+    ],
+    [
+     0.1143,
+     0.0721,
+     0.0427
+    ],
+    [
+     0.169,
+     0.1251,
+     0.0746
+    ],
+    [
+     0.251,
+     0.179,
+     0.0962
+    ]
+   ],
+   "files": {
+    "albedo": {
+     "file": "full-1k-albedo.ktx2",
+     "bytes": 1701558,
+     "sha256": "d11e7a380353e5365f11ee1362ccaef96c9851d8e5bdf0a857af4a1882d7b494"
+    },
+    "data": {
+     "file": "full-1k-data.ktx2",
+     "bytes": 7542337,
+     "sha256": "aab4d210a338c56363cc70db8d9ec46a2f37f341dce224cd44853291f31abaae"
+    }
+   }
+  },
+  "full-512": {
+   "size": 512,
+   "keys": [
+    "plaster",
+    "brick",
+    "earth",
+    "paving",
+    "stone",
+    "wood",
+    "reed",
+    "cloth"
+   ],
+   "means": [
+    [
+     0.1634,
+     0.0991,
+     0.0447
+    ],
+    [
+     0.2275,
+     0.1945,
+     0.1564
+    ],
+    [
+     0.4136,
+     0.2328,
+     0.1137
+    ],
+    [
+     0.1789,
+     0.1792,
+     0.1554
+    ],
+    [
+     0.131,
+     0.1081,
+     0.0673
+    ],
+    [
+     0.1138,
+     0.0716,
+     0.0423
+    ],
+    [
+     0.164,
+     0.1206,
+     0.0713
+    ],
+    [
+     0.2479,
+     0.1775,
+     0.0954
+    ]
+   ],
+   "files": {
+    "albedo": {
+     "file": "full-512-albedo.ktx2",
+     "bytes": 427155,
+     "sha256": "51782bc7b9883e9cd7dbb83ff9b67f2cca62cb4cd9f8ada1a7f48ee9e2eeda0d"
+    },
+    "data": {
+     "file": "full-512-data.ktx2",
+     "bytes": 2280533,
+     "sha256": "21c27439d4a9a5daf8b5dc66b9cdf84bfddfa9930faf4b36eca78a4ccf39d11c"
+    }
+   }
+  }
+ },
+ "skies": {
+  "qwantani_late_afternoon_puresky": {
+   "sun": {
+    "u": 0.60009765625,
+    "v": 0.3935546875,
+    "elevationDeg": 19.16015625,
+    "peak": 104822.98879999999
+   },
+   "p50": 0.273,
+   "p99": 2.6734,
+   "ibl": {
+    "file": "sky-qwantani_late_afternoon_puresky-ibl-512.hdr",
+    "bytes": 302449
+   },
+   "iblSmall": {
+    "file": "sky-qwantani_late_afternoon_puresky-ibl-256.hdr",
+    "bytes": 83671
+   },
+   "backdrop4k": {
+    "file": "sky-qwantani_late_afternoon_puresky-4k.ktx2",
+    "bytes": 1824974,
+    "width": 4096,
+    "height": 1024,
+    "exposure": 0.33665,
+    "vSpan": 0.56005859375
+   },
+   "backdrop2k": {
+    "file": "sky-qwantani_late_afternoon_puresky-2k.ktx2",
+    "bytes": 512256,
+    "width": 2048,
+    "height": 512,
+    "exposure": 0.33665,
+    "vSpan": 0.56005859375
+   },
+   "preview": {
+    "file": "sky-qwantani_late_afternoon_puresky-preview.webp",
+    "bytes": 2034,
+    "width": 1024,
+    "height": 256,
+    "exposure": 0.33665,
+    "vSpan": 0.56005859375
+   }
+  }
+ }
+}

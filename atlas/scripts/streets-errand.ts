@@ -169,7 +169,11 @@ try {
       fpsMedian: r2(1000 / pct(frames.frame, 50)), over20ms: frames.frame.filter((f: number) => f > 20).length,
       calls: frames.info.calls, triangles: frames.info.triangles,
     };
-    if (fps.frameMs.median > 17.5) problems.push(`${tag}: median frame ${fps.frameMs.median} ms on the run`);
+    // the realism look's phone tier holds 30 fps on purpose (decision 0033): judge the run against the tier's own rate
+    const cap = (frames.info as { look?: { fpsCap?: number | null } }).look?.fpsCap ?? null;
+    const budget = cap ? 1000 / cap : 1000 / 60;
+    if (fps.frameMs.median > budget * 1.05) problems.push(`${tag}: median frame ${fps.frameMs.median} ms on the run`);
+    (fps as Record<string, unknown>).look = (frames.info as { look?: { look?: string; tier?: string } }).look ? { look: (frames.info as { look: { look: string } }).look.look, tier: (frames.info as { look: { tier: string } }).look.tier, fpsCap: cap } : null;
 
     // ---- runs 2 and 3: the other readings, in time; run 4: a jog through the streets, which misses the horn. Each is
     // the whole route by the pilot, fast-forwarded in the game's fixed steps (film mode: no waiting, the same clock)

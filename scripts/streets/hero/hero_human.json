@@ -1,0 +1,86 @@
+{
+ "about": "The hero's MPFB settings: phenotype macros, face targets and the CC0 MakeHuman system assets he wears. Read by human.py.",
+ "human": {
+  "name": "hero",
+  "phenotype": {
+   "gender": 1.0,
+   "age": 0.4,
+   "muscle": 0.75,
+   "weight": 0.35,
+   "proportions": 0.9,
+   "height": 0.55,
+   "cupsize": 0.5,
+   "firmness": 0.5,
+   "race": {
+    "african": 0.45,
+    "asian": 0.2,
+    "caucasian": 0.35
+   }
+  },
+  "rig": "game_engine",
+  "eyes": "high-poly/high-poly.mhclo",
+  "eyebrows": "eyebrow001/eyebrow001.mhclo",
+  "eyelashes": "eyelashes02/eyelashes02.mhclo",
+  "teeth": "",
+  "tongue": "",
+  "hair": "",
+  "proxy": "",
+  "targets": [
+   {
+    "target": "head-fat-decr",
+    "value": 0.3
+   },
+   {
+    "target": "l-cheek-bones-incr",
+    "value": 0.35
+   },
+   {
+    "target": "r-cheek-bones-incr",
+    "value": 0.35
+   },
+   {
+    "target": "l-cheek-volume-decr",
+    "value": 0.35
+   },
+   {
+    "target": "r-cheek-volume-decr",
+    "value": 0.35
+   },
+   {
+    "target": "chin-prominent-incr",
+    "value": 0.2
+   },
+   {
+    "target": "chin-width-incr",
+    "value": 0.3
+   },
+   {
+    "target": "chin-bones-incr",
+    "value": 0.25
+   },
+   {
+    "target": "forehead-scale-vert-decr",
+    "value": 0.35
+   },
+   {
+    "target": "measure-neck-circ-incr",
+    "value": 0.35
+   },
+   {
+    "target": "nose-point-width-decr",
+    "value": 0.15
+   },
+   {
+    "target": "head-square",
+    "value": 0.25
+   }
+  ],
+  "clothes": [],
+  "skin_mhmat": "young_african_male/young_african_male.mhmat",
+  "skin_material_type": "ENHANCED_SSS",
+  "eyes_material_type": "PROCEDURAL_EYES",
+  "skin_material_settings": {},
+  "eyes_material_settings": {},
+  "expressions": []
+ }
+}
