@@ -68,8 +68,9 @@ export interface Civic {
   banners: { x: number; y: number; z: number; yaw: number; h: number; pole?: boolean }[];
   /** Flights of steps up to roofs, platforms and the walls: a path from the street to the top (for the probes). */
   stairs: { name: string; path: Vector3[] }[];
-  /** People standing about (figurines): position, facing, colour, pose. */
-  people: { x: number; y: number; z: number; yaw: number; c: RGB; sex: 'f' | 'm'; pose: 'stand' | 'sit' | 'carry' }[];
+  /** People standing about (figurines): position, facing, colour, pose; some have a part in the errands (`role`:
+   *  'overseer' at the door of the house of tablets, 'gatekeeper' inside each gate, with the gate's index). */
+  people: { x: number; y: number; z: number; yaw: number; c: RGB; sex: 'f' | 'm'; pose: 'stand' | 'sit' | 'carry'; role?: string; gate?: number }[];
 }
 
 // ---------------------------------------------------------------- the walls
@@ -570,11 +571,11 @@ export function dyersStreet(ctx: Ctx, civ: Civic) {
 /** People standing about, as figurines: at the stalls, at the scale, at the well, at the gates. */
 export function people(ctx: Ctx, civ: Civic) {
   const clothes: RGB[] = [C.linen, C.linen, [0.82, 0.76, 0.62], C.madder, C.indigo, C.ochre, [0.55, 0.47, 0.36]];
-  const put = (x: number, z: number, yaw: number, key: string, pose: 'stand' | 'sit' | 'carry' = 'stand') => {
+  const put = (x: number, z: number, yaw: number, key: string, pose: 'stand' | 'sit' | 'carry' = 'stand', role?: { role: string; gate?: number; sex?: 'f' | 'm' }) => {
     if (ctx.occ.blocked(x, z, 0.32, 0.1, 1.8)) return;
     const g = ctx.ground(x, z);
     const c = clothes[Math.floor(ctx.u(`pc:${key}`) * clothes.length) % clothes.length];
-    civ.people.push({ x, y: g, z, yaw, c, sex: ctx.u(`ps:${key}`) < 0.5 ? 'f' : 'm', pose });
+    civ.people.push({ x, y: g, z, yaw, c, sex: role?.sex ?? (ctx.u(`ps:${key}`) < 0.5 ? 'f' : 'm'), pose, ...(role ? { role: role.role, gate: role.gate } : {}) });
     ctx.kit.solidBox(x, g + 0.85, z, 0, 0.22, 0.85, 0.22);
     ctx.occ.add({ x, z, rot: 0, hw: 0.3, hd: 0.3 }, g, g + 1.7);
   };
@@ -599,7 +600,7 @@ export function people(ctx: Ctx, civ: Civic) {
   for (const [k, gt] of civ.gates.entries()) {
     const ix = gt.inner.x, iz = gt.inner.z;
     const tx = -Math.sin(gt.ang), tz = Math.cos(gt.ang);
-    put(ix + tx * 4.6, iz + tz * 4.6, gt.ang + Math.PI, `gate:${k}:a`);
+    put(ix + tx * 4.6, iz + tz * 4.6, gt.ang + Math.PI, `gate:${k}:a`, 'stand', { role: 'gatekeeper', gate: k, sex: 'm' });
     put(ix - tx * 4.8 + Math.cos(gt.ang) * 1.2, iz - tz * 4.8 + Math.sin(gt.ang) * 1.2, gt.ang + Math.PI * 0.8, `gate:${k}:b`);
   }
   if (civ.palace) {
@@ -609,7 +610,7 @@ export function people(ctx: Ctx, civ: Civic) {
   }
   if (civ.tablet) {
     const d = civ.tablet.door;
-    put(d.x + 0.8, d.z + 0.8, 0.6, 'scribe', 'sit');
+    put(d.x + 0.8, d.z + 0.8, 0.6, 'scribe', 'sit', { role: 'overseer', sex: 'm' });
   }
 }
 

@@ -1,0 +1,195 @@
+/* #/streets — an errand's panels and run HUD (Runner of the Tablet House). Phone first: panels are sheets along the
+   bottom, the HUD a narrow ribbon under the top row; on a computer the panel is a card at the bottom and the ribbon
+   sits at the top between the city's name and the sound button. Same look in both themes, like the rest of the HUD. */
+.er-panel {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(540px, calc(100% - 32px));
+  max-height: calc(100% - 132px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 16px 18px 16px;
+  border-radius: 16px;
+  background: rgb(24 18 13 / 0.88);
+  border: 1px solid var(--st-line, rgb(255 236 200 / 0.2));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 14px 40px rgb(0 0 0 / 0.35);
+  color: var(--st-ink, #fbf3e2);
+  -webkit-user-select: text;
+  user-select: text;
+  animation: er-in 0.28s ease-out both;
+}
+.er-panel--wide { width: min(640px, calc(100% - 32px)); }
+@keyframes er-in { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.er-panel__head { margin: 0 0 8px; }
+.er-panel__where {
+  margin: 0 0 2px;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--st-gold, #f0c987);
+}
+.er-panel__who {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.28rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.er-panel__role { font-weight: 400; color: var(--st-ink-2, #e5d6ba); font-size: 1.05rem; }
+.er-text {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--st-ink, #fbf3e2);
+  max-width: 62ch;
+}
+.er-text--prompt { color: var(--st-ink-2, #e5d6ba); }
+.er-text--after { color: var(--st-ink-2, #e5d6ba); font-style: italic; }
+.er-text.is-hidden { visibility: hidden; height: 0; margin: 0; overflow: hidden; }
+.er-note { margin: 8px 0 0; font-size: 0.8rem; color: var(--st-ink-2, #e5d6ba); }
+.er-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.er-btn {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--st-line, rgb(255 236 200 / 0.2));
+  background: rgb(255 240 210 / 0.08);
+  color: var(--st-ink, #fbf3e2);
+  font: 600 0.92rem/1.2 var(--font-ui);
+  cursor: pointer;
+}
+.er-btn:hover:not(:disabled) { background: rgb(255 240 210 / 0.16); }
+.er-btn--go { background: var(--st-gold, #f0c987); border-color: transparent; color: #1d130b; }
+.er-btn--go:hover:not(:disabled) { background: #f6d6a0; }
+.er-btn:disabled { opacity: 0.45; cursor: default; }
+.er-btn:focus-visible, .er-pick:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* the choice: the Tablet House's three readings */
+.er-tablet { margin: 4px -4px 10px; }
+/* the blank tablet shows a preview of each reading under a pointer; on a touch screen it waits for the press */
+@media (hover: none), (max-width: 720px) { .er-tablet.is-blank { display: none; } }
+.er-tablet canvas { display: block; width: 100%; }
+.er-picks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.er-pick {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid var(--st-line, rgb(255 236 200 / 0.2));
+  background: rgb(255 240 210 / 0.06);
+  color: var(--st-ink, #fbf3e2);
+  cursor: pointer;
+  font-family: var(--font-ui);
+}
+.er-pick:hover:not(:disabled), .er-pick:focus-visible { background: rgb(240 201 135 / 0.16); border-color: rgb(240 201 135 / 0.55); }
+.er-pick__label { display: block; font-weight: 600; font-size: 0.93rem; line-height: 1.3; }
+.er-pick__line { display: block; margin-top: 3px; font-size: 0.82rem; line-height: 1.4; color: var(--st-ink-2, #e5d6ba); font-family: var(--font-display); font-style: italic; }
+
+/* the run: compass ribbon, destination and distance, the horn's clock */
+.er-hud {
+  position: absolute;
+  z-index: 3;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 420px));
+  min-width: 260px;
+  padding: 6px 12px 7px;
+  border-radius: 12px;
+  background: var(--st-panel, rgb(24 18 13 / 0.72));
+  border: 1px solid var(--st-line, rgb(255 236 200 / 0.2));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--st-ink, #fbf3e2);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.er-hud--touch, .er-hud.er-hud--narrow { top: calc(max(12px, env(safe-area-inset-top, 0px)) + 52px); width: calc(100% - 24px); max-width: 380px; min-width: 0; }
+@media (max-width: 720px) { .er-hud { top: calc(max(12px, env(safe-area-inset-top, 0px)) + 52px); width: calc(100% - 24px); max-width: 380px; min-width: 0; } }
+.er-rib { position: relative; height: 14px; margin: 0 2px 3px; }
+.er-rib::before { content: ''; position: absolute; left: 0; right: 0; top: 7px; height: 1px; background: rgb(255 236 200 / 0.28); }
+.er-rib__tick { position: absolute; left: 50%; top: 2px; width: 1px; height: 11px; background: rgb(255 236 200 / 0.55); }
+.er-rib__mark { position: absolute; left: 50%; top: 0; width: 0; height: 14px; }
+.er-rib__pin {
+  position: absolute; left: -6px; top: 1px; width: 12px; height: 12px;
+  background: var(--st-gold, #f0c987);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.er-hud[data-side='is-ahead'] .er-rib__pin { background: #fff3d6; box-shadow: 0 0 0 2px rgb(240 201 135 / 0.6); }
+.er-hud[data-side='is-left'] .er-rib__pin { clip-path: polygon(0 50%, 100% 0, 100% 100%); left: -2px; }
+.er-hud[data-side='is-right'] .er-rib__pin { clip-path: polygon(100% 50%, 0 0, 0 100%); left: -10px; }
+.er-hud__row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; line-height: 1.2; }
+.er-hud__dest { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.er-hud__name { font-family: var(--font-display); font-weight: 600; font-size: 1rem; }
+.er-hud__dist { font-size: 0.82rem; color: var(--st-ink-2, #e5d6ba); }
+.er-hud__horn { flex: none; font-size: 0.82rem; color: var(--st-ink-2, #e5d6ba); }
+.er-hud__k { text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.66rem; }
+.er-hud__time { font-size: 1.02rem; font-weight: 600; color: var(--st-ink, #fbf3e2); }
+.er-hud__bar { display: block; height: 3px; margin-top: 5px; border-radius: 2px; background: rgb(255 236 200 / 0.14); overflow: hidden; }
+.er-hud__bar > span { display: block; height: 100%; background: var(--st-gold, #f0c987); transform-origin: left center; }
+.er-hud.is-warn .er-hud__time { color: #ffb46e; }
+.er-hud.is-warn .er-hud__bar > span { background: #f08a4b; }
+.er-hud.is-late .er-hud__time { color: var(--st-ink-2, #e5d6ba); }
+.er-hud__said { margin: 6px 0 0; font-size: 0.8rem; color: #ffcf9e; }
+
+/* the end card */
+.er-end__head { margin: 2px 0 12px; font-family: var(--font-display); font-size: 1.12rem; line-height: 1.35; }
+.er-end__head.is-late { color: #ffcf9e; }
+.er-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 12px; }
+.er-stats > div { padding: 8px 10px; border-radius: 10px; background: rgb(255 240 210 / 0.06); border: 1px solid rgb(255 236 200 / 0.12); }
+.er-stats dt { font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--st-ink-2, #e5d6ba); }
+.er-stats dd { margin: 2px 0 0; font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.er-route { margin: 0 0 12px; }
+.er-route__k { margin: 0 0 5px; font-size: 0.8rem; color: var(--st-ink-2, #e5d6ba); }
+.er-route__bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: rgb(255 240 210 / 0.08); }
+.er-route__street { background: #c9a36a; }
+.er-route__roof { background: #e8d9b5; }
+.er-route__legend { margin: 5px 0 0; font-size: 0.78rem; color: var(--st-ink-2, #e5d6ba); }
+.er-key { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin: 0 5px 0 0; vertical-align: -1px; }
+.er-key--street { background: #c9a36a; }
+.er-key--roof { background: #e8d9b5; margin-left: 10px; }
+.er-clay { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; }
+.er-fig { padding: 10px 12px; border-radius: 12px; background: rgb(255 240 210 / 0.06); border: 1px solid rgb(255 236 200 / 0.14); min-width: 0; }
+.er-fig--rounded { border-color: rgb(240 201 135 / 0.45); }
+.er-fig--boasted { border-color: rgb(240 138 75 / 0.6); }
+.er-fig--record { background: rgb(255 240 210 / 0.1); }
+.er-fig__k { margin: 0; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--st-ink-2, #e5d6ba); }
+.er-fig__n { margin: 2px 0 4px; font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.er-fig__t { margin: 0; font-size: 0.8rem; line-height: 1.4; color: var(--st-ink-2, #e5d6ba); }
+.er-next { padding: 10px 0 0; border-top: 1px solid rgb(255 236 200 / 0.14); }
+.er-next__k { margin: 0 0 3px; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--st-gold, #f0c987); }
+.er-next__t { margin: 0; font-size: 0.88rem; line-height: 1.45; }
+.er-next__soon { color: var(--st-ink-2, #e5d6ba); font-size: 0.8rem; }
+
+/* phones: sheets along the bottom */
+@media (max-width: 720px), (pointer: coarse) {
+  .er-panel {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    transform: none;
+    max-height: min(68dvh, calc(100% - 84px));
+    padding: 14px 15px 14px;
+    border-radius: 16px;
+    animation-name: er-in-sheet;
+  }
+  .er-panel--wide { max-height: calc(100% - 72px); }
+  .er-panel__who { font-size: 1.18rem; }
+  .er-text { font-size: 0.93rem; line-height: 1.5; }
+}
+@keyframes er-in-sheet { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (max-width: 380px) {
+  .er-stats dd { font-size: 1rem; }
+  .er-fig__n { font-size: 1.35rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .er-panel { animation: none; }
+}

@@ -35,7 +35,8 @@ let base = arg('url', '');
 const PORT = 4197;
 const server = base ? null : await serveDist(resolve(arg('dist', join(ROOT, 'dist'))), PORT);
 if (!base) base = `http://127.0.0.1:${PORT}/civilization/`;
-const query = [CITY && `city=${CITY}`, YEAR && `y=${YEAR}`].filter(Boolean).join('&');
+// errand=0: the free city, without the day's errand (its dialogues would hold the runner still)
+const query = [CITY && `city=${CITY}`, YEAR && `y=${YEAR}`, 'errand=0'].filter(Boolean).join('&');
 const href = `${base}#/streets${query ? `?${query}` : ''}`;
 
 const browser = await chromium.launch({ channel: 'chromium', args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] }).catch(() => chromium.launch());

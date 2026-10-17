@@ -136,6 +136,10 @@ export class StreetsGame {
   readonly counts = { splashes: 0, mantles: 0, grabs: 0, climbs: 0, pulls: 0, ladders: 0, edgeStops: 0, deepTurns: 0, autoJumps: 0 };
   private pilot: Pilot | null = null;
   private runnerHidden = false;
+  /** While a dialogue is open the runner stands: no stick, no keys, no jumps (the camera can still be dragged). */
+  frozen = false;
+  /** Called after every fixed step (errands): the game clock, the horizontal metres moved, the feet. */
+  onStep: ((s: { now: number; moved: number; feet: { x: number; y: number; z: number }; grounded: boolean }) => void) | null = null;
   /** The probes' side camera (filming): square to `heading`, `dist` metres off, at a fixed height. */
   sideView: { heading: number; dist: number; y: number; fov: number; ang?: number } | null = null;
   private w = 1;
@@ -343,12 +347,27 @@ export class StreetsGame {
     return Math.max(4.5, Math.min(7.5, g));
   }
 
+  /** The game clock (s): whole fixed steps, so it stops with the loop (a hidden tab) and never skips. */
+  get time() { return this.t; }
+  get touch() { return this.opts.touch; }
+
   private step(dt: number) {
+    const x0 = this.curr.x, z0 = this.curr.z;
+    this.stepMove(dt);
+    if (this.onStep) {
+      const c = this.curr;
+      this.onStep({ now: this.t, moved: Math.hypot(c.x - x0, c.z - z0), feet: { x: c.x, y: c.y, z: c.z }, grounded: this.grounded });
+    }
+  }
+
+  private stepMove(dt: number) {
     const phys = this.phys!, runner = this.runner!;
     this.t += dt;
     let ctl: Controls = this.input.controls();
     if (this.pilot) ctl = this.pilot.controls(this, dt);
-    const jumps = this.input.takeJumps() + (this.pilot?.takeJump() ?? 0);
+    let jumps = this.input.takeJumps() + (this.pilot?.takeJump() ?? 0);
+    // (a scripted pilot still drives: the probes move the runner whatever the view shows)
+    if (this.frozen && !this.pilot) { ctl = { mx: 0, my: 0, run: false, jumpHeld: false }; jumps = 0; }
     if (jumps > 0) this.jumpAt = this.t;
 
     // wished direction in the world, from the camera's yaw (or the pilot's own heading); while the view swings round by
@@ -899,6 +918,17 @@ export class StreetsGame {
     this.controlLock = 0; this.jumpAt = -1;
     this.cam.stopSwing();
     this.runner?.endTraverse(0);
+  }
+
+  /** Turn the view toward a point (and pitch it): a swing, or a cut with reduced motion (the view never moves by
+   *  itself then). The runner turns to face it too when standing. */
+  face(x: number, z: number, pitch = 0.16) {
+    const f = this.curr;
+    const yaw = Math.atan2(x - f.x, z - f.z);
+    if (this.opts.reducedMotion) { this.cam.stopSwing(); this.cam.yaw = yaw; }
+    else this.cam.swingTo(yaw);
+    this.cam.pitch = pitch;
+    if (this.speed < 0.3 && !this.trav && this.grounded) { this.heading = yaw; this.lastFacing = yaw; }
   }
 
   /** Steer by script: a list of waypoints (metres), each walked or run, with jumps. */

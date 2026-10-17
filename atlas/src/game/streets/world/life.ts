@@ -13,6 +13,7 @@ import { hash } from '../../../three/city/record.ts';
 import { armsSvg } from '../../../heraldry.ts';
 import type { ArmsSpec } from '../../../../../engine/src/export/contract.ts';
 import { type Ctx, C } from './ctx.ts';
+import type { Kit } from './kit.ts';
 import type { Civic } from './civic.ts';
 import { shade, vary, type RGB } from '../../../three/city/style.ts';
 
@@ -86,14 +87,21 @@ export function courtyardTrees(ctx: Ctx): number {
 const COLOURS = ['#b3322a', '#27589b', '#2c7847', '#6a3c88', '#28231f'];
 const METALS = ['#d6a634', '#f2eee5'];
 
+/** The state's colours as its banners show them: the people's colour (the field) and the faith's metal (the fringe). */
+export function stateColours(arms: ArmsSpec | null, fallback: string): { field: string; metal: string } {
+  return {
+    field: arms ? COLOURS[hash(`cul:${arms[1]}`) % COLOURS.length] : fallback,
+    metal: arms ? METALS[hash(arms[2] >= 0 ? `mov:${arms[2]}` : `none:${arms[0]}`) % 2] : '#d6a634',
+  };
+}
+
 /** The banner's cloth: the people's colour, a fringe of the faith's metal, the arms in the middle (drawn when the
  *  SVG has loaded; plain until then). */
-function bannerTexture(arms: ArmsSpec | null, fallback: string): CanvasTexture {
+export function bannerTexture(arms: ArmsSpec | null, fallback: string): CanvasTexture {
   const c = document.createElement('canvas');
   c.width = 128; c.height = 256;
   const g = c.getContext('2d')!;
-  const field = arms ? COLOURS[hash(`cul:${arms[1]}`) % COLOURS.length] : fallback;
-  const metal = arms ? METALS[hash(arms[2] >= 0 ? `mov:${arms[2]}` : `none:${arms[0]}`) % 2] : '#d6a634';
+  const { field, metal } = stateColours(arms, fallback);
   const paint = () => {
     g.fillStyle = field;
     g.fillRect(0, 0, 128, 256);
@@ -225,42 +233,7 @@ export function life(ctx: Ctx, civ: Civic, arms: ArmsSpec | null, fallbackColour
   disposers.push(() => { bg.dispose(); bm.dispose(); });
 
   // ---- figurines: a gown (women) or a kilt over bare legs (men), a torso, shoulders, arms, a bare wooden head
-  const wood: RGB = [0.79, 0.64, 0.47];
-  for (const p of civ.people) {
-    const k = ctx.kit;
-    const sit = p.pose === 'sit';
-    if (sit) k.put('frustum', p.x, p.y + 0.22, p.z, p.yaw, 0.42, 0.44, 0.42, C.timber);
-    const base = sit ? p.y + 0.44 : p.y;
-    const c = Math.cos(p.yaw), s = Math.sin(p.yaw);
-    // local frame: x across the shoulders (c, −s), z forward (s, c)
-    const at = (u: number, v: number): [number, number] => [p.x + c * u + s * v, p.z - s * u + c * v];
-    if (sit) {
-      // a lap and shins
-      const [lx, lz] = at(0, 0.18);
-      k.put('wood', lx, base + 0.06, lz, p.yaw, 0.36, 0.14, 0.42, p.c);
-      const [sx, sz] = at(0, 0.38);
-      k.put('wood', sx, p.y + 0.22, sz, p.yaw, 0.3, 0.44, 0.14, p.sex === 'f' ? p.c : wood);
-    } else if (p.sex === 'f') {
-      k.put('frustum', p.x, base + 0.56, p.z, p.yaw, 0.5, 1.12, 0.42, p.c);
-    } else {
-      for (const sg of [-1, 1]) { const [lx, lz] = at(sg * 0.09, 0); k.put('pole', lx, base + 0.27, lz, 0, 0.11, 0.54, 0.11, wood); }
-      k.put('frustum', p.x, base + 0.75, p.z, p.yaw, 0.46, 0.5, 0.38, p.c);
-    }
-    const waist = sit ? base + 0.1 : p.sex === 'f' ? base + 1.08 : base + 0.98;
-    k.put('pole', p.x, waist + 0.18, p.z, p.yaw, 0.34, 0.38, 0.24, p.sex === 'f' ? p.c : wood);
-    k.put('ball', p.x, waist + 0.38, p.z, p.yaw, 0.48, 0.16, 0.28, p.sex === 'f' ? p.c : wood);
-    for (const sg of [-1, 1]) {
-      const up = p.pose === 'carry' && sg > 0;
-      const [ax, az] = at(sg * 0.24, 0);
-      k.put('pole', ax, waist + (up ? 0.6 : 0.12), az, 0, 0.09, 0.5, 0.09, wood);
-    }
-    k.put('ball', p.x, waist + 0.6, p.z, p.yaw, 0.24, 0.29, 0.25, wood);
-    if (p.sex === 'f' && hash(`${p.x.toFixed(1)}:${p.z.toFixed(1)}`) % 2) {
-      const [hx, hz] = at(0, -0.05);
-      k.put('ball', hx, waist + 0.66, hz, p.yaw, 0.27, 0.2, 0.28, shade(p.c, 0.85));
-    }
-    if (p.pose === 'carry') { const [jx, jz] = at(0.24, 0); k.put('jar', jx, waist + 1.02, jz, 0, 0.32, 0.4, 0.32, C.clay); }
-  }
+  for (const p of civ.people) figurine(ctx.kit, p);
 
   return {
     group,
@@ -270,6 +243,63 @@ export function life(ctx: Ctx, civ: Civic, arms: ArmsSpec | null, fallbackColour
     tick(t: number) { uTime.value = reduced ? 12.5 : t; },
     dispose() { for (const d of disposers) d(); },
   };
+}
+
+/** What a figurine may carry or wear beyond its clothes (the levy: a spear, a shield, a helmet, a cloak). */
+export interface Gear { spear?: RGB; shield?: RGB; helmet?: RGB; cloak?: RGB; sash?: RGB }
+export type FigurePose = 'stand' | 'sit' | 'carry';
+const WOOD: RGB = [0.79, 0.64, 0.47];
+
+/** One figurine in the site's look (painted wood, no face): a gown (women) or a kilt over bare legs (men), a torso,
+ *  shoulders, arms and a bare wooden head; seated on a stool, or carrying a jar on the shoulder. */
+export function figurine(k: Kit, p: { x: number; y: number; z: number; yaw: number; c: RGB; sex: 'f' | 'm'; pose: FigurePose }, gear: Gear = {}) {
+  const wood = WOOD;
+  const sit = p.pose === 'sit';
+  if (sit) k.put('frustum', p.x, p.y + 0.22, p.z, p.yaw, 0.42, 0.44, 0.42, C.timber);
+  const base = sit ? p.y + 0.44 : p.y;
+  const c = Math.cos(p.yaw), s = Math.sin(p.yaw);
+  // local frame: x across the shoulders (c, −s), z forward (s, c)
+  const at = (u: number, v: number): [number, number] => [p.x + c * u + s * v, p.z - s * u + c * v];
+  if (sit) {
+    // a lap and shins
+    const [lx, lz] = at(0, 0.18);
+    k.put('wood', lx, base + 0.06, lz, p.yaw, 0.36, 0.14, 0.42, p.c);
+    const [sx, sz] = at(0, 0.38);
+    k.put('wood', sx, p.y + 0.22, sz, p.yaw, 0.3, 0.44, 0.14, p.sex === 'f' ? p.c : wood);
+  } else if (p.sex === 'f') {
+    k.put('frustum', p.x, base + 0.56, p.z, p.yaw, 0.5, 1.12, 0.42, p.c);
+  } else {
+    for (const sg of [-1, 1]) { const [lx, lz] = at(sg * 0.09, 0); k.put('pole', lx, base + 0.27, lz, 0, 0.11, 0.54, 0.11, wood); }
+    k.put('frustum', p.x, base + 0.75, p.z, p.yaw, 0.46, 0.5, 0.38, p.c);
+  }
+  const waist = sit ? base + 0.1 : p.sex === 'f' ? base + 1.08 : base + 0.98;
+  k.put('pole', p.x, waist + 0.18, p.z, p.yaw, 0.34, 0.38, 0.24, p.sex === 'f' ? p.c : wood);
+  k.put('ball', p.x, waist + 0.38, p.z, p.yaw, 0.48, 0.16, 0.28, p.sex === 'f' ? p.c : wood);
+  if (gear.sash) { const [bx, bz] = at(0, 0.005); k.put('wood', bx, waist + 0.22, bz, p.yaw + 0.5, 0.36, 0.07, 0.26, gear.sash); }
+  if (gear.cloak) { const [cx, cz] = at(0, -0.15); k.put('wood', cx, waist - 0.12, cz, p.yaw, 0.5, 1.0, 0.05, gear.cloak); }
+  for (const sg of [-1, 1]) {
+    const up = p.pose === 'carry' && sg > 0;
+    const [ax, az] = at(sg * 0.24, 0);
+    k.put('pole', ax, waist + (up ? 0.6 : 0.12), az, 0, 0.09, 0.5, 0.09, wood);
+  }
+  k.put('ball', p.x, waist + 0.6, p.z, p.yaw, 0.24, 0.29, 0.25, wood);
+  if (gear.helmet) k.put('ball', p.x, waist + 0.68, p.z, p.yaw, 0.27, 0.2, 0.28, gear.helmet);
+  else if (p.sex === 'f' && hash(`${p.x.toFixed(1)}:${p.z.toFixed(1)}`) % 2) {
+    const [hx, hz] = at(0, -0.05);
+    k.put('ball', hx, waist + 0.66, hz, p.yaw, 0.27, 0.2, 0.28, shade(p.c, 0.85));
+  }
+  if (p.pose === 'carry') { const [jx, jz] = at(0.24, 0); k.put('jar', jx, waist + 1.02, jz, 0, 0.32, 0.4, 0.32, C.clay); }
+  if (gear.spear) {
+    // grounded beside the right hand, the bronze head above the helmets
+    const [sx, sz] = at(0.3, 0.06);
+    k.put('pole', sx, base + 1.25, sz, 0, 0.045, 2.5, 0.045, C.timberDark);
+    k.put('cone', sx, base + 2.6, sz, 0, 0.07, 0.22, 0.07, gear.spear);
+  }
+  if (gear.shield) {
+    // a tall wicker shield of hide, on the left arm
+    const [hx, hz] = at(-0.34, 0.06);
+    k.put('wood', hx, waist - 0.05, hz, p.yaw + 0.15, 0.06, 0.95, 0.5, gear.shield);
+  }
 }
 
 export const _c = new Color();

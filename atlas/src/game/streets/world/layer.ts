@@ -57,6 +57,9 @@ export interface Layer {
   loop(): { x: number; z: number; run?: boolean }[];
   /** Can a runner walk from the house of tablets to every place (raised ones: to the foot of their stairs)? */
   walkTest(): { id: string; name: string; ok: boolean; metres: number }[];
+  /** A street route from a to b (A* on a 1 m grid, clear of everything solid near the ground and of water), as points
+   *  every `every` metres along it, and its length (m); null when there is none. For errands and their bots. */
+  route(a: { x: number; z: number }, b: { x: number; z: number }, every?: number): { pts: { x: number; z: number }[]; metres: number } | null;
   /** Per frame: time (s) and where the camera is (the near detail shows within reach of it). */
   tick(t: number, cam?: { x: number; z: number }): void;
   dispose(): void;
@@ -265,9 +268,25 @@ export function buildLayer(inp: LayerInput): Layer {
     });
   };
 
+  let streetPath: ReturnType<typeof walker> | null = null;
+  const route = (a: { x: number; z: number }, b: { x: number; z: number }, every = 3) => {
+    streetPath ??= walker(ctx);
+    const r = streetPath(new Vector3(a.x, 0, a.z), new Vector3(b.x, 0, b.z));
+    if (!r) return null;
+    let metres = 0;
+    const pts: { x: number; z: number }[] = [{ x: r[0][0], z: r[0][1] }];
+    let since = 0;
+    for (let i = 1; i < r.length; i++) {
+      const d = Math.hypot(r[i][0] - r[i - 1][0], r[i][1] - r[i - 1][1]);
+      metres += d; since += d;
+      if (since >= every || i === r.length - 1) { pts.push({ x: r[i][0], z: r[i][1] }); since = 0; }
+    }
+    return { pts, metres };
+  };
+
   return {
     group, solids: kit.solids, affordances, quarters, river: rv, riverName: rec.site.river?.name ?? null, hearth, life: lf, stats, civ, reach,
-    views, loop, walkTest,
+    views, loop, walkTest, route,
     tick(tt: number, cam?: { x: number; z: number }) {
       lf.tick(tt); rv.tick(tt);
       if (cam) kit.near(cam.x, cam.z, nearDist);

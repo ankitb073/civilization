@@ -1,19 +1,40 @@
-// #/streets[?sc=sc-N | ?city=set:N][&y=YEAR][&sacked=1] — Runner of the Tablet House: a runner of the palace tablet
-// house in a city of the record, in the week of its siege (lazy-loaded; three.js and Rapier live in this route's
-// chunks). Defaults to Pumi, AY 332, the Sack of Himi (sc-919), on the eve of the sack (days 1–3); `sacked=1` shows the
-// burnt city. The HUD: the city and the enemy, the place the runner is at, and a "Sound on" button (the Tablet House's
-// soundscape, beat `muster`; muted until tapped on phones).
+// #/streets[?sc=sc-N | ?city=set:N][&y=YEAR][&sacked=1][&errand=0] — Runner of the Tablet House: a runner of the
+// palace tablet house in a city of the record, in the week of its siege (lazy-loaded; three.js and Rapier live in this
+// route's chunks). Defaults to Pumi, AY 332, the Sack of Himi (sc-919), on the eve of the sack (days 1–3); `sacked=1`
+// shows the burnt city. The HUD: the city and the enemy, the place the runner is at, and a "Sound on" button (the
+// Tablet House's soundscape; muted until tapped on phones). When the scenario has a streets script
+// (streets-scripts/<id>.json) and its Tablet House script, the day's errand runs (errand/): the overseer hands the
+// runner a tablet at the door of the house of tablets; `errand=0` leaves the city free.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Scenario, ScenariosJson } from '../../../../engine/src/export/contract.ts';
 import { fetchJson } from '../../data.ts';
 import { reducedMotion, route } from '../../state.ts';
-import { Sound, soundAvailable } from '../tablet/sound.ts';
+import { StreetsSound, soundAvailable } from './sound.ts';
 import { placeAt, type Place } from './affordances.ts';
 import { StreetsGame } from './game.ts';
 import { setWorldOptions } from './world.ts';
+import { normalizeScript, type TabletScript } from '../tablet/script.ts';
+import { normalizeStreetsScript, type StreetsScript } from './errand/script.ts';
+import { ErrandRun, type ErrandSnapshot } from './errand/run.ts';
+import { ErrandView } from './errand/ErrandView.tsx';
 import './streets.css';
 import './world/hud.css';
+
+// the scripts an errand plays from: the city's streets script and its Tablet House script (one lazy chunk each)
+const STREETS_SCRIPTS = import.meta.glob<unknown>('../../../../streets-scripts/*.json', { import: 'default' });
+const TABLET_SCRIPTS = import.meta.glob<unknown>('../../../../scenario-scripts/*.json', { import: 'default' });
+const byId = (m: Record<string, () => Promise<unknown>>) => new Map(Object.entries(m).map(([p, f]) => [p.replace(/^.*\//, '').replace(/\.json$/, ''), f]));
+const streetsLoader = byId(STREETS_SCRIPTS), tabletLoader = byId(TABLET_SCRIPTS);
+async function loadErrandScripts(sc: Scenario): Promise<{ th: TabletScript; script: StreetsScript } | null> {
+  const ls = streetsLoader.get(sc.id), lt = tabletLoader.get(sc.id);
+  if (!ls || !lt) return null;
+  try {
+    const [rs, rt] = await Promise.all([ls(), lt()]);
+    const th = normalizeScript(rt, sc), script = normalizeStreetsScript(rs, sc.id);
+    return th && script ? { th, script } : null;
+  } catch { return null; }
+}
 
 const DEFAULT_SC = 'sc-919';
 const FALLBACK = { city: 'set:17', year: 332 };
@@ -63,7 +84,9 @@ export function StreetsView() {
   const [title, setTitle] = useState<{ name: string; year: number; enemy: string | null } | null>(null);
   const [where, setWhere] = useState<Where | null>(null);
   const [soundOn, setSoundOn] = useState(false);
-  const sound = useRef<Sound | null>(null);
+  const sound = useRef<StreetsSound | null>(null);
+  const [errand, setErrand] = useState<{ run: ErrandRun; s: Scenario; th: TabletScript } | null>(null);
+  const [errandPhase, setErrandPhase] = useState<ErrandSnapshot['phase'] | null>(null);
   const soundWanted = useRef(false);
   const soundTouched = useRef(false);
   const [hint, setHint] = useState(readHint);
@@ -92,21 +115,38 @@ export function StreetsView() {
     const onLock = () => setLocked(document.pointerLockElement === canvas);
     document.addEventListener('pointerlockchange', onLock);
     let whereT = 0;
+    let run: ErrandRun | null = null;
     (async () => {
       const params = route.peek().params;
       const pick = await pickCity(params);
       const sc = pick.scenario;
+      // the day's errand: the scenario's own city and year, before the sack, unless asked to leave the city free
+      const errandP = sc && params.get('errand') !== '0' && params.get('sacked') !== '1' && pick.year === sc.year && pick.city === sc.city.id ? loadErrandScripts(sc) : Promise.resolve(null);
       setWorldOptions({
         scenario: sc ? { id: sc.id, year: sc.year, outcome: sc.outcome, arms: sc.state.arms ?? null, cityName: sc.city.name } : null,
         sacked: params.get('sacked') === '1',
         reducedMotion,
       });
-      sound.current = new Sound(sc?.id ?? pick.city);
+      sound.current = new StreetsSound(sc?.id ?? pick.city);
       await game.load(pick.city, pick.year, (s) => { if (!dead) setStep(s); });
       if (dead) return;
       const c = game.city!;
       setTitle({ name: c.name, year: c.cy.year, enemy: sc?.enemy.name ?? null });
       document.title = `Runner of the Tablet House: ${c.name}, AY ${c.cy.year} — Palimpsest`;
+      const scripts = await errandP;
+      if (dead) return;
+      if (sc && scripts) {
+        try {
+          run = new ErrandRun(game, sc, scripts.th, scripts.script, { sound: sound.current, reduced: reducedMotion, arms: sc.state.arms ?? null });
+          run.subscribe((x) => { if (!dead) setErrandPhase(x.phase); });
+          run.begin();
+          setErrand({ run, s: sc, th: scripts.th });
+        } catch (e) {
+          // a script naming a place this world does not have: say so, and leave the city free
+          console.warn(String((e as Error)?.message ?? e));
+          run = null;
+        }
+      }
       game.start();
       setReady(true);
       // where the runner is, a few times a second
@@ -133,6 +173,7 @@ export function StreetsView() {
       dead = true;
       clearInterval(statsT);
       clearInterval(whereT);
+      run?.dispose();
       sound.current?.dispose();
       ro.disconnect();
       document.removeEventListener('pointerlockchange', onLock);
@@ -152,12 +193,14 @@ export function StreetsView() {
     const s = sound.current;
     if (!s) return;
     if (!soundWanted.current) { s.disable(); return; }
-    const ok = await s.enable('muster');
+    const ok = await s.enable();
     if (!ok && soundWanted.current) { soundWanted.current = false; setSoundOn(false); }
   };
   useEffect(() => {
     if (!ready || touch || !soundAvailable()) return;
-    const first = () => {
+    const first = (e: Event) => {
+      // the sound button's own click decides (starting it here too would have that click switch it straight off)
+      if (e.target instanceof Element && e.target.closest('.st-sound')) return;
       window.removeEventListener('keydown', first, true);
       window.removeEventListener('pointerdown', first, true);
       if (!soundTouched.current && !soundWanted.current) void toggleSound();
@@ -243,7 +286,10 @@ export function StreetsView() {
           <button type="button" class="st-hint__ok" onClick={dismiss}>Got it</button>
         </div>
       )}
-      {!touch && ready && !hint && !locked && <p class="st-tip">Click to look around</p>}
+      {!touch && ready && !hint && !locked && (!errandPhase || errandPhase === 'run' || errandPhase === 'free') && <p class="st-tip">Click to look around</p>}
+      {ready && errand && !hint && (
+        <ErrandView run={errand.run} s={errand.s} th={errand.th} touch={touch} reduced={reducedMotion} sound={sound.current} />
+      )}
 
       {!ready && !failed && (
         <div class="st-load" role="status"><div class="spinner" /> {step}</div>

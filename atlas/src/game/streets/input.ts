@@ -50,6 +50,15 @@ export class Input {
   private used = false;
   /** An override for scripted runs: when set, it replaces the player's controls. */
   virtual: Controls | null = null;
+  /** Off while a dialogue is open: keys reach its buttons (Space and the arrows are not taken), and a click on the
+   *  scene neither moves the runner nor locks the pointer. Turning it off lets go of everything held. */
+  get enabled() { return this.on; }
+  set enabled(v: boolean) {
+    if (v === this.on) return;
+    this.on = v;
+    if (!v) { this.keys.clear(); this.joy = null; this.looks.clear(); this.jumps = 0; this.jumpTouch = -1; this.releaseLock(); this.drawJoy(); }
+  }
+  private on = true;
 
   constructor(els: InputEls) {
     this.els = els;
@@ -92,6 +101,7 @@ export class Input {
   }
 
   private key(e: KeyboardEvent, down: boolean) {
+    if (!this.on) return;
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     const k = e.code;
@@ -107,6 +117,7 @@ export class Input {
   }
 
   private down(e: PointerEvent) {
+    if (!this.on) return;
     const { root, canvas } = this.els;
     if (e.target instanceof HTMLElement && e.target.closest('button, a, [role="dialog"]')) return;
     const r = root.getBoundingClientRect();

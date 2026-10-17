@@ -26,7 +26,8 @@
     "shoot-museum": "node --disable-warning=ExperimentalWarning scripts/shoot-museum.ts",
     "sound": "node --disable-warning=ExperimentalWarning scripts/sound-check.ts",
     "streets-world": "node --disable-warning=ExperimentalWarning scripts/streets-world.ts",
-    "streets": "node --disable-warning=ExperimentalWarning scripts/streets.ts"
+    "streets": "node --disable-warning=ExperimentalWarning scripts/streets.ts",
+    "streets-errand": "node --disable-warning=ExperimentalWarning scripts/streets-errand.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.19.3",

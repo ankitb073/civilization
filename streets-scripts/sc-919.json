@@ -1,0 +1,77 @@
+{
+  "scenario": "sc-919",
+  "title": "Runner of the Tablet House",
+  "errands": [
+    {
+      "id": "muster",
+      "day": 1,
+      "beat": "muster",
+      "title": "The muster",
+      "people": {
+        "overseer": {
+          "name": "{names.m.0}",
+          "sex": "m",
+          "role": "overseer of the tablets"
+        },
+        "gatekeeper": {
+          "name": "{names.m.2}",
+          "sex": "m",
+          "role": "keeper of the gate"
+        }
+      },
+      "from": "tabletHouse",
+      "to": "riverGate",
+      "horn": {
+        "seconds": 50,
+        "warn": 15,
+        "measured": {
+          "streetMetres": 203,
+          "crowMetres": 189,
+          "streetRunS": 29.8,
+          "streetJogS": 54.5,
+          "roofRunS": 33.9,
+          "note": "Bot runs from the door of the house of tablets into the gate's radius, fixed 60 Hz steps (atlas/scripts/streets-errand.ts --measure). Streets at a run make the horn with time to spare; a jog through the streets misses it; the crow's line over the roofs costs about four seconds more than the streets."
+        }
+      },
+      "brief": [
+        "The lamps are still lit in {place.from}. Last night each man of the levy took a clay token from its baskets; whoever comes home will give his back. {overseer.name} has sat up counting what is gone, a notch on his board for each man.",
+        "The levy of {state.name} is forming at {place.to}. When the horn sounds it marches for {battle.place}, with {state.ruler.name}, the {state.ruler.title}, at its head. He is {state.ruler.age}. Against him comes the host of {enemy.ruler.name}, {enemy.ruler.title} of {enemy.name}, who is {enemy.ruler.age}.",
+        "{overseer.name} has smoothed the clay and left it for you. “You know your signs,” he says. “Press the figure, and run. The {state.ruler.title} has said he will not go out with a village behind him.”"
+      ],
+      "slot": "muster",
+      "prompt": "The board says what it says. The {state.ruler.title} will hear the tablet read aloud at {place.to}. Which figure do you press into the clay?",
+      "pressed": {
+        "true": "{overseer.name} runs his thumb along the edge without touching the signs. “That is the board,” he says. “Let the {state.ruler.title} count it for himself.” He rolls the seal of the house along the edge.",
+        "rounded": "{overseer.name} looks at the figure a long time. “The carriers and the late-comers,” he says. “Well. They will carry something.” He rolls the seal of the house along the edge.",
+        "boasted": "{overseer.name} reads it twice. “The {state.ruler.title} will like it,” he says quietly, and does not look at you. Then he rolls the seal of the house along the edge, because it is not his hand on the clay."
+      },
+      "handover": "He wraps the tablet in a damp cloth and puts it in your hands. Somewhere toward the river a horn tries its voice.",
+      "objective": "Carry the tablet to {place.to} before the horn.",
+      "arrive": {
+        "intime": {
+          "scene": "The levy stands in ranks before {place.to}, spears grounded, sandals white with dust. {battle.commander.name}, the {state.ruler.title}, stands in front of them in a bronze helmet that still smells of the smith's oil. You put the tablet into his hands, and his herald reads it aloud: “{tablet.line}”",
+          "true": "The ranks are quiet. The {state.ruler.title} turns the clay over, as if more were written on the back. “My mother's tablets were longer,” he says, and gives it to the herald, and does not look at you again.",
+          "rounded": "Somebody in the front rank laughs, and stops. The {state.ruler.title} weighs the tablet in his palm. “A round number,” he says. “Good. Let the {enemy.ruler.title} count that in her tent.”",
+          "boasted": "A cheer goes up from the ranks, and goes on longer than it should. The {state.ruler.title} smiles for the first time this morning. Behind him a captain counts his own men with his eyes, and says nothing.",
+          "after": "Then the horn sounds, and the levy of {state.name} goes out through {place.to}, toward {battle.place}."
+        },
+        "late": {
+          "scene": "The square before {place.to} is empty. The dust of the levy still hangs over the river road. {gatekeeper.name}, who keeps the gate, is sweeping dung from the threshold. “They went at the horn,” he says, and holds out his hand for the tablet.",
+          "true": "He reads the figure with his lips moving. “That is about what it looked like, going past,” he says, and sets the tablet in the niche by the gate, where the tolls are kept, to wait for the {state.ruler.title} to come home.",
+          "rounded": "He holds it up to the light. “More than I counted going past,” he says, “but I was counting oxen.” He sets the tablet in the niche by the gate, where the tolls are kept.",
+          "boasted": "He reads it twice and laughs, not unkindly. “If that many had gone through my gate,” he says, “I would still be counting them.” He sets the tablet in the niche by the gate, face to the wall."
+        }
+      },
+      "end": {
+        "title": "Day one · The muster",
+        "intime": "You reached {place.to} before the horn.",
+        "late": "The horn sounded before you reached {place.to}.",
+        "record": "{battle.ours} men marched for {battle.place} with {battle.commander.name}.",
+        "teaser": {
+          "title": "Day two · The field",
+          "text": "The two hosts meet at {battle.place} {battle.date}. At noon a runner comes in barefoot, his soles split by the road."
+        }
+      }
+    }
+  ]
+}

@@ -140,7 +140,8 @@ async function shoot() {
   const PORT = 4198;
   const server = await serveDist(resolve(arg('dist', join(ROOT, 'dist'))), PORT);
   const base = `http://127.0.0.1:${PORT}/civilization/`;
-  const href = `${base}#/streets${Q ? `?${Q}` : ''}`;
+  // errand=0: the free city, without the day's errand (its dialogues would hold the runner still)
+  const href = `${base}#/streets?${['errand=0', Q].filter(Boolean).join('&')}`;
   const sizes = [
     { name: 'desktop', width: 1440, height: 900, dpr: 1, mobile: false, throttle: 1 },
     { name: 'phone', width: 390, height: 844, dpr: 2, mobile: true, throttle: 4 },
