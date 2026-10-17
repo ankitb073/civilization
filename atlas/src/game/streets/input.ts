@@ -1,7 +1,8 @@
-// Streets: input. Desktop: WASD or the arrow keys, Shift to run, Space to jump; the mouse looks around with pointer
-// lock (click the scene; Esc releases), or by dragging when the lock is refused. Phones: a floating joystick on the
-// left half (its rest place is bottom left; past ~80% of its reach the runner runs), drag on the right half to look,
-// and a jump button. Everything lands in one small state the game reads each frame.
+// Streets: input. Desktop: WASD or the arrow keys jog, with Shift to run and Alt to walk, Space to jump; the mouse
+// looks around with pointer lock (click the scene; Esc releases), or by dragging when the lock is refused. Phones: a
+// floating joystick on the left half (its rest place is bottom left): the further it is pushed the faster the runner
+// goes, from a walk through a jog to a run at the rim; drag on the right half to look, and a jump button. Everything
+// lands in one small state the game reads each frame.
 
 export interface Controls {
   /** Move axes, -1..1: x to the right, y forward (screen up). Magnitude 0..1. */
@@ -9,7 +10,13 @@ export interface Controls {
   my: number;
   run: boolean;
   jumpHeld: boolean;
+  /** How fast the player asks to go, 0..1: about 0.35 a walk, 0.75 a jog, 1 a run (the game maps it to m/s). When
+   *  absent, `run` decides (1 or a walk). */
+  pace?: number;
 }
+
+/** Paces the keys give. */
+export const PACE = { walk: 0.35, jog: 0.75, run: 1 } as const;
 
 export interface InputEls {
   root: HTMLElement;
@@ -88,10 +95,10 @@ export class Input {
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     const k = e.code;
-    const game = /^(Key[WASD]|Arrow(Up|Down|Left|Right)|Space|Shift(Left|Right))$/.test(k);
+    const game = /^(Key[WASD]|Arrow(Up|Down|Left|Right)|Space|Shift(Left|Right)|Alt(Left|Right))$/.test(k);
     if (!game) return;
-    // keep Space and the arrows from scrolling or pressing a focused button
-    if (k === 'Space' || k.startsWith('Arrow')) e.preventDefault();
+    // keep Space and the arrows from scrolling or pressing a focused button, and Alt from opening a menu bar
+    if (k === 'Space' || k.startsWith('Arrow') || k.startsWith('Alt')) e.preventDefault();
     if (down) {
       if (k === 'Space' && !this.keys.has(k)) this.jumps++;
       this.keys.add(k);
@@ -180,17 +187,21 @@ export class Input {
     let mx = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
     let my = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
     let run = k.has('ShiftLeft') || k.has('ShiftRight');
+    let pace: number = run ? PACE.run : k.has('AltLeft') || k.has('AltRight') ? PACE.walk : PACE.jog;
     if (mx || my) { const l = Math.hypot(mx, my); mx /= l; my /= l; }
     if (this.joy) {
       const m = Math.min(1, Math.hypot(this.joy.x, this.joy.y));
       const dead = 0.12;
       if (m > dead) {
-        const s = Math.min(1, (m - dead) / (1 - dead)) / m;
+        const t = Math.min(1, (m - dead) / (1 - dead));
+        const s = t / m;
         mx = this.joy.x * s; my = this.joy.y * s;
         run = m >= RUN_AT;
+        // analog: the push sets the pace, a walk at half, a jog toward the rim, a run at it
+        pace = run ? PACE.run : Math.min(PACE.jog, (t / ((RUN_AT - dead) / (1 - dead))) * PACE.jog);
       }
     }
-    return { mx, my, run, jumpHeld: k.has('Space') || this.jumpTouch >= 0 };
+    return { mx, my, run, pace, jumpHeld: k.has('Space') || this.jumpTouch >= 0 };
   }
 
   takeLook(): [number, number] {

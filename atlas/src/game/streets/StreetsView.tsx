@@ -219,8 +219,8 @@ export function StreetsView() {
 
       <p id="st-controls" class="sr-only">
         {touch
-          ? 'Drag on the left half to move; push the stick to its edge to run. Drag on the right half to look around. The jump button jumps.'
-          : 'W, A, S and D or the arrow keys move; hold Shift to run; Space jumps. Click the scene to look around with the mouse; Escape releases it.'}
+          ? 'Drag on the left half to move: a little to walk, further to jog, to the edge to run. Run into a wall to climb it, or walk into a ladder. Drag on the right half to look around. The jump button jumps.'
+          : 'W, A, S and D or the arrow keys jog; hold Shift to run or Alt to walk; Space jumps, and jumping at a wall climbs it. Walk into a ladder to climb it. Click the scene to look around with the mouse; Escape releases it.'}
       </p>
 
       {ready && hint && (
@@ -228,14 +228,15 @@ export function StreetsView() {
           <p id="st-hint-t" class="st-hint__t">You carry the palace’s tablets</p>
           {touch ? (
             <ul class="st-hint__keys">
-              <li><b>Left thumb</b> move — push to the edge to run</li>
+              <li><b>Left thumb</b> move · the edge runs</li>
+              <li><b>Run at a wall</b> to climb it · walk into a ladder</li>
               <li><b>Right thumb</b> drag to look</li>
               <li><b>Jump</b> button, bottom right</li>
             </ul>
           ) : (
             <ul class="st-hint__keys">
-              <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</li>
-              <li><kbd>Shift</kbd> run · <kbd>Space</kbd> jump</li>
+              <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> jog · <kbd>Shift</kbd> run · <kbd>Alt</kbd> walk</li>
+              <li><kbd>Space</kbd> jump · jump at a wall to climb it</li>
               <li>Click to look with the mouse · <kbd>Esc</kbd> lets go</li>
             </ul>
           )}

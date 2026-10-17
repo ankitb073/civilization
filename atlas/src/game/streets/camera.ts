@@ -15,6 +15,11 @@ export interface CamFrame {
   phase: number;
   /** Runner's facing (radians, +z at 0) and whether it is moving under the player's control. */
   facing: number; moving: boolean;
+  /** On a wall, an edge or a ladder: the view stands a little further off, so the edge above is in it. */
+  climbing?: boolean;
+  /** Shift the point the view turns about (m, horizontal): out from a wall the runner is on, so the view's own
+   *  collision sweep does not start inside the edge. */
+  offset?: { x: number; z: number };
 }
 
 export type Sweep = (from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }) => number;
@@ -38,6 +43,8 @@ export class ThirdPersonCamera {
   private init = false;
   /** The height of the ground the runner last stood on. */
   private refY = 0;
+  /** 0..1, how far into the climbing framing. */
+  private climbK = 0;
   private dip = 0; private dipV = 0;
   private fovNow = 0;
   baseFov = 60;
@@ -58,7 +65,13 @@ export class ThirdPersonCamera {
     this.shoulder = portrait ? 0.28 : 0.45;
   }
 
+  /** Swing round to a yaw over about half a second (a ladder's set framing); not with reduced motion. */
+  private swing: number | null = null;
+  swingTo(yaw: number) { if (!this.reduced) this.swing = yaw; }
+  stopSwing() { this.swing = null; }
+
   turn(dx: number, dy: number) {
+    this.swing = null;
     this.yaw -= dx;
     this.pitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, this.pitch + dy));
   }
@@ -77,11 +90,17 @@ export class ThirdPersonCamera {
     // runner left: a quarter of a rise, all of a fall below it (off a roof), quickly so the runner stays in view
     if (f.grounded || !this.init) this.refY = f.y;
     const rel = f.y - this.refY;
-    const tx = f.x, ty = this.refY + HEAD + (rel > 0 ? rel * RISE_SHARE : rel), tz = f.z;
+    const tx = f.x + (f.offset?.x ?? 0), ty = this.refY + HEAD + (rel > 0 ? rel * RISE_SHARE : rel), tz = f.z + (f.offset?.z ?? 0);
     if (!this.init) { this.px = tx; this.py = ty; this.pz = tz; this.init = true; }
     const kxz = 1 - Math.exp(-dt * 16), ky = 1 - Math.exp(-dt * (f.grounded ? 9 : rel < 0 ? 10 : 6));
     this.px += (tx - this.px) * kxz; this.pz += (tz - this.pz) * kxz; this.py += (ty - this.py) * ky;
 
+    if (this.swing !== null) {
+      let d = this.swing - this.yaw;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      this.yaw += d * (1 - Math.exp(-dt * 7));
+      if (Math.abs(d) < 0.01) this.swing = null;
+    }
     // swing behind the runner when nobody is steering the view
     if (this.follow && f.moving && performance.now() - lastLook > 1400) {
       let d = f.facing - this.yaw;
@@ -91,9 +110,13 @@ export class ThirdPersonCamera {
       this.pitch += (0.16 - this.pitch) * (1 - Math.exp(-dt * 0.8));
     }
 
-    // spring for the landing dip
-    this.dipV += (-this.dip * 90 - this.dipV * 14) * dt;
-    this.dip += this.dipV * dt;
+    // spring for the landing dip, in steps of at most 1/120 s (a stiff spring stepped coarsely blows up: a long frame,
+    // or the probes drawing every few steps, must not fling the view)
+    for (let left = dt; left > 1e-6; left -= 1 / 120) {
+      const h = Math.min(1 / 120, left);
+      this.dipV += (-this.dip * 90 - this.dipV * 14) * h;
+      this.dip += this.dipV * h;
+    }
     let bob = 0;
     if (!this.reduced && f.grounded && f.speed > 0.3) {
       const amp = 0.008 + 0.018 * Math.min(1, f.speed / Math.max(1, f.runSpeed));
@@ -104,7 +127,8 @@ export class ThirdPersonCamera {
     const fx = Math.sin(this.yaw) * cy, fy = -sy, fz = Math.cos(this.yaw) * cy;
     const rx = -Math.cos(this.yaw), rz = Math.sin(this.yaw);
     const head = { x: this.px, y: this.py + (this.reduced ? 0 : this.dip * 0.25) + bob, z: this.pz };
-    const want = this.want * (this.reduced ? 1 : 1 + 0.08 * Math.min(1, f.speed / Math.max(1, f.runSpeed)));
+    this.climbK += ((f.climbing ? 1 : 0) - this.climbK) * (1 - Math.exp(-dt * 3));
+    const want = (this.want + 0.7 * this.climbK) * (this.reduced ? 1 : 1 + 0.08 * Math.min(1, f.speed / Math.max(1, f.runSpeed)));
     // out to the shoulder, then back along the view; how far each shoulder's boom gets
     const boom = (off: number) => {
       const sh = { x: head.x + rx * off, y: head.y, z: head.z + rz * off };

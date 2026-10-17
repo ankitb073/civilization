@@ -6,8 +6,9 @@ import { PCFShadowMap, PerspectiveCamera, Scene, SRGBColorSpace, Vector3, WebGLR
 import { loadCityRecord, type CityRecord } from '../../three/city/index.ts';
 import { layoutOf } from '../../three/city/layout.ts';
 import { ThirdPersonCamera } from './camera.ts';
-import { Input, type Controls, type InputEls } from './input.ts';
-import { StreetsPhysics, loadRapier } from './physics.ts';
+import { Input, PACE, type Controls, type InputEls } from './input.ts';
+import { StreetsPhysics, loadRapier, type Ledge } from './physics.ts';
+import { ladderNear, type Ladder } from './affordances.ts';
 import { loadRunner, type Runner } from './runner.ts';
 import { LOT, buildStreets, type Solid, type StreetsCity } from './world.ts';
 
@@ -36,7 +37,46 @@ export const FEEL = {
   takeoffStand: 0.083,
   boostRun: 3.2,
   boostWalk: 1.45,
+  /** The jog between the walk and the run (m/s). */
+  jog: 3.4,
 };
+
+/** Traversal: heights in metres above the feet, speeds in m/s, times in seconds. */
+const MOVE = {
+  /** A mantle takes an edge between these heights (waist to head); below it the controller steps up by itself. */
+  mantleMin: 0.45, mantleMax: 1.8,
+  /** Hands reach this far above the feet in a hang (Hang_Loop), so a jump grabs an edge this high above the feet. */
+  reach: 2.05,
+  /** The highest edge above the ground below that a runner scrambles up to (house walls; not the city walls). */
+  climbMax: 6.3,
+  /** Scrambling speed up a wall, and the ladder's up and down. */
+  climbV: 3.4, ladderUp: 1.8, ladderDown: 2.3,
+  /** How long a pull-up from a hang takes, and the longest a phone or a held key hangs before it. */
+  pull: 0.72, hangMin: 0.12,
+  /** Water: a wader slows with depth and turns back where it is deeper than this. */
+  deep: 0.95,
+};
+
+type V2 = { x: number; z: number };
+/** A move in which the game carries the body along a path instead of the controller. */
+type Trav =
+  | { kind: 'mantle'; t: number; dur: number; x0: number; y0: number; z0: number; d0: number; L: Ledge; speed: number }
+  | { kind: 'climb'; L: Ledge; y: number }
+  | { kind: 'hang'; t: number; L: Ledge }
+  | { kind: 'pull'; t: number; L: Ledge }
+  | { kind: 'ladder'; lad: Ladder; y: number; on: number; from?: { x: number; y: number; z: number }; top?: boolean }
+  | { kind: 'off'; t: number; dur: number; lad: Ladder; x0: number; y0: number; z0: number; top: boolean };
+
+/** A splash in the river, for the sound and the water to answer (the game counts them too). */
+export interface Splash { x: number; y: number; z: number; strength: number; kind: 'enter' | 'step' | 'land' | 'turn' }
+
+const smooth = (t: number) => { const u = Math.max(0, Math.min(1, t)); return u * u * (3 - 2 * u); };
+/** The speed a pace (0..1, input.ts) asks for: a walk at 0.35, a jog at 0.75, a run from 0.9. */
+function paceSpeed(p: number, run: number): number {
+  if (p <= PACE.walk) return FEEL.walk * Math.max(0.35, p / PACE.walk);
+  if (p <= PACE.jog) return FEEL.walk + (FEEL.jog - FEEL.walk) * ((p - PACE.walk) / (PACE.jog - PACE.walk));
+  return FEEL.jog + (run - FEEL.jog) * Math.min(1, (p - PACE.jog) / 0.15);
+}
 const STEP = 1 / 60;
 
 type Probe = { frame: number[]; cpu: number[]; phys: number[]; skate: number[] };
@@ -81,10 +121,23 @@ export class StreetsGame {
   private yawRate = 0;
   private lastFacing = 0;
   private controlLock = 0;
+  /** The view's yaw a held push is read against while the view swings by itself (null: the view's own). */
+  private inputYaw: number | null = null;
+  /** The move under way (mantle, climb, hang, pull-up, ladder), if any. */
+  private trav: Trav | null = null;
+  /** Water depth at the feet (m), and the stride phase last step (for splashes at footfalls). */
+  private depth = 0;
+  private prevDepth = 0;
+  /** Turning back from deep water: for `t` seconds the runner heads (x, z), toward the shallows, whatever the stick. */
+  private balk = { t: 0, x: 0, z: 0, cool: 0 };
+  private lastPhase = 0;
+  /** Called on every splash (sound, ripples); `stats.splashes` counts them for the probes. */
+  onSplash: ((s: Splash) => void) | null = null;
+  readonly counts = { splashes: 0, mantles: 0, grabs: 0, climbs: 0, pulls: 0, ladders: 0, edgeStops: 0, deepTurns: 0, autoJumps: 0 };
   private pilot: Pilot | null = null;
   private runnerHidden = false;
   /** The probes' side camera (filming): square to `heading`, `dist` metres off, at a fixed height. */
-  sideView: { heading: number; dist: number; y: number; fov: number } | null = null;
+  sideView: { heading: number; dist: number; y: number; fov: number; ang?: number } | null = null;
   private w = 1;
   private h = 1;
   private dpr = 1;
@@ -99,7 +152,8 @@ export class StreetsGame {
     r.setPixelRatio(this.dpr);
     this.renderer = r;
     this.cam = new ThirdPersonCamera(opts.reducedMotion);
-    this.cam.follow = opts.touch;
+    // a touch player gets a camera that swings in behind; with reduced motion it never turns by itself
+    this.cam.follow = opts.touch && !opts.reducedMotion;
     this.input = new Input({ ...els, canvas });
   }
 
@@ -139,6 +193,20 @@ export class StreetsGame {
         if (gy === null || gy > 2 || !this.phys.free(x, gy, z)) continue;
         spawn.x = x; spawn.z = z; spawn.y = gy;
         break search;
+      }
+    }
+    // the runner starts at the door of the house of tablets when the world names one, facing the most open way
+    const tab = city.affordances.places.find((p) => p.kind === 'tablet-house');
+    if (tab) {
+      const gy = this.phys.groundAt(tab.pos.x, tab.pos.z, tab.pos.y + 3);
+      if (gy !== null && this.phys.free(tab.pos.x, gy + 0.02, tab.pos.z)) {
+        let best = spawn.facing, bd = -1;
+        for (let k = 0; k < 16; k++) {
+          const a = (k / 16) * Math.PI * 2;
+          const d = this.phys.rayFlat(tab.pos.x, gy + 1.2, tab.pos.z, Math.sin(a), Math.cos(a), 40);
+          if (d > bd) { bd = d; best = a; }
+        }
+        spawn.x = tab.pos.x; spawn.z = tab.pos.z; spawn.y = gy; spawn.facing = best;
       }
     }
     this.phys.teleport(spawn.x, spawn.y + 0.05, spawn.z);
@@ -240,7 +308,9 @@ export class StreetsGame {
     const ctl = this.input.controls();
     this.cam.update(this.camera, dt, {
       x: o.x, y: o.y, z: o.z, speed: this.animSpeed, runSpeed: this.runSpeed(), grounded: this.grounded,
-      phase: runner.phase, facing: this.lastFacing, moving: this.speed > 0.5 && (!!this.pilot || Math.hypot(ctl.mx, ctl.my) > 0.1),
+      phase: runner.phase, facing: this.lastFacing, moving: (this.speed > 0.5 || !!this.trav) && (!!this.pilot || Math.hypot(ctl.mx, ctl.my) > 0.1),
+      climbing: !!this.trav && this.trav.kind !== 'mantle',
+      offset: this.wallOut(),
     }, (a, b) => this.phys!.sweep(a, b), this.input.lastLook);
     const hide = this.cam.dist < 0.6;
     if (hide !== this.runnerHidden) { this.runnerHidden = hide; runner.model.visible = !hide; }
@@ -256,13 +326,15 @@ export class StreetsGame {
 
     if (this.sideView) {
       // the probes' side view: square to the run, at a fixed height, so the body is seen to rise and fall
-      const s = this.sideView, h = s.heading, cam = this.camera;
-      cam.position.set(o.x - Math.cos(h) * s.dist, s.y, o.z + Math.sin(h) * s.dist);
+      const s = this.sideView, h = s.heading, cam = this.camera, a = s.ang ?? 0;
+      // off the runner's right, swung back by `ang` (so a wall it faces is not edge-on between them)
+      const ox = -Math.cos(h) * Math.cos(a) - Math.sin(h) * Math.sin(a), oz = Math.sin(h) * Math.cos(a) - Math.cos(h) * Math.sin(a);
+      cam.position.set(o.x + ox * s.dist, s.y, o.z + oz * s.dist);
       cam.lookAt(o.x, s.y, o.z);
       if (Math.abs(cam.fov - s.fov) > 0.01) { cam.fov = s.fov; cam.updateProjectionMatrix(); }
     }
 
-    if (this.city.model.smoke.length) this.city.smoke.update(this.opts.reducedMotion ? 40 : clock, this.camera);
+    void clock; // (the world updates its own smoke, before each render)
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -279,16 +351,41 @@ export class StreetsGame {
     const jumps = this.input.takeJumps() + (this.pilot?.takeJump() ?? 0);
     if (jumps > 0) this.jumpAt = this.t;
 
-    // wished direction in the world, from the camera's yaw (or the pilot's own heading)
-    const [fx, fz] = this.pilot ? [Math.sin(this.pilot.yaw), Math.cos(this.pilot.yaw)] : this.cam.forward();
+    // wished direction in the world, from the camera's yaw (or the pilot's own heading); while the view swings round by
+    // itself (onto a ladder), a held push keeps meaning what it meant when it began, until it is let go
+    if (Math.hypot(ctl.mx, ctl.my) < 0.2) this.inputYaw = null;
+    const [fx, fz] = this.pilot ? [Math.sin(this.pilot.yaw), Math.cos(this.pilot.yaw)]
+      : this.inputYaw !== null ? [Math.sin(this.inputYaw), Math.cos(this.inputYaw)] : this.cam.forward();
     const rx = -fz, rz = fx;
     let wx = fx * ctl.my + rx * ctl.mx, wz = fz * ctl.my + rz * ctl.mx;
     const wl = Math.hypot(wx, wz);
-    const mag = Math.min(1, wl);
+    let mag = Math.min(1, wl);
     if (wl > 1e-3) { wx /= wl; wz /= wl; }
     const run = this.runSpeed();
-    let target = mag < 0.05 ? 0 : ctl.run ? run : FEEL.walk * Math.min(1, mag / 0.8);
+    const pace = ctl.pace ?? (ctl.run ? PACE.run : PACE.walk);
+    let target = mag < 0.05 ? 0 : paceSpeed(pace, run);
     if (this.controlLock > 0) { this.controlLock -= dt; target = Math.min(target, 0.4); }
+    // wading: slower the deeper it is
+    const aff = this.city!.affordances;
+    this.depth = this.grounded ? aff.waterDepthAt(this.curr.x, this.curr.z) : 0;
+    if (this.depth > 0.12) target *= Math.max(0.35, 1 - this.depth * 0.75);
+    if (this.depth > MOVE.deep + 0.05 && !this.trav) {
+      // in over the waist (jumped in): wade back toward the nearest shallows, whatever the stick says
+      let best = 0, bd = Infinity;
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2, d = aff.waterDepthAt(this.curr.x + Math.sin(a) * 2, this.curr.z + Math.cos(a) * 2);
+        if (d < bd) { bd = d; best = a; }
+      }
+      wx = Math.sin(best); wz = Math.cos(best); mag = 1; target = 1.1;
+    }
+
+    this.balk.cool -= dt;
+    if (this.balk.t > 0) { this.balk.t -= dt; wx = this.balk.x; wz = this.balk.z; mag = 1; target = Math.min(target, 1.1); }
+
+    // a move under way carries the body itself
+    if (this.trav) { this.stepTrav(dt, ctl, wx, wz, mag, jumps > 0); return; }
+    // or one starts: a ladder, a mantle, a grab or a climb
+    if (this.startTrav(wx, wz, mag, target)) return;
 
     if (runner.rolling) {
       // the roll carries the runner on, straight
@@ -353,9 +450,12 @@ export class StreetsGame {
     if (!this.grounded) {
       const g = this.vy > 0 ? FEEL.gUp : FEEL.gDown;
       this.vy = Math.max(-FEEL.terminal, this.vy - g * dt);
-    } else this.vy = -1.5;
+    } else this.vy = 0; // on the ground the controller's snap holds the feet down (a push down would drag on stairs)
 
-    const hx = Math.sin(this.heading) * this.speed, hz = Math.cos(this.heading) * this.speed;
+    let hx = Math.sin(this.heading) * this.speed, hz = Math.cos(this.heading) * this.speed;
+    if (this.grounded && this.speed > 0.05 && this.takeoffT < 0 && !runner.rolling) {
+      [hx, hz] = this.guardEdges(hx, hz, target);
+    }
     const r = phys.move(hx * dt, this.vy * dt, hz * dt);
     const f = phys.feet();
     this.curr.set(f.x, f.y, f.z);
@@ -376,10 +476,20 @@ export class StreetsGame {
     if (nowGround) {
       if (!was) {
         const drop = Math.max(0, this.peakY - f.y);
+        const dep = aff.waterDepthAt(f.x, f.z);
+        if (dep > 0.08) this.splash(f.x, f.y + dep, f.z, Math.min(1, 0.3 + drop * 0.25 + dep * 0.3), 'land');
         runner.land(this.airT, drop, this.speed);
         this.cam.land(drop);
         if (runner.pose === 'land' && drop > 2.5) this.controlLock = 0.25;
       }
+      if (was && this.depth > 0.12) {
+        // a footfall in the water: twice a stride, and once on wading in
+        const ph = runner.phase, fall = (this.lastPhase < 0.5 && ph >= 0.5) || ph < this.lastPhase;
+        if (fall && this.animSpeed > 0.3) this.splash(f.x, f.y + this.depth, f.z, Math.min(1, 0.2 + this.animSpeed * 0.12 + this.depth * 0.4), 'step');
+      }
+      if (was && this.depth > 0.12 && this.prevDepth <= 0.12) this.splash(f.x, f.y + this.depth, f.z, 0.5, 'enter');
+      this.prevDepth = this.depth;
+      this.lastPhase = runner.phase;
       this.grounded = true;
       this.lastGround = this.t;
       this.jumped = false;
@@ -393,6 +503,337 @@ export class StreetsGame {
     }
   }
 
+  // ------------------------------------------------------------------ traversal
+  /** Which way the runner means to go: the stick's way when pushed, else where it is heading if it is moving. */
+  private intent(wx: number, wz: number, mag: number): V2 | null {
+    if (mag > 0.3) return { x: wx, z: wz };
+    if (this.speed > 0.6) return { x: Math.sin(this.heading), z: Math.cos(this.heading) };
+    return null;
+  }
+
+  private splash(x: number, y: number, z: number, strength: number, kind: Splash['kind']) {
+    this.counts.splashes++;
+    this.onSplash?.({ x, y, z, strength, kind });
+  }
+
+  /** The ground below (x, z) from just above the feet (null over nothing within 30 m). */
+  private below(x: number, z: number, y: number): number | null { return this.phys!.groundAt(x, z, y + 0.5); }
+
+  /**
+   * On the ground, before moving: a walker (not a jogger or runner) stops at a roof's edge, sliding along it if it can;
+   * nobody walks into water deeper than MOVE.deep (the runner turns back); and on a phone a runner reaching an edge
+   * jumps it when there is somewhere to land. Returns the displacement rate to use.
+   */
+  private guardEdges(hx: number, hz: number, target: number): [number, number] {
+    const f = this.curr, aff = this.city!.affordances, phys = this.phys!;
+    const sp = Math.hypot(hx, hz), dx = hx / sp, dz = hz / sp;
+    // the edge-stop is for a walker: someone asking to walk (not jog or run) and going at a walk
+    const walking = target <= 2.3 && this.speed < 2.3;
+    const bad = (x: number, z: number) => {
+      const ahead = 0.42;
+      const px = f.x + x * ahead, pz = f.z + z * ahead;
+      if (walking) {
+        const g = this.below(px, pz, f.y);
+        if (g === null || f.y - g > 0.7) return 'edge';
+      }
+      const d = aff.waterDepthAt(px, pz);
+      if (d > MOVE.deep && d > this.depth + 0.02) return 'deep';
+      return null;
+    };
+    // a phone's runner jumps an edge it meets at speed, if a landing about as high is in reach (the next roof across a
+    // gap, not the street below the side of a stair)
+    if (this.opts.touch && this.speed > 4 && !this.jumped && this.jumpAt < 0) {
+      const g = this.below(f.x + dx * 0.55, f.z + dz * 0.55, f.y);
+      if (g === null || f.y - g > 0.9) {
+        for (const d of [1.6, 2.4, 3.2, 3.8]) {
+          const l = this.below(f.x + dx * d, f.z + dz * d, f.y + 0.7);
+          if (l !== null && l > f.y - 1.2 && l < f.y + 0.9) { this.jumpAt = this.t; this.counts.autoJumps++; break; }
+        }
+      }
+    }
+    const why = bad(dx, dz);
+    if (!why) return [hx, hz];
+    // slide along: the nearest heading that is not over the edge or into the deep, with the speed it keeps
+    for (const a of [0.45, -0.45, 0.9, -0.9]) {
+      const c = Math.cos(a), s2 = Math.sin(a);
+      const ex = dx * c - dz * s2, ez = dx * s2 + dz * c;
+      if (!bad(ex, ez)) return [ex * sp * Math.cos(a), ez * sp * Math.cos(a)];
+    }
+    if (why === 'deep') {
+      // turn back from the deep: once per approach, face the shallows and wade a few steps back toward them
+      if (this.balk.cool <= 0) {
+        let best = this.heading, bd = Infinity;
+        for (let k = 0; k < 12; k++) {
+          const a = (k / 12) * Math.PI * 2, d = aff.waterDepthAt(f.x + Math.sin(a) * 1.5, f.z + Math.cos(a) * 1.5);
+          if (d < bd) { bd = d; best = a; }
+        }
+        this.balk = { t: 0.7, x: Math.sin(best), z: Math.cos(best), cool: 1.6 };
+        this.counts.deepTurns++;
+        this.splash(f.x, f.y + this.depth, f.z, 0.35, 'turn');
+      }
+    } else if (this.speed > 0.3) this.counts.edgeStops++;
+    this.speed = 0;
+    void phys;
+    return [0, 0];
+  }
+
+  /** Start a move if the runner meets one: a ladder it walks into (from the street or the roof), a mantle over an
+   *  edge waist- to head-high, a grab of an edge within the hands' reach in the air, or a scramble up a wall too high
+   *  for that. Desktop mantles when running into an edge or jumping at it; phones whenever pushing into it. */
+  private startTrav(wx: number, wz: number, mag: number, target: number): boolean {
+    const phys = this.phys!, runner = this.runner!, f = this.curr, aff = this.city!.affordances;
+    if (runner.rolling || this.takeoffT >= 0) return false;
+    const want = this.intent(wx, wz, mag);
+    const jumpNow = this.jumpAt >= 0 && this.t - this.jumpAt <= FEEL.buffer;
+    if (this.grounded && want) {
+      // a ladder: walking at its foot toward the wall, or at its top out over the edge
+      const lad = ladderNear(aff, f.x, f.y, f.z, 0.9);
+      if (lad && want.x * -lad.facing.x + want.z * -lad.facing.z > 0.55) { this.mountLadder(lad, false); return true; }
+      for (const l of aff.ladders) {
+        if (Math.abs(l.top.y - f.y) > 0.6 || Math.hypot(l.top.x - f.x, l.top.z - f.z) > 0.8) continue;
+        if (want.x * l.facing.x + want.z * l.facing.z > 0.55) { this.mountLadder(l, true); return true; }
+      }
+      // a mantle: a moving runner meeting an edge waist- to head-high goes over it
+      const L = phys.ledge(f.x, f.y, f.z, want.x, want.z, 0.85, MOVE.mantleMin, MOVE.mantleMax);
+      if (L && (this.speed > 0.4 || jumpNow || this.opts.touch)) {
+        this.jumpAt = -1;
+        this.startMantle(L, target);
+        return true;
+      }
+      // a phone's runner going at a wall too high to mantle jumps at it (and the air below grabs or climbs it)
+      if (this.opts.touch && this.speed > 2.5 && !jumpNow && !this.jumped) {
+        const H = phys.ledge(f.x, f.y, f.z, want.x, want.z, 1.2, MOVE.mantleMax, MOVE.climbMax);
+        if (H) { this.jumpAt = this.t; this.counts.autoJumps++; }
+      }
+      return false;
+    }
+    if (!this.grounded && this.airT > 0.04) {
+      const dir = want ?? { x: Math.sin(this.heading), z: Math.cos(this.heading) };
+      const L = phys.ledge(f.x, f.y, f.z, dir.x, dir.z, 0.75, 0.3, MOVE.climbMax);
+      if (!L) return false;
+      const ground = this.below(f.x, f.z, f.y) ?? f.y;
+      if (L.top - ground > MOVE.climbMax) return false;
+      if (L.up <= 1.15 && this.vy < 4) { this.startMantle(L, Math.max(this.speed, 2)); return true; }
+      if (L.up <= MOVE.reach + 0.08) { this.startHang(L); return true; }
+      if (this.vy > -3) { this.trav = { kind: 'climb', L, y: f.y }; this.counts.climbs++; this.faceWall(L); runner.climb(2.6); return true; }
+    }
+    return false;
+  }
+
+  private faceWall(L: { nx: number; nz: number }) {
+    this.heading = Math.atan2(-L.nx, -L.nz);
+    this.lastFacing = this.heading;
+  }
+
+  private startMantle(L: Ledge, speed: number) {
+    const f = this.curr;
+    const dur = Math.max(0.45, Math.min(0.68, 0.42 + 0.14 * L.up));
+    this.trav = { kind: 'mantle', t: 0, dur, x0: f.x, y0: f.y, z0: f.z, d0: Math.max(0.3, L.dist), L, speed: Math.min(speed, this.runSpeed()) };
+    this.counts.mantles++;
+    this.faceWall(L);
+    this.runner!.mantle(dur);
+  }
+
+  private startHang(L: Ledge) {
+    this.trav = { kind: 'hang', t: 0, L };
+    this.counts.grabs++;
+    this.faceWall(L);
+    this.runner!.hang();
+  }
+
+  private mountLadder(lad: Ladder, fromTop: boolean) {
+    const f = this.curr;
+    this.counts.ladders++;
+    // coming over the top, the view swings round to look at the wall the runner is going down (not out over the street);
+    // the push that brought the runner here keeps taking it down until it is let go
+    if (fromTop) { this.inputYaw = this.cam.yaw; this.cam.swingTo(Math.atan2(-lad.facing.x, -lad.facing.z) + 0.35); }
+    this.heading = Math.atan2(-lad.facing.x, -lad.facing.z);
+    const g = this.ladderLine(lad);
+    const y = fromTop ? g.hi : g.lo;
+    this.trav = { kind: 'ladder', lad, y, on: 0, from: { x: f.x, y: f.y, z: f.z }, top: fromTop };
+    this.runner!.ladder(0);
+  }
+
+  /** Where the feet are on a ladder at height y: on the line of its rungs (from the foot, out from the wall, up to the
+   *  top at the wall), a little out from them; the lowest and highest heights the feet climb between. */
+  private ladderLine(lad: Ladder) {
+    const n = lad.facing;
+    const F = { x: lad.base.x - n.x * 0.45, y: lad.base.y, z: lad.base.z - n.z * 0.45 }; // the ladder's foot
+    const W = { x: lad.top.x + n.x * 0.45, y: lad.top.y, z: lad.top.z + n.z * 0.45 }; // where it meets the wall's top
+    const at = (y: number) => {
+      const k = (y - F.y) / Math.max(0.5, W.y - F.y);
+      return { x: F.x + (W.x - F.x) * k + n.x * 0.2, y, z: F.z + (W.z - F.z) * k + n.z * 0.2 };
+    };
+    return { at, lo: F.y + 0.12, hi: W.y - 1.0, W };
+  }
+
+  /** One step of the move under way. */
+  private stepTrav(dt: number, ctl: Controls, wx: number, wz: number, mag: number, jumped: boolean) {
+    const tr = this.trav!, phys = this.phys!, runner = this.runner!;
+    const put = (x: number, y: number, z: number) => { phys.place(x, y, z); this.curr.set(x, y, z); };
+    const done = (speed: number) => {
+      this.trav = null;
+      this.grounded = true; this.vy = 0; this.airT = 0; this.jumped = false; this.lastGround = this.t;
+      this.speed = speed; this.animSpeed = speed;
+      this.peakY = this.curr.y; this.fromY = this.curr.y;
+      runner.endTraverse(speed);
+    };
+    this.grounded = true; this.vy = 0; this.airT = 0; this.clear = 0;
+    this.animSpeed *= 0.8;
+    const toward = (L: { nx: number; nz: number }) => mag > 0.3 && wx * -L.nx + wz * -L.nz > 0.3;
+    const away = (L: { nx: number; nz: number }) => mag > 0.3 && wx * L.nx + wz * L.nz > 0.5;
+    const wallPoint = (L: Ledge, out: number) => ({ x: L.fx + L.nx * out, z: L.fz + L.nz * out });
+    switch (tr.kind) {
+      case 'mantle': {
+        // hands to the edge, body up and over, feet onto the top: a path keyed to Climb Up's frames
+        tr.t += dt;
+        const u = tr.t / tr.dur, L = tr.L;
+        const lowY = Math.max(tr.y0, L.top - 0.8);
+        // (the hands plant on the edge at about a fifth of the way and stay there through the tuck; the knees come onto
+        // the top as the body passes over it)
+        const keys = [
+          { u: 0, y: tr.y0, out: tr.d0 }, { u: 0.22, y: lowY, out: 0.34 }, { u: 0.45, y: Math.max(lowY, L.top - 0.62), out: 0.12 },
+          { u: 0.68, y: L.top - 0.08, out: -0.2 }, { u: 0.85, y: L.top + 0.02, out: -0.36 },
+          { u: 1, y: L.sy + 0.02, out: -Math.hypot(L.sx - L.fx, L.sz - L.fz) },
+        ];
+        let i = 0;
+        while (i < keys.length - 2 && keys[i + 1].u < u) i++;
+        const a = keys[i], b = keys[i + 1], k = smooth((u - a.u) / (b.u - a.u));
+        const out = a.out + (b.out - a.out) * k, y = a.y + (b.y - a.y) * k;
+        // the start is wherever the runner was: blend from it to the wall's line over the first stretch
+        const w = wallPoint(L, out), s0 = smooth(u / 0.22);
+        put(tr.x0 + (w.x - tr.x0) * s0, y, tr.z0 + (w.z - tr.z0) * s0);
+        if (u >= 1) done(mag > 0.3 ? Math.min(tr.speed, 4.5) : 0);
+        break;
+      }
+      case 'climb': {
+        // up the wall at a scramble, until the hands are at the edge
+        const L = tr.L;
+        if (away(L) || jumped) { this.letGo(L, 1.5); break; }
+        tr.y = Math.min(L.top - MOVE.reach, tr.y + MOVE.climbV * dt);
+        const w = wallPoint(L, 0.26);
+        put(w.x, tr.y, w.z);
+        runner.climb(MOVE.climbV / 1.15);
+        if (tr.y >= L.top - MOVE.reach - 1e-3) {
+          // climbing on up toward the wall: straight into the pull-up; otherwise hang there
+          this.startHang(L);
+          if (mag > 0.3 && wx * -L.nx + wz * -L.nz > 0.3) { this.trav = { kind: 'pull', t: 0, L }; this.counts.pulls++; runner.pull(MOVE.pull); }
+        }
+        break;
+      }
+      case 'hang': {
+        tr.t += dt;
+        const L = tr.L, w = wallPoint(L, 0.15);
+        put(w.x, L.top - MOVE.reach, w.z);
+        if (away(tr.L)) { this.letGo(L, 0.5); break; }
+        // up: on a phone or with the stick toward the wall after a beat; at once on a jump
+        if (jumped || (tr.t > MOVE.hangMin && (toward(L) || (this.opts.touch && mag < 0.3)))) {
+          this.trav = { kind: 'pull', t: 0, L };
+          this.counts.pulls++;
+          runner.pull(MOVE.pull);
+        }
+        break;
+      }
+      case 'pull': {
+        tr.t += dt;
+        const u = tr.t / MOVE.pull, L = tr.L;
+        const standOut = -Math.hypot(L.sx - L.fx, L.sz - L.fz);
+        const keys = [
+          { u: 0, y: L.top - MOVE.reach, out: 0.15 }, { u: 0.34, y: L.top - 1.45, out: 0.13 }, { u: 0.6, y: L.top - 0.68, out: -0.12 },
+          { u: 0.8, y: L.top - 0.1, out: -0.32 }, { u: 1, y: L.sy + 0.02, out: standOut },
+        ];
+        let i = 0;
+        while (i < keys.length - 2 && keys[i + 1].u < u) i++;
+        const a = keys[i], b = keys[i + 1], k = smooth((u - a.u) / (b.u - a.u));
+        const w = wallPoint(L, a.out + (b.out - a.out) * k);
+        put(w.x, a.y + (b.y - a.y) * k, w.z);
+        if (u >= 1) done(0);
+        break;
+      }
+      case 'ladder': {
+        const g = this.ladderLine(tr.lad), n = tr.lad.facing;
+        this.heading = Math.atan2(-n.x, -n.z);
+        // stepping on (from the street or over the top): ease from where the feet were onto the line
+        if (tr.on < 1 && tr.from) {
+          tr.on = Math.min(1, tr.on + dt / (tr.top ? 0.45 : 0.22));
+          const p = g.at(tr.y), k = smooth(tr.on);
+          const lift = tr.top ? Math.sin(k * Math.PI) * 0.25 : 0;
+          put(tr.from.x + (p.x - tr.from.x) * k, tr.from.y + (p.y - tr.from.y) * k + lift, tr.from.z + (p.z - tr.from.z) * k);
+          runner.ladder(tr.top ? -1.2 : 1.2);
+          break;
+        }
+        // up with the stick (or W) up, down with it down, whichever way the view looks; coming over the top, the push
+        // that walked the runner off the roof takes it on down until it is let go; a jump lets go
+        if (jumped) { this.trav = null; this.leaveLadder(tr.lad); break; }
+        const fwd = this.inputYaw !== null ? (mag > 0.2 ? (wx * -n.x + wz * -n.z) * mag : 0) : ctl.my;
+        const v = fwd > 0.2 ? MOVE.ladderUp * Math.min(1, fwd / 0.8) : fwd < -0.2 ? -MOVE.ladderDown * Math.min(1, -fwd / 0.8) : 0;
+        tr.y = Math.max(g.lo, Math.min(g.hi, tr.y + v * dt));
+        const p = g.at(tr.y);
+        put(p.x, p.y, p.z);
+        runner.ladder(v / 0.75);
+        if (v > 0 && tr.y >= g.hi - 1e-3) {
+          const c = this.curr;
+          this.trav = { kind: 'off', t: 0, dur: 0.55, lad: tr.lad, x0: c.x, y0: c.y, z0: c.z, top: true };
+          runner.mantle(0.55);
+        } else if (v < 0 && tr.y <= g.lo + 1e-3) {
+          const c = this.curr;
+          this.trav = { kind: 'off', t: 0, dur: 0.2, lad: tr.lad, x0: c.x, y0: c.y, z0: c.z, top: false };
+        }
+        break;
+      }
+      case 'off': {
+        // over the top onto the roof, or a step back off the bottom rung into the street
+        tr.t += dt;
+        const u = Math.min(1, tr.t / tr.dur), to = tr.top ? tr.lad.top : tr.lad.base;
+        const g = this.ladderLine(tr.lad);
+        if (tr.top) {
+          const ky = smooth(u / 0.6), kx = smooth((u - 0.3) / 0.7);
+          const W = g.W;
+          const mx = tr.x0 + (W.x - tr.x0) * smooth(u / 0.5), mz = tr.z0 + (W.z - tr.z0) * smooth(u / 0.5);
+          put(mx + (to.x - mx) * kx, tr.y0 + (to.y + 0.02 - tr.y0) * ky, mz + (to.z - mz) * kx);
+        } else {
+          const k = smooth(u);
+          put(tr.x0 + (to.x - tr.x0) * k, tr.y0 + (to.y + 0.02 - tr.y0) * k, tr.z0 + (to.z - tr.z0) * k);
+        }
+        if (u >= 1) {
+          if (!tr.top) this.heading = Math.atan2(tr.lad.facing.x, tr.lad.facing.z);
+          done(0);
+        }
+        break;
+      }
+    }
+  }
+
+  /** Out from the wall or ladder the runner is on (for the camera), eased in and out. */
+  private wallOff = { x: 0, z: 0 };
+  private wallOut(): { x: number; z: number } {
+    const tr = this.trav;
+    let x = 0, z = 0;
+    if (tr && (tr.kind === 'climb' || tr.kind === 'hang' || tr.kind === 'pull')) { x = tr.L.nx * 0.6; z = tr.L.nz * 0.6; }
+    else if (tr && (tr.kind === 'ladder' || tr.kind === 'off')) { x = tr.lad.facing.x * 0.6; z = tr.lad.facing.z * 0.6; }
+    this.wallOff.x += (x - this.wallOff.x) * 0.2; this.wallOff.z += (z - this.wallOff.z) * 0.2;
+    return this.wallOff;
+  }
+
+  /** Let go of a wall or an edge: drop straight down, pushed off a little. */
+  private letGo(L: { nx: number; nz: number }, push: number) {
+    this.trav = null;
+    this.grounded = false; this.vy = 0; this.vy0 = 0; this.airT = 0.3; this.jumped = true;
+    this.heading = Math.atan2(L.nx, L.nz);
+    this.speed = push;
+    this.fromY = this.curr.y; this.peakY = this.curr.y;
+    this.runner!.endTraverse(0);
+  }
+
+  /** Jump off a ladder, back from it. */
+  private leaveLadder(lad: Ladder) {
+    this.grounded = false; this.vy = 3; this.vy0 = 3; this.airT = 0.05; this.jumped = true;
+    this.heading = Math.atan2(lad.facing.x, lad.facing.z);
+    this.speed = 1.8;
+    this.fromY = this.curr.y; this.peakY = this.curr.y;
+    this.runner!.endTraverse(0);
+  }
+
   // ------------------------------------------------------------------ probes for the screenshot script
   info() {
     const ri = this.renderer.info;
@@ -400,8 +841,9 @@ export class StreetsGame {
     return {
       calls: ri.render.calls, triangles: ri.render.triangles, geometries: ri.memory.geometries, textures: ri.memory.textures,
       physics: this.phys?.counts, gaits: this.runner?.gaits, pose: this.runner?.pose, speed: this.animSpeed, grounded: this.grounded,
+      trav: this.trav?.kind ?? null, depth: this.depth, moves: { ...this.counts },
       feet: f, cam: { ...this.cam.last, yaw: this.cam.yaw, pitch: this.cam.pitch, fov: this.camera.fov, y: this.camera.position.y }, dpr: this.dpr, size: [this.w, this.h],
-      timing: this.timing, city: this.rec ? { id: this.rec.id, name: this.city?.cy.name, year: this.city?.cy.year, P: this.city?.P, solids: this.city?.solids.length } : null,
+      timing: this.timing, city: this.rec ? { id: this.rec.id, name: this.city?.name, year: this.city?.cy.year, P: this.city?.P, solids: this.city?.solids.length } : null,
     };
   }
 
@@ -450,10 +892,20 @@ export class StreetsGame {
     return { facing };
   }
 
+  /** Forget any move, push, turn-back or lock (the runner is being put somewhere); whatever its body was doing (a roll,
+   *  a landing) ends there. */
+  private resetMoves() {
+    this.trav = null; this.takeoffT = -1; this.jumped = false; this.grounded = true; this.balk.t = 0; this.inputYaw = null;
+    this.controlLock = 0; this.jumpAt = -1;
+    this.cam.stopSwing();
+    this.runner?.endTraverse(0);
+  }
+
   /** Steer by script: a list of waypoints (metres), each walked or run, with jumps. */
   drive(points: Waypoint[], loop = true) { this.pilot = new Pilot(points, loop); this.cam.follow = true; }
-  stopDriving() { this.pilot = null; this.cam.follow = this.opts.touch; }
+  stopDriving() { this.pilot = null; this.cam.follow = this.opts.touch && !this.opts.reducedMotion; }
   teleport(x: number, z: number, facing?: number) {
+    this.resetMoves();
     const gy = this.phys!.groundAt(x, z, 80) ?? 0;
     this.phys!.teleport(x, gy + 0.05, z);
     const f = this.phys!.feet();
@@ -595,6 +1047,159 @@ export class StreetsGame {
     return { ok: false, wanted: 0, got: 0 };
   }
 
+  /**
+   * Walls to try the moves on: the faces of boxes standing on the ground, with street ground in front of them (the feet
+   * 0.9 m out, free to stand), and what the ledge probe makes of each (its height above the feet). Nearest to the temple
+   * square first. `want`: 'mantle' (waist to head high) or 'wall' (higher, up to MOVE.climbMax).
+   */
+  walls(want: 'mantle' | 'wall', n = 30): { x: number; y: number; z: number; facing: number; up: number; top: number }[] {
+    const phys = this.phys!, out: { x: number; y: number; z: number; facing: number; up: number; top: number }[] = [];
+    const boxes = this.city!.solids.filter((s): s is Extract<Solid, { kind: 'box' }> => s.kind === 'box' && s.hx > 0.6 && s.hz > 0.6);
+    boxes.sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z));
+    for (const A of boxes) {
+      if (out.length >= n) break;
+      const yaw = 2 * Math.atan2(A.q.y, A.q.w);
+      for (const [lx, lz, h] of [[1, 0, A.hx], [-1, 0, A.hx], [0, 1, A.hz], [0, -1, A.hz]] as const) {
+        const nx = lx * Math.cos(yaw) + lz * Math.sin(yaw), nz = -lx * Math.sin(yaw) + lz * Math.cos(yaw);
+        const x = A.x + nx * (h + 0.9), z = A.z + nz * (h + 0.9);
+        const gy = phys.groundAt(x, z, A.y + A.hy + 1);
+        // in the street: on the city's ground, by the foot of the box
+        if (gy === null || Math.abs(gy - (A.y - A.hy)) > 0.4 || Math.abs(gy - this.city!.heightAt(x, z)) > 0.4 || !phys.free(x, gy + 0.02, z)) continue;
+        if (this.city!.affordances.waterDepthAt(x, z) > 0.05) continue;
+        const L = want === 'mantle'
+          ? phys.ledge(x, gy, z, -nx, -nz, 1.3, MOVE.mantleMin, MOVE.mantleMax)
+          : phys.ledge(x, gy, z, -nx, -nz, 1.3, MOVE.mantleMax + 0.2, MOVE.climbMax);
+        if (!L) continue;
+        out.push({ x, y: gy, z, facing: Math.atan2(-nx, -nz), up: L.up, top: L.top });
+        break;
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Street to roof, headless (fixed steps, no drawing): from a stand `back` metres out from a wall, facing it, push
+   * forward at a run and press jump at once (or, from further back, when the feet are 1.2 m from the wall), and take
+   * whatever the runner does — a mantle, a grab and pull-up, a scramble — until it stands on top. Seconds from the first
+   * step to standing on the top (Infinity if not within `max`), and the moves it took.
+   */
+  scale(w: { x: number; y: number; z: number; facing: number; top: number }, back = 0.9, max = 4, press = true): { s: number; moves: string[] } | null {
+    const phys = this.phys!, inp = this.input;
+    const dx = Math.sin(w.facing), dz = Math.cos(w.facing);
+    const sx = w.x - dx * (back - 0.9), sz = w.z - dz * (back - 0.9);
+    // a run-up must start in the street too, with nothing between it and the wall
+    const gy = phys.groundAt(sx, sz, w.y + 1.5);
+    if (gy === null || Math.abs(gy - w.y) > 0.35 || !phys.free(sx, gy + 0.02, sz)) return null;
+    if (back > 0.9 && phys.rayFlat(sx, gy + 0.9, sz, dx, dz, back + 0.6) < back - 0.95) return null;
+    this.stopDriving();
+    this.teleport(sx, sz, w.facing);
+    this.cam.yaw = w.facing; this.trav = null; this.grounded = true; this.jumped = false; this.takeoffT = -1;
+    const ctl: Controls = { mx: 0, my: 1, run: true, pace: PACE.run, jumpHeld: true };
+    inp.virtual = ctl;
+    const moves: string[] = [];
+    let pressed = false;
+    const t0 = this.t;
+    for (let i = 0; i < Math.round(max / STEP); i++) {
+      const f = phys.feet();
+      const toWall = phys.rayFlat(f.x, f.y + 0.9, f.z, dx, dz, 3);
+      if (press && !pressed && toWall < 1.2 + 0.3) { inp.jumps++; pressed = true; }
+      this.step(STEP);
+      const tr = this.trav as Trav | null, k = tr?.kind;
+      if (k && moves[moves.length - 1] !== k) moves.push(k);
+      if (!tr && this.grounded && this.curr.y > w.top - 0.4) { inp.virtual = null; return { s: this.t - t0, moves }; }
+    }
+    inp.virtual = null;
+    return { s: Infinity, moves };
+  }
+
+  /** Ladders from the street, nearest the temple square first, with their heights. */
+  streetLadders(n = 10): { i: number; h: number; x: number; z: number }[] {
+    const a = this.city!.affordances, phys = this.phys!;
+    return a.ladders.map((l, i) => ({ l, i }))
+      .filter(({ l }) => { const g = phys.groundAt(l.base.x, l.base.z, l.base.y + 1); return g !== null && Math.abs(g - l.base.y) < 0.3 && a.waterDepthAt(l.base.x, l.base.z) === 0; })
+      .sort((p, q) => Math.hypot(p.l.base.x, p.l.base.z) - Math.hypot(q.l.base.x, q.l.base.z))
+      .slice(0, n).map(({ l, i }) => ({ i, h: l.top.y - l.base.y, x: l.base.x, z: l.base.z }));
+  }
+
+  /** On top of a wall the probes climbed, walk (or run) back out toward its edge for a few seconds: does a walker stop
+   *  at the edge, and does a runner go over? The lowest the feet got, and where they started. */
+  edgeTest(w: { x: number; y: number; z: number; facing: number; top: number }, pace: number): { y0: number; low: number } | null {
+    const r = this.scale(w, 0.9, 4, true);
+    if (!r || !Number.isFinite(r.s)) return null;
+    // a few steps in from the edge, then back out toward it
+    const out = w.facing + Math.PI;
+    const inner = { mx: 0, my: 1, run: false, pace: PACE.walk, jumpHeld: false };
+    this.cam.yaw = w.facing;
+    for (let i = 0; i < 40; i++) this.step(STEP), (this.input.virtual = inner);
+    this.cam.yaw = out;
+    const y0 = this.curr.y;
+    let low = y0;
+    this.input.virtual = { mx: 0, my: 1, run: pace >= 1, pace, jumpHeld: false };
+    for (let i = 0; i < 180; i++) { this.step(STEP); low = Math.min(low, this.curr.y); }
+    this.input.virtual = null;
+    return { y0, low };
+  }
+
+  /** Up the world's stairs at a pace, headless: the palace's, the temple's, a wall stair and two houses'. For each, its
+   *  length along the path, its rise, the seconds to the top (Infinity if not within 20 s) and the speed made good. */
+  stairs(pace = PACE.walk) {
+    type St = { name: string; path: { x: number; y: number; z: number }[] };
+    const all = ((this.city as unknown as { layer?: { civ?: { stairs?: St[] } } }).layer?.civ?.stairs ?? []);
+    const pick = [all.find((s) => s.name === 'palace'), all.find((s) => s.name === 'temple'), all.find((s) => s.name.startsWith('walls')),
+      ...all.filter((s) => s.name.startsWith('house')).slice(0, 2)].filter((s): s is St => !!s);
+    return pick.map((st) => {
+      const p = st.path, last = p[p.length - 1];
+      let len = 0;
+      for (let i = 1; i < p.length; i++) len += Math.hypot(p[i].x - p[i - 1].x, p[i].z - p[i - 1].z);
+      this.teleport(p[0].x, p[0].z, Math.atan2(p[1].x - p[0].x, p[1].z - p[0].z));
+      this.drive(p.slice(1).map((q) => ({ x: q.x, z: q.z, pace })), false);
+      let s = Infinity;
+      for (let i = 0; i < 1200; i++) {
+        this.step(STEP);
+        if (Math.hypot(this.curr.x - last.x, this.curr.z - last.z) < 1.3 && Math.abs(this.curr.y - last.y) < 0.5) { s = (i + 1) * STEP; break; }
+      }
+      this.stopDriving();
+      return { name: st.name, len: Math.round(len * 100) / 100, rise: Math.round((last.y - p[0].y) * 100) / 100, s: Math.round(s * 100) / 100, mps: Math.round((len / s) * 100) / 100 };
+    });
+  }
+
+  /** Stand 1 m out from a ladder's foot facing the wall (or, `top`, on the roof by its top facing out over the edge). */
+  atLadder(i: number, top = false) {
+    const l = this.city!.affordances.ladders[i], n = l.facing;
+    this.stopDriving();
+    this.resetMoves();
+    if (top) { this.phys!.teleport(l.top.x - n.x * 0.5, l.top.y + 0.05, l.top.z - n.z * 0.5); }
+    else this.phys!.teleport(l.base.x + n.x * 0.6, l.base.y + 0.05, l.base.z + n.z * 0.6);
+    const f = this.phys!.feet();
+    this.curr.set(f.x, f.y, f.z); this.prev.copy(this.curr);
+    this.speed = 0; this.vy = 0; this.animSpeed = 0; this.grounded = true; this.jumped = false;
+    const face = top ? Math.atan2(n.x, n.z) : Math.atan2(-n.x, -n.z);
+    this.heading = face; this.lastFacing = face; this.cam.yaw = face; this.cam.pitch = 0.22;
+    return { facing: face, base: { x: l.base.x, y: l.base.y, z: l.base.z }, top: { x: l.top.x, y: l.top.y, z: l.top.z } };
+  }
+
+  /** A place at the river's edge: dry feet within a few metres of water that deepens from wading depth to over the
+   *  waist, and the way into it. */
+  riverEdge(): { x: number; z: number; facing: number } | null {
+    const a = this.city!.affordances, phys = this.phys!;
+    for (let r = 10; r < 200; r += 3) for (let k = 0; k < 64; k++) {
+      const ang = (k / 64) * Math.PI * 2, x = Math.cos(ang) * r, z = Math.sin(ang) * r;
+      if (a.waterDepthAt(x, z) !== 0) continue;
+      for (let j = 0; j < 8; j++) {
+        const b = (j / 8) * Math.PI * 2, dx = Math.sin(b), dz = Math.cos(b);
+        const d1 = a.waterDepthAt(x + dx * 3, z + dz * 3), d2 = a.waterDepthAt(x + dx * 8, z + dz * 8);
+        if (d1 > 0.2 && d1 < 0.7 && d2 > 1.1) {
+          const g = phys.groundAt(x, z, 30);
+          if (g === null || !phys.free(x, g + 0.02, z)) continue;
+          let clear = true;
+          for (let s = 0.5; s < 8; s += 0.5) if (phys.rayFlat(x, g + 0.9 - s * 0.1, z, dx, dz, 0.6) < 0.5) { clear = false; break; }
+          if (clear) return { x, z, facing: b };
+        }
+      }
+    }
+    return null;
+  }
+
   /** Whole houses standing on the ground (boxes 3–8 m tall and at least 5 m across), from the city's solids. */
   private houses() {
     return this.city!.solids.filter((s): s is Extract<Solid, { kind: 'box' }> =>
@@ -663,7 +1268,7 @@ export class StreetsGame {
   }
 }
 
-export interface Waypoint { x: number; z: number; run?: boolean; jump?: boolean }
+export interface Waypoint { x: number; z: number; run?: boolean; jump?: boolean; pace?: number }
 
 /** A scripted runner: heads for each waypoint in turn, walking or running, and jumps where told. */
 class Pilot {
@@ -692,7 +1297,7 @@ class Pilot {
       this.lastD = d; this.stuckT = 0;
     }
     this.yaw = Math.atan2(p.x - f.x, p.z - f.z);
-    return { mx: 0, my: 1, run: !!p.run, jumpHeld: true };
+    return { mx: 0, my: 1, run: !!p.run, pace: p.run ? PACE.run : (p.pace ?? PACE.walk), jumpHeld: true };
   }
 }
 

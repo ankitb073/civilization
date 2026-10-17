@@ -25,6 +25,8 @@ const YEAR = arg('y', '');
 const REDUCED = process.argv.includes('--reduced');
 /** Only the jump frame strips (desktop), named with --tag (e.g. before / after). */
 const STRIP_ONLY = process.argv.includes('--strip');
+/** Only the traversal probes (mantle, wall, ladder, water strips, timings and screenshots). */
+const MOVES_ONLY = process.argv.includes('--moves');
 const TAG = arg('tag', '');
 const AXE = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8');
 mkdirSync(OUT, { recursive: true });
@@ -60,8 +62,211 @@ type W = { __palimpsestStreets: {
   teleport(x: number, z: number, f?: number): void; input: { virtual: unknown }; feel(): Record<string, number>;
   film(on: boolean): void; home(): { facing: number }; screenBox(): { x0: number; y0: number; x1: number; y1: number };
   advance(sec: number, ctl: unknown, jump?: boolean): { t: number; y: number; x: number; z: number; grounded: boolean; pose: string; vy: number; speed: number; pelvis: number };
-  sideView: { heading: number; dist: number; y: number; fov: number } | null;
+  sideView: { heading: number; dist: number; y: number; fov: number; ang?: number } | null;
+  walls(want: 'mantle' | 'wall', n?: number): { x: number; y: number; z: number; facing: number; up: number; top: number }[];
+  scale(w: unknown, back?: number, max?: number, press?: boolean): { s: number; moves: string[] } | null;
+  streetLadders(n?: number): { i: number; h: number; x: number; z: number }[];
+  atLadder(i: number, top?: boolean): { facing: number; base: { x: number; y: number; z: number }; top: { x: number; y: number; z: number } };
+  riverEdge(): { x: number; z: number; facing: number } | null;
+  cam: { yaw: number; pitch: number };
 } };
+
+/** Traversal (step 2): street-to-roof timings at every wall the probe finds (from a stand 0.9 m out, jumping at it; and
+ *  from 5 m back at a run; on a phone, with no jump at all, by auto-parkour), mantles walked into, ladders up and over
+ *  and back down, wading toward deep water; frame strips of the mantle, the wall climb and pull-up and the ladder
+ *  (desktop), and a screenshot of each move. */
+async function moveProbes(page: Page, prefix: string, phone: boolean) {
+  const res: Record<string, unknown> = {};
+  const shots: Record<string, string> = {};
+  const pct = (a: number[], p: number) => { const q = a.slice().sort((x, y) => x - y); return q.length ? q[Math.min(q.length - 1, Math.floor((p / 100) * q.length))] : NaN; };
+  // ---- timings, headless
+  const t = await page.evaluate((phone) => {
+    const g = (window as unknown as W).__palimpsestStreets;
+    g.film(true);
+    const walls = g.walls('wall', 80);
+    const stand = walls.map((w) => ({ up: w.up, r: g.scale(w, 0.9, 4, true) }));
+    const runup = walls.map((w) => ({ up: w.up, r: g.scale(w, 5, 4, true) })).filter((x) => x.r);
+    const auto = phone ? walls.map((w) => ({ up: w.up, r: g.scale(w, 5, 4, false) })).filter((x) => x.r) : [];
+    const mantles = g.walls('mantle', 30).map((w) => ({ up: w.up, r: g.scale(w, 2.2, 3, false) }));
+    // the edge-stop: on a roof the runner climbed, walk back out to its edge (stays up), and run out (goes over)
+    const edges = walls.slice(0, 12).map((w) => {
+      const walk = (g as unknown as { edgeTest(w: unknown, p: number): { y0: number; low: number } | null }).edgeTest(w, 0.35);
+      const run = (g as unknown as { edgeTest(w: unknown, p: number): { y0: number; low: number } | null }).edgeTest(w, 1);
+      return { walkStayed: walk ? walk.low > walk.y0 - 0.6 : null, runLeft: run ? run.low < run.y0 - 1.5 : null };
+    });
+    const lad = g.streetLadders(8).map((l) => {
+      g.atLadder(l.i);
+      const W = { mx: 0, my: 1, run: false, pace: 0.35, jumpHeld: false };
+      let up = Infinity, down = Infinity;
+      for (let k = 0; k < 600; k++) { const r = g.advance(1 / 60, W); const i = g.info() as unknown as { trav: string | null }; if (k > 30 && !i.trav && r.grounded && r.y > l.h - 0.5 + 0) { up = (k + 1) / 60; break; } }
+      g.atLadder(l.i, true);
+      const y0 = (g.info() as unknown as { feet: { y: number } }).feet.y;
+      for (let k = 0; k < 600; k++) { const r = g.advance(1 / 60, W); const i = g.info() as unknown as { trav: string | null }; if (k > 30 && !i.trav && r.grounded && r.y < y0 - l.h + 0.5) { down = (k + 1) / 60; break; } }
+      return { h: l.h, up, down };
+    });
+    g.film(false);
+    // up the world's stairs at a walk, a jog and a run (m/s made good; the flat walk is 1.45)
+    const gs = g as unknown as { stairs(p: number): { name: string; s: number; mps: number }[] };
+    const stairs = { walk: gs.stairs(0.35), jog: gs.stairs(0.75), run: gs.stairs(1) };
+    return { stand, runup, auto, mantles, lad, edges, stairs };
+  }, phone);
+  const sum = (rows: { up: number; r: { s: number; moves: string[] } | null }[]) => {
+    const ss = rows.map((x) => x.r!.s).filter(Number.isFinite);
+    return {
+      walls: rows.length, made: ss.length, within2s: rows.filter((x) => x.r!.s <= 2).length,
+      heightsM: [Math.min(...rows.map((x) => x.up)), Math.max(...rows.map((x) => x.up))].map((v) => Math.round(v * 100) / 100),
+      seconds: { median: r2(pct(ss, 50)), p90: r2(pct(ss, 90)), max: r2(Math.max(...ss)) },
+      moves: [...new Set(rows.map((x) => x.r!.moves.join('>')))],
+    };
+  };
+  res.streetToRoof = { fromStand: sum(t.stand), fromRunUp: sum(t.runup), ...(phone ? { autoParkour: sum(t.auto) } : {}) };
+  res.mantles = { tried: t.mantles.length, mantled: t.mantles.filter((m) => m.r && m.r.moves[0] === 'mantle').length, seconds: r2(pct(t.mantles.filter((m) => m.r && Number.isFinite(m.r.s)).map((m) => m.r!.s), 50)) };
+  res.ladders = t.lad.map((l) => ({ h: r2(l.h), upS: r2(l.up), downS: r2(l.down) }));
+  res.stairs = Object.fromEntries(Object.entries(t.stairs).map(([k, v]) => [k, v.map((x) => `${x.name} ${x.mps} m/s`)]));
+  const e = t.edges.filter((x) => x.walkStayed !== null);
+  res.edgeStop = { roofs: e.length, walkerStayedOn: e.filter((x) => x.walkStayed).length, runnerWentOver: t.edges.filter((x) => x.runLeft).length };
+
+  // ---- strips and screenshots, filmed
+  type Setup = { ok: boolean; heading: number; y0: number; y1: number; lead: number };
+  const film = async (kind: string, every: number, n: number, dist: number, strip: boolean, shotAt: number[]) => {
+    for (const view of strip ? (['game', 'side'] as const) : (['game'] as const)) {
+      // two passes: the first, headless, finds the step at which the move begins; the second films from just before it
+      const st = await page.evaluate(([kind, view, dist]) => {
+        const g = (window as unknown as W).__palimpsestStreets as unknown as W['__palimpsestStreets'] & Record<string, (...a: unknown[]) => unknown>;
+        g.film(true); g.sideView = null;
+        const JOG = { mx: 0, my: 1, run: false, pace: 0.75, jumpHeld: false }, WALK = { mx: 0, my: 1, run: false, pace: 0.35, jumpHeld: false };
+        const RUN = { mx: 0, my: 1, run: true, pace: 1, jumpHeld: true };
+        const info = () => g.info() as unknown as { trav: string | null; feet: { x: number; y: number; z: number } };
+        let setup: () => { heading: number; y1: number } | null;
+        let ctl: unknown = WALK, press = false;
+        if (kind === 'mantle') {
+          const ws = g.walls('mantle', 40);
+          const w = ws.filter((x) => x.up > 0.85)[0] ?? ws[0];
+          if (!w) return null;
+          ctl = JOG;
+          setup = () => { g.teleport(w.x - Math.sin(w.facing) * 1.6, w.z - Math.cos(w.facing) * 1.6, w.facing); g.cam.yaw = w.facing + 0.5; g.cam.pitch = 0.2; return { heading: w.facing, y1: w.top }; };
+        } else if (kind === 'climb' || kind === 'hang') {
+          const w = g.walls('wall', 30).filter((x) => x.up > 4.2 && x.up < 5)[kind === 'hang' ? 1 : 0] ?? g.walls('wall', 30)[0];
+          if (!w) return null;
+          ctl = RUN; press = true;
+          setup = () => { g.teleport(w.x, w.z, w.facing); g.cam.yaw = w.facing + 0.6; g.cam.pitch = 0.05; return { heading: w.facing, y1: w.top }; };
+        } else if (kind === 'ladder-up' || kind === 'ladder-down') {
+          const l = g.streetLadders(8).filter((x) => x.h > 3.5)[0];
+          if (!l) return null;
+          setup = () => { const a = g.atLadder(l.i, kind === 'ladder-down'); g.cam.yaw = a.facing + 0.6; return { heading: a.facing, y1: a.top.y }; };
+        } else if (kind === 'wade') {
+          const e = g.riverEdge();
+          if (!e) return null;
+          ctl = JOG;
+          setup = () => { g.teleport(e.x, e.z, e.facing); g.cam.yaw = e.facing + 0.4; g.cam.pitch = 0.25; return { heading: e.facing, y1: 0 }; };
+        } else if (kind === 'jog') {
+          ctl = JOG;
+          setup = () => { const h = g.home(); g.cam.yaw = h.facing; return { heading: h.facing, y1: 0 }; };
+        } else if (kind === 'costume') {
+          ctl = { mx: 0, my: 0, run: false, pace: 0, jumpHeld: false };
+          setup = () => { const h = g.home(); g.cam.yaw = h.facing + Math.PI - 0.45; g.cam.pitch = 0.08; return { heading: h.facing, y1: 0 }; };
+        } else return null;
+        // the view settles first (it was elsewhere); the moves are fixed-step, so a second run is the same as the first
+        const STILL = { mx: 0, my: 0, run: false, pace: 0, jumpHeld: false };
+        let s0 = setup()!;
+        g.advance(0.5, STILL);
+        let lead = 0;
+        if (kind === 'mantle') {
+          for (let k = 0; k < 240; k++) { g.advance(1 / 60, ctl); if (info().trav) { lead = Math.max(0, k - 4); break; } }
+          s0 = setup()!;
+          g.advance(0.5, STILL);
+        }
+        const y0 = info().feet.y;
+        if (lead) g.advance(lead / 60, ctl);
+        const r = g.advance(1 / 60, ctl, press);
+        g.sideView = view === 'side' ? { heading: s0.heading, dist: dist as number, y: (y0 + Math.max(y0 + 1, s0.y1)) / 2 + 0.3, fov: 42, ang: kind === 'wade' ? 0.15 : kind === 'mantle' ? 0.55 : 0.75 } : null;
+        // the hang: let go of the stick as the hands reach the edge (the runner hangs), push again to pull up
+        const sched = kind === 'hang' ? [ctl, ctl, ctl, STILL, STILL, STILL, STILL, ctl] : null;
+        (window as unknown as { __mv: unknown }).__mv = { ctl, y0, sched };
+        return { ok: true, y0, r };
+      }, [kind, view, dist] as const);
+      if (!st) { res[kind] = 'no place found'; break; }
+      const frames: Frame[] = [];
+      for (let k = 0; k < n; k++) {
+        const r = await page.evaluate((every) => {
+          const g = (window as unknown as W).__palimpsestStreets;
+          const mv = (window as unknown as { __mv: { ctl: unknown; y0: number; sched: unknown[] | null; k?: number } }).__mv;
+          mv.k = (mv.k ?? -1) + 1;
+          const r = g.advance(every / 60, mv.sched ? mv.sched[Math.min(mv.k, mv.sched.length - 1)] : mv.ctl);
+          const i = g.info() as unknown as { trav: string | null };
+          return { ...r, trav: i.trav, y0: mv.y0 };
+        }, every);
+        const box = await page.evaluate(() => (window as unknown as W).__palimpsestStreets.screenBox());
+        const buf = await page.screenshot();
+        frames.push({ png: buf.toString('base64'), box, label: `+${((k + 1) * every / 60).toFixed(2)} s  ${(r.y - r.y0).toFixed(2)} m\n${r.trav ?? r.pose}` });
+        if (view === 'game' && shotAt.includes(k)) {
+          const file = join(OUT, `${prefix}-move-${kind}${shotAt.length > 1 ? `-${k}` : ''}${REDUCED ? '-reduced' : ''}.png`);
+          writeFileSync(file, buf);
+          shots[`${kind}${shotAt.length > 1 ? `-${k}` : ''}`] = file;
+        }
+      }
+      if (strip) {
+        const file = join(OUT, `${prefix}-strip-${kind}-${view}${REDUCED ? '-reduced' : ''}.png`);
+        await compose(page, frames, `${prefix} · ${kind} · ${view} camera · ${Math.round((every / 60) * 1000)} ms apart (heights are the feet over the start)`, file, phone ? 390 : 1440, phone ? 844 : 900, view === 'game');
+        shots[`strip-${kind}-${view}`] = file;
+      }
+    }
+  };
+  await film('costume', 1, 1, 6, false, [0]);
+  await film('jog', 20, 3, 6, false, [2]);
+  await film('mantle', 4, 12, 6, !phone, [5]);
+  await film('climb', 8, 12, 9, !phone, [3, 9]);
+  await film('hang', 8, 12, 9, !phone, [5]);
+  await film('ladder-up', 14, 12, 9, !phone, [5]);
+  await film('ladder-down', 12, 12, 9, !phone, [4]);
+  await film('wade', 12, 10, 7, !phone, [6]);
+  // back to the temple square for whatever comes next
+  await page.evaluate(() => { const g = (window as unknown as W).__palimpsestStreets; g.home(); g.film(false); });
+  return { res, shots };
+}
+
+type Frame = { png: string; box: { x0: number; y0: number; x1: number; y1: number }; label: string };
+
+/** Lay frames side by side, all cropped to one box (the union of where the runner was on screen, padded), labelled. */
+async function compose(page: Page, frames: Frame[], title: string, file: string, W0 = 1440, H0 = 900, track = false) {
+  let x0 = Math.min(...frames.map((f) => f.box.x0)), x1 = Math.max(...frames.map((f) => f.box.x1));
+  let y0 = Math.min(...frames.map((f) => f.box.y0)), y1 = Math.max(...frames.map((f) => f.box.y1));
+  const padX = Math.max(60, (x1 - x0) * 0.35), padY = Math.max(50, (y1 - y0) * 0.18);
+  x0 = Math.max(0, x0 - padX); x1 = Math.min(W0, x1 + padX); y0 = Math.max(0, y0 - padY * 1.6); y1 = Math.min(H0, y1 + padY);
+  const crop = { x: Math.round(x0), y: Math.round(y0), w: Math.round(x1 - x0), h: Math.round(y1 - y0) };
+  // tracking: each frame its own window, the same size, centred on where the runner is in it (the view moved a lot)
+  const crops = frames.map((f) => {
+    if (!track) return crop;
+    const w = Math.min(W0, Math.max(...frames.map((g) => g.box.x1 - g.box.x0)) * 1.8 + 120);
+    const h = Math.min(H0, Math.max(...frames.map((g) => g.box.y1 - g.box.y0)) * 1.4 + 120);
+    const cx = Number.isFinite(f.box.x0) ? (f.box.x0 + f.box.x1) / 2 : W0 / 2, cy = Number.isFinite(f.box.y0) ? (f.box.y0 + f.box.y1) / 2 : H0 / 2;
+    return { x: Math.round(Math.max(0, Math.min(W0 - w, cx - w / 2))), y: Math.round(Math.max(0, Math.min(H0 - h, cy - h / 2))), w: Math.round(w), h: Math.round(h) };
+  });
+  const blank = await page.context().newPage();
+  const data = await blank.evaluate(async ({ frames, crops, title }) => {
+    const crop = crops[0];
+    const th = 300, tw = Math.round((crop.w / crop.h) * th), cols = frames.length;
+    const cv = document.createElement('canvas');
+    cv.width = tw * cols; cv.height = th + 22;
+    const x = cv.getContext('2d')!;
+    x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height);
+    x.fillStyle = '#222'; x.font = '13px -apple-system, sans-serif'; x.fillText(title, 6, 15);
+    for (let i = 0; i < frames.length; i++) {
+      const im = new Image();
+      im.src = `data:image/png;base64,${frames[i].png}`;
+      await im.decode();
+      const c = crops[i];
+      x.drawImage(im, c.x, c.y, c.w, c.h, i * tw, 22, tw, th);
+      x.strokeStyle = '#fff'; x.lineWidth = 2; x.beginPath(); x.moveTo(i * tw, 22); x.lineTo(i * tw, th + 22); x.stroke();
+      x.fillStyle = 'rgba(255,255,255,0.82)'; x.fillRect(i * tw, 22, tw, 34);
+      x.fillStyle = '#111'; x.font = '11px -apple-system, sans-serif';
+      frames[i].label.split('\n').forEach((l, j) => x.fillText(l, i * tw + 4, 36 + j * 13));
+    }
+    return cv.toDataURL('image/png').split(',')[1];
+  }, { frames, crops, title });
+  await blank.close();
+  writeFileSync(file, Buffer.from(data, 'base64'));
+}
 
 /** Frame strips of a jump: the game stepped by hand (fixed steps, so the frames are evenly spaced whatever the machine),
  *  12 frames 5 steps (83 ms) apart from just before the press, in the game's own camera and from the side at a fixed
@@ -99,36 +304,8 @@ async function jumpStrips(page: Page, prefix: string) {
       frames.push({ png, box, label: `${t >= 0 ? '+' : ''}${t.toFixed(2)} s  ${(r.y - r0.y).toFixed(2)} m\n${r.pose}${r.grounded ? ' · ground' : ''}` });
       arc.push({ t: Math.round(t * 1000) / 1000, h: Math.round((r.y - r0.y) * 100) / 100, d: Math.round(Math.hypot(r.x - r0.x, r.z - r0.z) * 100) / 100, pose: r.pose, ground: r.grounded, pelvis: Math.round(r.pelvis * 100) / 100 });
     }
-    // one crop for all frames (the union of where the runner was on screen), the frames side by side, labelled
-    const W0 = 1440, H0 = 900;
-    let x0 = Math.min(...frames.map((f) => f.box.x0)), x1 = Math.max(...frames.map((f) => f.box.x1));
-    let y0 = Math.min(...frames.map((f) => f.box.y0)), y1 = Math.max(...frames.map((f) => f.box.y1));
-    const padX = Math.max(60, (x1 - x0) * 0.35), padY = Math.max(50, (y1 - y0) * 0.18);
-    x0 = Math.max(0, x0 - padX); x1 = Math.min(W0, x1 + padX); y0 = Math.max(0, y0 - padY * 1.6); y1 = Math.min(H0, y1 + padY);
-    const crop = { x: Math.round(x0), y: Math.round(y0), w: Math.round(x1 - x0), h: Math.round(y1 - y0) };
-    const blank = await page.context().newPage();
-    const data = await blank.evaluate(async ({ frames, crop, title }) => {
-      const th = 300, tw = Math.round((crop.w / crop.h) * th), cols = frames.length;
-      const cv = document.createElement('canvas');
-      cv.width = tw * cols; cv.height = th + 22;
-      const x = cv.getContext('2d')!;
-      x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height);
-      x.fillStyle = '#222'; x.font = '13px -apple-system, sans-serif'; x.fillText(title, 6, 15);
-      for (let i = 0; i < frames.length; i++) {
-        const im = new Image();
-        im.src = `data:image/png;base64,${frames[i].png}`;
-        await im.decode();
-        x.drawImage(im, crop.x, crop.y, crop.w, crop.h, i * tw, 22, tw, th);
-        x.strokeStyle = '#fff'; x.lineWidth = 2; x.beginPath(); x.moveTo(i * tw, 22); x.lineTo(i * tw, th + 22); x.stroke();
-        x.fillStyle = 'rgba(255,255,255,0.82)'; x.fillRect(i * tw, 22, tw, 34);
-        x.fillStyle = '#111'; x.font = '11px -apple-system, sans-serif';
-        frames[i].label.split('\n').forEach((l, j) => x.fillText(l, i * tw + 4, 36 + j * 13));
-      }
-      return cv.toDataURL('image/png').split(',')[1];
-    }, { frames, crop, title: `${prefix} · ${c.name} jump · ${view} camera · 83 ms apart from the press (heights are the feet over the take-off ground)` });
-    await blank.close();
     const file = join(OUT, `${prefix}-strip-${c.name}-${view}${REDUCED ? '-reduced' : ''}.png`);
-    writeFileSync(file, Buffer.from(data, 'base64'));
+    await compose(page, frames, `${prefix} · ${c.name} jump · ${view} camera · 83 ms apart from the press (heights are the feet over the take-off ground)`, file);
     files.push(file);
     out[`${c.name}-${view}`] = arc;
   }
@@ -179,7 +356,7 @@ try {
       wire.push({ url: r.url().replace(base, ''), bytes: len || (await r.body().catch(() => Buffer.alloc(0))).length });
     });
     page.on('pageerror', (e) => errors.push(String(e)));
-    page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
+    page.on('console', (m) => { if (m.type() === 'error' || /context lost/i.test(m.text())) errors.push(`console: ${m.text()}`); });
     const shot = async (name: string) => {
       const file = join(OUT, `${s.name}-${name}${REDUCED ? '-reduced' : ''}.png`);
       await page.screenshot({ path: file });
@@ -207,7 +384,14 @@ try {
     });
     await page.getByRole('button', { name: 'Got it' }).click();
     await page.waitForTimeout(300);
-    const start = (await info(page)).feet;
+    let traversal: { res: Record<string, unknown>; shots: Record<string, string> } | null = null;
+    if (MOVES_ONLY || (!STRIP_ONLY)) {
+      traversal = await moveProbes(page, `${s.name}${TAG ? `-${TAG}` : ''}`, s.mobile);
+      writeFileSync(join(OUT, `moves-${s.name}${TAG ? `-${TAG}` : ''}${REDUCED ? '-reduced' : ''}.json`), JSON.stringify(traversal, null, 1));
+      console.log(`  traversal ${JSON.stringify(traversal.res)}`);
+      console.log(`  traversal shots: ${Object.values(traversal.shots).join(', ')}`);
+      if (MOVES_ONLY) { await ctx.close(); continue; }
+    }
     if (STRIP_ONLY || !s.mobile) {
       const st = await jumpStrips(page, `${s.name}${TAG ? `-${TAG}` : ''}`);
       const feel = await page.evaluate(() => (window as unknown as W).__palimpsestStreets.feel());
@@ -218,13 +402,21 @@ try {
       if (STRIP_ONLY) { await ctx.close(); continue; }
     }
 
-    // ---- real input: walk, run, jump
+    // ---- real input: walk, run, jump (from the temple square, where the traversal probes left the runner)
+    const start = (await info(page)).feet;
     const moves: Record<string, unknown> = {};
     if (!s.mobile) {
+      // W alone jogs; with Alt it walks, with Shift it runs
+      await page.keyboard.down('AltLeft');
       await page.keyboard.down('KeyW');
       await page.waitForTimeout(1300);
       const walk = await info(page);
       files.walk = await shot('walk');
+      await page.keyboard.up('AltLeft');
+      await page.waitForTimeout(1300);
+      const jog = await info(page);
+      files.jog = await shot('jog');
+      moves.jog = { pose: jog.pose, speed: r2(jog.speed) };
       await page.keyboard.down('Shift');
       await page.waitForTimeout(1300);
       const run = await info(page);
@@ -294,7 +486,7 @@ try {
     await page.waitForTimeout(900);
     const wi = await info(page);
     files.wall = await shot('wall');
-    moves.wall = { ...wall, camWanted: r2(wi.cam.wanted), camGot: r2(wi.cam.got) };
+    moves.wall = { ...wall, camWanted: r2(wi.cam.wanted), camGot: r2(wi.cam.got), pose: wi.pose, feet: [wi.feet.x, wi.feet.y, wi.feet.z].map(r2), yaw: r2(wi.cam.yaw), pitch: r2(wi.cam.pitch) };
 
     // ---- the rooftop hook: on a roof, run and jump the gap to the next one
     const roof = await page.evaluate(() => (window as unknown as W).__palimpsestStreets.roofRun());
@@ -364,6 +556,7 @@ try {
       city: last.city,
       moves,
       feel,
+      traversal: traversal?.res,
       axe,
       errors,
       files,
@@ -383,7 +576,7 @@ try {
     console.log(`  screenshots: ${Object.values(files).join(', ')}`);
     await ctx.close();
   }
-  if (!STRIP_ONLY) {
+  if (!STRIP_ONLY && !MOVES_ONLY) {
     writeFileSync(join(OUT, `stats${REDUCED ? '-reduced' : ''}.json`), JSON.stringify(summary, null, 2));
     console.log(`\nstats → ${join(OUT, `stats${REDUCED ? '-reduced' : ''}.json`)}`);
   }

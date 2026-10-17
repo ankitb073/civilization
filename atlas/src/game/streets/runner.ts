@@ -20,10 +20,15 @@ export const RUNNER_URL = `${import.meta.env.BASE_URL}game/streets/runner.glb`;
 /** A looping gait and what the clip says about it. */
 export interface Gait { name: string; speed: number; front: number; duration: number }
 
-export type Pose = 'idle' | 'walk' | 'run' | 'takeoff' | 'jump' | 'fall' | 'land' | 'roll';
+export type Pose = 'idle' | 'walk' | 'jog' | 'run' | 'takeoff' | 'jump' | 'fall' | 'land' | 'roll'
+  | 'mantle' | 'climb' | 'hang' | 'pull' | 'ladder';
+/** The poses in which the game moves the body along a scripted path (no locomotion or flight logic). */
+const SCRIPTED = new Set<Pose>(['mantle', 'climb', 'hang', 'pull', 'ladder']);
 
 const CLIPS = {
-  idle: 'Idle_Loop', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop', sprint: 'Sprint_Loop',
+  idle: 'Idle_Loop', walk: 'Walk_Loop', jog: 'Jog_Loop', run: 'Jog_Fwd_Loop',
+  // traversal: the mantle (UAL2), and Mesh2Motion's hang, wall climb and ladder (retargeted), our pull-up
+  mantle: 'ClimbUp_1m', hang: 'Hang_Loop', climb: 'Climb_Wall', ladder: 'Climb_Ladder', pull: 'Hang_PullUp',
   jumpStart: 'Jump_Start', jumpLoop: 'Jump_Loop', jumpLand: 'Jump_Land', roll: 'Roll',
   // authored in scripts/streets/runner-asset.ts: a phase from take-off (0) to touch-down (1) over one second
   leapL: 'Run_Jump_L', leapR: 'Run_Jump_R', hopAir: 'Jump_Air',
@@ -58,7 +63,7 @@ export class Runner {
   /** The model inside, which leans. */
   readonly model: Object3D;
   readonly mixer: AnimationMixer;
-  readonly gaits: { walk: Gait; run: Gait; sprint: Gait };
+  readonly gaits: { walk: Gait; jog: Gait; run: Gait };
   readonly height: number;
   pose: Pose = 'idle';
   /** 0..1 through the current gait's cycle (for the camera's step bob). */
@@ -98,7 +103,7 @@ export class Runner {
     this.gaits = {
       walk: measureGait(scene, need(CLIPS.walk)),
       run: measureGait(scene, need(CLIPS.run)),
-      sprint: measureGait(scene, need(CLIPS.sprint)),
+      jog: measureGait(scene, need(CLIPS.jog)),
     };
     this.height = 1.8;
     for (const n of [CLIPS.jumpStart, CLIPS.jumpLand, CLIPS.roll]) {
@@ -106,7 +111,8 @@ export class Runner {
       a.setLoop(LoopOnce, 1);
       a.clampWhenFinished = true;
     }
-    for (const n of [CLIPS.idle, CLIPS.walk, CLIPS.run, CLIPS.sprint, CLIPS.jumpLoop]) this.actions.get(n)!.setLoop(LoopRepeat, Infinity);
+    for (const n of [CLIPS.idle, CLIPS.walk, CLIPS.jog, CLIPS.run, CLIPS.jumpLoop, CLIPS.hang, CLIPS.climb, CLIPS.ladder]) this.actions.get(n)!.setLoop(LoopRepeat, Infinity);
+    for (const n of [CLIPS.mantle, CLIPS.pull]) { const a = this.actions.get(n)!; a.setLoop(LoopOnce, 1); a.clampWhenFinished = true; }
     // the flight clips are posed by hand (their time is the arc's phase), so they neither play on nor wrap
     for (const n of [CLIPS.leapL, CLIPS.leapR, CLIPS.hopAir]) {
       const a = this.actions.get(n)!;
@@ -137,7 +143,7 @@ export class Runner {
   }
 
   private gaitOf(p: Pose): Gait | null {
-    return p === 'walk' ? this.gaits.walk : p === 'run' ? this.gaits.run : null;
+    return p === 'walk' ? this.gaits.walk : p === 'jog' ? this.gaits.jog : p === 'run' ? this.gaits.run : null;
   }
 
   /** The jump under way: a leap (carried forward, off foot `side`) or a hop (from a stand), and its phase. */
@@ -190,8 +196,9 @@ export class Runner {
       // give a little, more after a drop
       const lead = wasJump && this.leap ? (this.side === 'l' ? 'r' : 'l') : 'l';
       this.pose = 'run';
-      this.fadeTo(CLIPS.run, 0.1, { time: TOUCH[lead] });
-      this.absorb(Math.min(0.4, 0.06 + 0.05 * drop), 2.3);
+      // (a few hundredths before the foot lands in the run, so the contact shows the leg reaching, then giving)
+      this.fadeTo(CLIPS.run, 0.1, { time: TOUCH[lead] - 0.03 });
+      this.absorb(Math.min(0.3, 0.03 + 0.04 * drop), 2.3, 0);
       return;
     }
     if (drop > 2.2) {
@@ -207,11 +214,11 @@ export class Runner {
   }
 
   /** Play a share (`w`) of the landing's knee bend on top of the pose, at a rate. */
-  private absorb(w: number, rate: number) {
+  private absorb(w: number, rate: number, from = 0.04) {
     const a = this.act(ABSORB);
     a.stop();
     a.reset();
-    a.time = 0.04;
+    a.time = from;
     a.timeScale = rate;
     a.setEffectiveWeight(w);
     a.play();
@@ -246,6 +253,7 @@ export class Runner {
   /** The ground speed the feet show right now (the gait's measured speed × its playback rate), when walking or running. */
   footSpeed(): number | null {
     if (this.pose === 'walk') return this.act(CLIPS.walk).timeScale * this.gaits.walk.speed;
+    if (this.pose === 'jog') return this.act(CLIPS.jog).timeScale * this.gaits.jog.speed;
     if (this.pose === 'run') return this.act(CLIPS.run).timeScale * this.gaits.run.speed;
     return null;
   }
@@ -261,20 +269,46 @@ export class Runner {
   /** Whether the roll still holds the runner (the game keeps it moving straight). */
   get rolling() { return this.pose === 'roll'; }
 
+  /** Idle, walk, jog or run by speed, each change a little late going back down (so the gait does not flicker at a
+   *  boundary), the feet kept in step across the crossfade. */
   private locomote(speed: number, force = false) {
     const prev = this.pose;
-    let want: Pose;
-    if (speed < 0.12) want = 'idle';
-    else if (prev === 'run') want = speed < 2.4 ? 'walk' : 'run';
-    else want = speed > 3.1 ? 'run' : 'walk';
+    const rank = (p: Pose) => (p === 'walk' ? 1 : p === 'jog' ? 2 : p === 'run' ? 3 : 0);
+    const up = [0.12, 2.3, 4.8], down = [0.08, 2.0, 4.4];
+    let r = 0;
+    for (let i = 0; i < 3; i++) if (speed > (rank(prev) > i ? down[i] : up[i])) r = i + 1;
+    const want: Pose = (['idle', 'walk', 'jog', 'run'] as const)[r];
     if (want === prev && !force) return;
     const from = this.gaitOf(prev);
     const to = this.gaitOf(want);
     const fade = prev === 'idle' || want === 'idle' ? 0.25 : force ? 0.14 : 0.2;
-    const name = want === 'idle' ? CLIPS.idle : want === 'walk' ? CLIPS.walk : CLIPS.run;
+    const name = want === 'idle' ? CLIPS.idle : want === 'walk' ? CLIPS.walk : want === 'jog' ? CLIPS.jog : CLIPS.run;
     this.pose = want;
     this.fadeTo(name, fade, from && to ? { syncFrom: from, syncTo: to } : {});
   }
+
+  // ------------------------------------------------------------------ traversal (the game moves the body)
+  /** A mantle over an edge waist- to head-high, taking `dur` seconds. */
+  mantle(dur: number) {
+    this.pose = 'mantle';
+    this.fadeTo(CLIPS.mantle, 0.08, { time: 0.04, rate: 0.6 / dur });
+  }
+  /** Scrambling up a wall at `rate` (the clip's own pace is about 1.2 m a cycle). */
+  climb(rate: number) {
+    if (this.pose !== 'climb') { this.pose = 'climb'; this.fadeTo(CLIPS.climb, 0.12, { time: 0, rate }); }
+    this.act(CLIPS.climb).timeScale = rate;
+  }
+  /** Hanging from an edge by the hands. */
+  hang() { this.pose = 'hang'; this.fadeTo(CLIPS.hang, 0.1, { time: 0 }); }
+  /** Pulling up from a hang onto the top, taking `dur` seconds. */
+  pull(dur: number) { this.pose = 'pull'; this.fadeTo(CLIPS.pull, 0.08, { time: 0, rate: 0.8 / dur }); }
+  /** On a ladder, climbing at `rate` (negative going down, 0 holding on). */
+  ladder(rate: number) {
+    if (this.pose !== 'ladder') { this.pose = 'ladder'; this.fadeTo(CLIPS.ladder, 0.15, { time: 0, rate }); }
+    this.act(CLIPS.ladder).timeScale = rate;
+  }
+  /** Back on its feet after a scripted move, at a speed. */
+  endTraverse(speed: number) { this.pose = 'fall'; this.locomote(speed, true); }
 
   /**
    * Advance the animation. speed: horizontal m/s; grounded; vy: vertical m/s; air: seconds off the ground;
@@ -283,7 +317,9 @@ export class Runner {
   update(dt: number, s: { speed: number; grounded: boolean; vy: number; air: number; turn: number; arc: Arc }) {
     this.poseT += dt;
     const p = this.pose;
-    if (!s.grounded) {
+    if (SCRIPTED.has(p)) {
+      // the game drives these; nothing to decide
+    } else if (!s.grounded) {
       const arc = s.arc;
       if (p === 'jump') {
         const a = this.act(this.flightClip());
@@ -314,12 +350,13 @@ export class Runner {
     } else if (p !== 'takeoff') this.locomote(s.speed);
 
     // playback rate from the real speed: feet planted
-    const w = this.act(CLIPS.walk), r = this.act(CLIPS.run);
-    w.timeScale = Math.max(0.5, Math.min(2.2, s.speed / this.gaits.walk.speed));
+    const w = this.act(CLIPS.walk), j = this.act(CLIPS.jog), r = this.act(CLIPS.run);
+    w.timeScale = Math.max(0.5, Math.min(2.4, s.speed / this.gaits.walk.speed));
+    j.timeScale = Math.max(0.6, Math.min(1.6, s.speed / this.gaits.jog.speed));
     r.timeScale = Math.max(0.7, Math.min(1.4, s.speed / this.gaits.run.speed));
     const g = this.gaitOf(this.pose);
     if (g) {
-      const a = this.pose === 'walk' ? w : r;
+      const a = this.pose === 'walk' ? w : this.pose === 'jog' ? j : r;
       this.phase = ((a.time / g.duration - g.front) % 1 + 1) % 1;
     }
     this.mixer.update(dt);
