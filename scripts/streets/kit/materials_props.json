@@ -1,0 +1,7 @@
+{
+ "M_Terracotta": {"set": "props_terracotta", "tile_m": 0.5, "hi": 1024, "lo": 512, "normal": "etc1s", "roughness": 1.0, "notes": "fired clay, neutral buff (tinted per piece by COLOR_0); Blender v 0..0.875 body (periodic in v), v 0.875..1 a cord-impressed applied band"},
+ "M_ClayRaw": {"set": "props_clayraw", "tile_m": 0.5, "hi": 1024, "lo": 512, "normal": "etc1s", "roughness": 1.0, "notes": "unfired clay; v 0.25..1 body (periodic in v), v 0..0.25 four tablet faces (blank, faint ruled lines, stylus pocks, thumb-smoothed)"},
+ "M_Basketry": {"set": "props_basketry", "trim": true, "hi": 1024, "lo": 512, "normal": "etc1s", "roughness": 1.0, "notes": "trim, u tiles at 0.4 m: coiled 0.625..1, plaited palm leaf 0.25..0.625, two-ply cord 0.0625..0.25, fibre binding 0..0.0625"},
+ "M_Hessian": {"set": "props_hessian", "tile_m": 0.27, "hi": 1024, "lo": 512, "normal": "etc1s", "roughness": 1.0, "notes": "coarse undyed sackcloth (Poly Haven hessian_230)"},
+ "M_Grain": {"set": "props_grain", "tile_m": 0.15, "hi": 1024, "lo": 512, "normal": "etc1s", "roughness": 1.0, "notes": "hulled barley heap"}
+}

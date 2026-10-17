@@ -6,7 +6,7 @@
 
 import { Vector3 } from 'three';
 import type { Ladder } from '../affordances.ts';
-import { C, type Ctx, onSide, yawAlong } from './ctx.ts';
+import { C, type Ctx, houseOwner, onSide, yawAlong } from './ctx.ts';
 import { sideStair, stairFootClear } from './houses.ts';
 import { type House, type Rect, type Side, sides } from './plan.ts';
 import { ladderAt } from './reach.ts';
@@ -16,12 +16,13 @@ import { riverDist } from '../../../three/city/layout.ts';
 const TAU = Math.PI * 2;
 
 /** A flight of steps straight out from a face (side s at offset t), from `top` down to the ground. */
-export function frontStair(ctx: Ctx, s: Side, t: number, width: number, top: number, col: RGB, slope = 34) {
+export function frontStair(ctx: Ctx, s: Side, t: number, width: number, top: number, col: RGB, slope = 34, what: 'temple' | 'palace' | 'bridge' = 'bridge') {
   const { kit } = ctx;
   const [fx, fz] = onSide(s, t, 0.5);
   const g = ctx.ground(fx, fz);
   const rise = top - g;
   const run = rise / Math.tan((slope * Math.PI) / 180);
+  ctx.intents.push({ k: 'front', owner: kit.owner, side: { ...s }, t, width, top, g, run, what });
   const n = Math.max(2, Math.ceil(rise / 0.24));
   const yaw = yawAlong(s);
   for (let k = 0; k < n; k++) {
@@ -31,12 +32,15 @@ export function frontStair(ctx: Ctx, s: Side, t: number, width: number, top: num
     const [x, z] = onSide(s, t, (d0 + d1) / 2 + 0.01);
     kit.put('mud', x, g + h / 2, z, yaw, width, h, d1 - d0 + 0.02, vary(col, ctx.u(`fs:${s.x.toFixed(1)}:${k}`), 0.035));
   }
-  // cheek walls
+  // cheek walls (they stay the layer's own beside the kit's flights in the hero district)
+  const owner = kit.owner;
+  kit.owner = -1;
   for (const sg of [-1, 1]) {
     const a = new Vector3(...p3(s, t + sg * (width / 2 + 0.2), 0, top + 0.2));
     const b = new Vector3(...p3(s, t + sg * (width / 2 + 0.2), run, g + 0.45));
     kit.beam('mud', a, b, 0.4, 0.5, shade(col, 0.92), true);
   }
+  kit.owner = owner;
   const pts: number[] = [];
   for (const sg of [-1, 1]) {
     const tt = t + sg * width / 2;
@@ -81,24 +85,31 @@ export function wallWorks(ctx: Ctx, civ: Civic) {
   const { kit } = ctx;
   const col: RGB = W.runs[0] ? W.runs[0].part.c : [0.72, 0.58, 0.42];
   // merlons on the outer edge of every standing run (the model's crenels sat in the middle of the walk)
-  for (const r of W.runs) {
+  const runOwner = (i: number) => { const r = W.runs[i]; return ctx.owners.id(`wr:${i}`, (r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2); };
+  for (const [ri, r] of W.runs.entries()) {
+    kit.owner = runOwner(ri);
     const len = Math.hypot(r.x1 - r.x0, r.z1 - r.z0);
     const tx = (r.x1 - r.x0) / len, tz = (r.z1 - r.z0) / len;
     const mx = (r.x0 + r.x1) / 2, mz = (r.z0 + r.z1) / 2;
     let nx = -tz, nz = tx;
     if (nx * mx + nz * mz < 0) { nx = -nx; nz = -nz; } // outward
-    const n = Math.max(2, Math.round(len / 2.5));
-    for (let k = 0; k < n; k++) {
-      const f = (k + 0.5) / n;
-      const x = r.x0 + (r.x1 - r.x0) * f + nx * (W.T / 2 - 0.28), z = r.z0 + (r.z1 - r.z0) * f + nz * (W.T / 2 - 0.28);
-      const a = new Vector3(x - tx * 0.65, W.H + 0.55, z - tz * 0.65), b = new Vector3(x + tx * 0.65, W.H + 0.55, z + tz * 0.65);
-      kit.beam('mud', a, b, 0.5, 1.1, shade(col, 1.03), true);
+    // the kit's wall walk (citywall_4m, which redraws it in the hero district): a breastwork 0.55 m high along the outer
+    // edge, and two merlons on it to every 4 m module (at 0.55–1.45 and 2.55–3.45 m), 0.55 m higher again
+    const ko = (W.T / 2) * (1.455 / 1.68), kt = 0.45 * (W.T / 3.36);
+    const bx = nx * ko, bz = nz * ko;
+    kit.beam('mud', new Vector3(r.x0 + bx, W.H + 0.275, r.z0 + bz), new Vector3(r.x1 + bx, W.H + 0.275, r.z1 + bz), kt, 0.55, shade(col, 1.03), true);
+    const nm = Math.max(1, Math.round(len / 4)), km = len / (4 * nm);
+    for (let k = 0; k < nm; k++) for (const [m0, m1] of [[0.55, 1.45], [2.55, 3.45]]) {
+      const a0 = (k * 4 + m0) * km, a1 = (k * 4 + m1) * km;
+      const a = new Vector3(r.x0 + tx * a0 + bx, W.H + 0.825, r.z0 + tz * a0 + bz), b = new Vector3(r.x0 + tx * a1 + bx, W.H + 0.825, r.z0 + tz * a1 + bz);
+      kit.beam('mud', a, b, kt, 0.55, shade(col, 1.05), true);
     }
     // a low kerb on the inner edge
     const ia = new Vector3(r.x0 - nx * (W.T / 2 - 0.12), W.H + 0.12, r.z0 - nz * (W.T / 2 - 0.12));
     const ib = new Vector3(r.x1 - nx * (W.T / 2 - 0.12), W.H + 0.12, r.z1 - nz * (W.T / 2 - 0.12));
     kit.beam('mud', ia, ib, 0.24, 0.24, shade(col, 0.98), true);
   }
+  kit.owner = -1;
   // the runs' inner faces as sides (normal toward the town)
   const faceOf = (r: (typeof W.runs)[number]): Side => {
     const len = Math.hypot(r.x1 - r.x0, r.z1 - r.z0);
@@ -141,7 +152,9 @@ export function wallWorks(ctx: Ctx, civ: Civic) {
       const t1 = (dir > 0 ? hi : lo) - dir * 0.1;
       if (Math.abs(t1 - t0) - 1.0 < rise / Math.tan((46 * Math.PI) / 180) + 0.2) continue;
       if (!stairFootClear(ctx, s, t0, dir, 1.6, g0, 0.02)) continue;
+      kit.owner = runOwner(i);
       const path = sideStair(ctx, s, t0, t1, ctx.ground(s.x, s.z), W.H, 1.6, shade(col, 0.96), 0.02, W.T / 2);
+      kit.owner = -1;
       stairRuns.add(i);
       civ.walls.feet.push(path[0]);
       civ.stairs.push({ name: `walls ${civ.walls.feet.length}`, path });
@@ -159,7 +172,9 @@ export function wallWorks(ctx: Ctx, civ: Civic) {
     const t = (lo + hi) / 2 + (ctx.u(`wlt:${i}`) - 0.5) * (hi - lo - 1.6);
     const [cx, cz] = onSide(s, t, 1.3);
     if (!ctx.occ.clear({ x: cx, z: cz, rot: yawAlong(s), hw: 0.45, hd: 1.1 }, 0, 0.2, 2.2) || ctx.water(cx, cz) > 0) return;
+    kit.owner = runOwner(i);
     civ.ladders.push(ladderAt(ctx, s, t, ctx.ground(cx, cz), W.H, 1.4, `w${i}`));
+    kit.owner = -1;
     civ.walls.ladders++;
   });
   // over each tower on the walk: a ladder up its face from either side
@@ -176,7 +191,9 @@ export function wallWorks(ctx: Ctx, civ: Civic) {
       });
       if (!on) continue;
       const s: Side = { x: tw.x + tx * sg * tw.half, z: tw.z + tz * sg * tw.half, nx: tx * sg, nz: tz * sg, tx: Math.cos(ang), tz: Math.sin(ang), half: tw.half, k: 0 };
+      kit.owner = ctx.owners.id(`tw:${tw.x.toFixed(1)},${tw.z.toFixed(1)}`, tw.x, tw.z);
       civ.ladders.push(ladderAt(ctx, s, -0.55, W.H, tw.top, 0.9, `t${tw.x.toFixed(0)}`));
+      kit.owner = -1;
     }
   }
   // the gates: leaves swung open against the towers' inner faces, and a banner on each tower
@@ -195,8 +212,11 @@ export function wallWorks(ctx: Ctx, civ: Civic) {
         // hinged at the tower's corner on the town side, folded back against the inner face
         const hx = tw.x + ux * tw.half - rx * tw.half, hz = tw.z + uz * tw.half - rz * tw.half;
         const a = new Vector3(hx - rx * 0.2, 2.6, hz - rz * 0.2), b = new Vector3(hx - rx * 0.2 - ux * leafW, 2.6, hz - rz * 0.2 - uz * leafW);
+        kit.owner = ctx.owners.id(`tw:${tw.x.toFixed(1)},${tw.z.toFixed(1)}`, tw.x, tw.z);
         kit.beam('wood', a, b, 0.22, 5.2, vary(C.timberDark, ctx.u(`gl:${tw.x}`), 0.08), true);
         for (const y of [0.9, 2.6, 4.3]) kit.beam('wood', a.clone().setY(y).addScaledVector(new Vector3(-rx, 0, -rz), 0.14), b.clone().setY(y).addScaledVector(new Vector3(-rx, 0, -rz), 0.14), 0.1, 0.2, C.bronze);
+        ctx.intents.push({ k: 'gateLeaf', owner: kit.owner, a: [a.x, a.y, a.z], b: [b.x, b.y, b.z], h: 5.2 });
+        kit.owner = -1;
       }
       civ.banners.push({ x: tw.x - rx * (tw.half + 0.05), y: tw.top - 0.6, z: tw.z - rz * (tw.half + 0.05), yaw: Math.atan2(rz, -rx) + Math.PI, h: 3.2 });
       tv.push(new Vector3(tw.x, tw.top, tw.z));
@@ -244,7 +264,9 @@ export function templeSteps(ctx: Ctx, civ: Civic, away: { x: number; z: number }
   // the short ends (gable ends) face the entrances; take the one away from the palace
   const ends = sides(T).filter((s) => s.half <= Math.min(T.hw, T.hd) + 1e-3);
   const pick = (ends.length ? ends : sides(T)).map((s) => ({ s, d: away ? -Math.hypot(s.x - away.x, s.z - away.z) : 0 })).sort((a, b) => a.d - b.d)[0].s;
-  const st = frontStair(ctx, pick, 0, Math.min(pick.half * 2 - 2, 8), T.top, [0.82, 0.74, 0.6]);
+  ctx.kit.owner = ctx.owners.id('temple', T.x, T.z);
+  const st = frontStair(ctx, pick, 0, Math.min(pick.half * 2 - 2, 8), T.top, [0.82, 0.74, 0.6], 34, 'temple');
+  ctx.kit.owner = -1;
   civ.temple = { foot: st.foot };
   civ.stairs.push({ name: 'temple', path: [st.foot, st.head] });
   // banners either side of the steps
@@ -259,7 +281,8 @@ export function palaceSteps(ctx: Ctx, civ: Civic) {
   if (!P) return;
   // the platform's side facing the square
   const front = sides(P).sort((a, b) => (b.nx * P.gate.nx + b.nz * P.gate.nz) - (a.nx * P.gate.nx + a.nz * P.gate.nz))[0];
-  const st = frontStair(ctx, front, 0, 6, P.top, [0.8, 0.72, 0.58], 33);
+  ctx.kit.owner = ctx.owners.id('palace', P.x, P.z);
+  const st = frontStair(ctx, front, 0, 6, P.top, [0.8, 0.72, 0.58], 33, 'palace');
   // a great doorway in the hall's front
   const hf = sides(P.hall).sort((a, b) => (b.nx * P.gate.nx + b.nz * P.gate.nz) - (a.nx * P.gate.nx + a.nz * P.gate.nz))[0];
   const yaw = yawAlong(hf);
@@ -267,11 +290,15 @@ export function palaceSteps(ctx: Ctx, civ: Civic) {
   ctx.kit.put('wood', dx, P.top + 1.8, dz, yaw, 2.4, 3.6, 0.06, C.void);
   const [lx, lz] = onSide(hf, 0, 0.12);
   ctx.kit.put('wood', lx, P.top + 3.75, lz, yaw, 3.4, 0.3, 0.3, C.timberDark);
+  const columns: [number, number, number][] = [];
   for (const sg of [-1, 1]) {
     const [cx, cz] = onSide(hf, sg * 1.7, 0.35);
     ctx.kit.put('pole', cx, P.top + 1.8, cz, 0, 0.5, 3.6, 0.5, [0.55, 0.32, 0.22]);
     ctx.kit.solidBox(cx, P.top + 1.8, cz, 0, 0.25, 1.8, 0.25);
+    columns.push([cx, P.top, cz]);
   }
+  ctx.intents.push({ k: 'palaceDoor', owner: ctx.kit.owner, side: { ...hf }, y: P.top, columns });
+  ctx.kit.owner = -1;
   const towers: Vector3[] = [];
   for (const sg of [-1, 1]) {
     const [x, z] = onSide(front, sg * 4.2, -1.6);
@@ -306,7 +333,9 @@ export function market(ctx: Ctx, civ: Civic, avoid: { x: number; z: number } | n
     const yaw = Math.atan2(Math.sin(a), -Math.cos(a)) + Math.PI / 2; // local x along the arc, facing in
     const rect: Rect = { x, z, rot: -a - Math.PI / 2, hw: 1.5, hd: 1.0 };
     if (!ctx.occ.clear(rect, 0.4, 0.1, 2.4)) continue;
+    ctx.kit.owner = ctx.owners.id(`stall:${k}`, x, z);
     stall(ctx, x, z, a, k);
+    ctx.kit.owner = -1;
     stalls.push({ x, z, yaw });
     ctx.occ.add(rect, 0, 2.5);
     if (stalls.length >= (ctx.mobile ? 12 : 16)) break;
@@ -318,7 +347,10 @@ export function market(ctx: Ctx, civ: Civic, avoid: { x: number; z: number } | n
     const a = base + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.12;
     sx = Math.cos(a) * sr; sz = Math.sin(a) * sr;
   }
+  ctx.kit.owner = ctx.owners.id('scale', sx, sz);
   scale(ctx, sx, sz, base);
+  ctx.intents.push({ k: 'scale', owner: ctx.kit.owner, x: sx, z: sz, a: base });
+  ctx.kit.owner = -1;
   civ.market = { centre: new Vector3(Math.cos(base) * (rs - 2), 0, Math.sin(base) * (rs - 2)), scale: new Vector3(sx, ctx.ground(sx, sz), sz), stalls };
 }
 
@@ -343,10 +375,13 @@ function stall(ctx: Ctx, x: number, z: number, a: number, k: number) {
   const [cx, cz] = P(0, 0.55);
   kit.block('wood', cx, g, cz, yaw, 2.5, 0.82, 0.7, vary(C.timber, ctx.u(`stw:${k}`), 0.1), true);
   const n = 3 + Math.floor(ctx.u(`stn:${k}`) * 3);
+  const goods: { u: number; v: number; kind: number; c: RGB }[] = [];
   for (let j = 0; j < n; j++) {
-    const [gx, gz] = P(-0.95 + (1.9 * (j + 0.5)) / n, 0.55 + (ctx.u(`sgv:${k}:${j}`) - 0.5) * 0.25);
+    const gu = -0.95 + (1.9 * (j + 0.5)) / n, gv = 0.55 + (ctx.u(`sgv:${k}:${j}`) - 0.5) * 0.25;
+    const [gx, gz] = P(gu, gv);
     const c = GOODS[Math.floor(ctx.u(`sgc:${k}:${j}`) * GOODS.length) % GOODS.length];
     const kind = ctx.u(`sgk:${k}:${j}`);
+    goods.push({ u: gu, v: gv, kind, c });
     if (kind < 0.3) kit.put('cone', gx, g + 0.82 + 0.13, gz, 0, 0.42, 0.26, 0.42, c); // a heap of grain or spice
     else if (kind < 0.6) kit.put('jar', gx, g + 0.82 + 0.17, gz, kind * 9, 0.26, 0.34, 0.26, vary(C.clay, kind, 0.15));
     else if (kind < 0.8) kit.put('ball', gx, g + 0.82 + 0.08, gz, kind * 5, 0.3, 0.17, 0.3, c); // a basket's worth
@@ -354,10 +389,12 @@ function stall(ctx: Ctx, x: number, z: number, a: number, k: number) {
   }
   // a sack or two and a big jar on the ground beside it
   const [jx, jz] = P(1.75, 0.2);
-  if (!ctx.occ.blocked(jx, jz, 0.35, g + 0.1, g + 1)) {
+  const jar = !ctx.occ.blocked(jx, jz, 0.35, g + 0.1, g + 1);
+  if (jar) {
     kit.put('jar', jx, g + 0.42, jz, k, 0.62, 0.84, 0.62, vary(C.buff, ctx.u(`sj:${k}`), 0.1));
     kit.solidBox(jx, g + 0.42, jz, 0, 0.25, 0.42, 0.25);
   }
+  ctx.intents.push({ k: 'stall', owner: kit.owner, x, z, a, i: k, cloth, goods, jar });
   const [sx, sz] = P(-1.75, 0.3);
   kit.put('frustum', sx, g + 0.33, sz, k * 1.3, 0.56, 0.66, 0.5, vary(C.linen, ctx.u(`ss:${k}`), 0.1));
   kit.put('ball', sx, g + 0.7, sz, k * 1.3, 0.3, 0.12, 0.28, vary(C.linen, ctx.u(`ss:${k}`), 0.1));
@@ -392,7 +429,10 @@ export function well(ctx: Ctx, civ: Civic, toward: { x: number; z: number } | nu
     for (const off of [4.6, -4.6, 6, -6]) {
       const x = Math.cos(a) * ring - Math.sin(a) * off, z = Math.sin(a) * ring + Math.cos(a) * off;
       if (ctx.occ.blocked(x, z, 2.2, 0.1, 2.5) || ctx.water(x, z) > 0 || riverDist(plan.L, x / plan.LOT, z / plan.LOT).d < 0.8) continue;
+      ctx.kit.owner = ctx.owners.id('well', x, z);
       wellAt(ctx, x, z, a);
+      ctx.intents.push({ k: 'well', owner: ctx.kit.owner, x, z, a });
+      ctx.kit.owner = -1;
       civ.well = new Vector3(x, ctx.ground(x, z), z);
       return;
     }
@@ -419,12 +459,14 @@ function wellAt(ctx: Ctx, x: number, z: number, a: number) {
   const { kit } = ctx;
   const g = ctx.ground(x, z);
   curb(ctx, x, z, g, 0.85, 0.8, [0.7, 0.62, 0.5], C.water);
-  // the sweep: an upright, a long pole pivoting on it, a counterweight and a bucket
+  // the sweep: an upright, a long pole pivoting on it, a counterweight and a bucket (the upright where the kit's
+  // well_head has its forked post, 2.3 m out, so its collider stands under the kit's post)
   const ux = Math.cos(a), uz = Math.sin(a);
-  const px = x + ux * 1.6, pz = z + uz * 1.6;
-  kit.put('pole', px, g + 1.45, pz, 0, 0.2, 2.9, 0.2, C.timberDark);
-  kit.solidBox(px, g + 1.45, pz, 0, 0.12, 1.45, 0.12);
-  const top = new Vector3(px, g + 2.85, pz);
+  const px = x + ux * 2.3, pz = z + uz * 2.3;
+  kit.put('pole', px, g + 1.2, pz, 0, 0.2, 2.4, 0.2, C.timberDark);
+  kit.solidBox(px, g + 1.2, pz, 0, 0.12, 1.2, 0.12);
+  ctx.occ.add({ x: px, z: pz, rot: 0, hw: 0.15, hd: 0.15 }, g, g + 2.4);
+  const top = new Vector3(px, g + 2.31, pz);
   const tip = new Vector3(x - ux * 0.2, g + 3.6, z - uz * 0.2);
   const tail = top.clone().multiplyScalar(2).sub(tip).add(new Vector3(0, -0.1, 0));
   kit.beam('wood', tail, tip, 0.1, 0.1, C.timber);
@@ -436,6 +478,7 @@ function wellAt(ctx: Ctx, x: number, z: number, a: number) {
     const b = a + 2.2 + k * 0.5;
     const jx = x + Math.cos(b) * 1.55, jz = z + Math.sin(b) * 1.55;
     kit.put('jar', jx, g + 0.36, jz, k, 0.5, 0.72, 0.5, vary(C.buff, ctx.u(`wj:${k}`), 0.12));
+    ctx.intents.push({ k: 'jar', owner: kit.owner, x: jx, y: g, z: jz, yaw: k, r: 0.25, h: 0.72 });
     kit.solidBox(jx, g + 0.36, jz, 0, 0.2, 0.36, 0.2);
   }
 }
@@ -466,6 +509,8 @@ export function tabletHouse(ctx: Ctx, civ: Civic, i: number) {
   const front = ss.filter((s) => !s.court).sort((a, b) => b.open - a.open)[0] ?? ss.sort((a, b) => b.open - a.open)[0];
   d.door = { k: front.k, t: 0 };
   const g = h.ground;
+  const own = houseOwner(ctx, i);
+  kit.owner = own;
   // baskets of clay and a water jar by the door
   for (const [t, kind] of [[-1.2, 0], [-1.75, 0], [1.3, 1]] as [number, number][]) {
     const [x, z] = onSide(front, t, 0.45);
@@ -473,11 +518,14 @@ export function tabletHouse(ctx: Ctx, civ: Civic, i: number) {
       kit.put('pole', x, g + 0.22, z, 0, 0.55, 0.44, 0.55, [0.62, 0.5, 0.33]);
       kit.put('ball', x, g + 0.44, z, t, 0.48, 0.16, 0.48, [0.55, 0.53, 0.5]); // grey clay heaped in it
       kit.solidBox(x, g + 0.25, z, 0, 0.26, 0.25, 0.26);
+      ctx.intents.push({ k: 'basket', owner: own, x, y: g, z, yaw: t });
     } else {
       kit.put('jar', x, g + 0.5, z, 0, 0.7, 1.0, 0.7, C.clay);
       kit.solidBox(x, g + 0.5, z, 0, 0.28, 0.5, 0.28);
+      ctx.intents.push({ k: 'jar', owner: own, x, y: g, z, yaw: 0.7, r: 0.35, h: 1.0 });
     }
   }
+  kit.owner = -1;
   // on the roof: a reed shade over racks of tablets drying in the sun
   const y = h.roof;
   if (h.flat) {
@@ -490,8 +538,11 @@ export function tabletHouse(ctx: Ctx, civ: Civic, i: number) {
   }
   const [mx, mz] = L(0, 0);
   kit.put('cloth', mx, y + 2.12, mz, h.rot, (h.hw - 1.3) * 2 + 0.5, 0.06, (h.hd - 1.6) * 2 + 0.5, C.reed);
+  kit.owner = own;
+  const racks: { x: number; z: number; yaw: number; len: number }[] = [];
   for (let r = 0; r < 3; r++) {
     const [rx, rz] = L(-0.8 + r * 0.8, 0);
+    racks.push({ x: rx, z: rz, yaw: h.rot + Math.PI / 2, len: (h.hd - 2.0) * 2 });
     kit.block('wood', rx, y, rz, h.rot + Math.PI / 2, (h.hd - 2.0) * 2, 0.42, 0.5, C.timber, true);
     const n = Math.floor(((h.hd - 2.0) * 2) / 0.22);
     for (let k = 0; k < n; k++) {
@@ -499,6 +550,8 @@ export function tabletHouse(ctx: Ctx, civ: Civic, i: number) {
       kit.put('wood', tx, y + 0.5, tz, h.rot + 0.05 * (ctx.u(`tb:${r}:${k}`) - 0.5), 0.17, 0.16, 0.04, vary([0.72, 0.62, 0.48], ctx.u(`tbc:${r}:${k}`), 0.12));
     }
   }
+  ctx.intents.push({ k: 'tablets', owner: own, house: i, racks, y });
+  kit.owner = -1;
   }
   // the cistern in its courtyard
   let cistern: Vector3 | null = null;
@@ -506,7 +559,10 @@ export function tabletHouse(ctx: Ctx, civ: Civic, i: number) {
   if (court) {
     const [x, z] = onSide(court, 0, Math.min(court.open, 8) / 2 + 0.3);
     if (!ctx.occ.blocked(x, z, 1.4, g + 0.1, g + 1)) {
+      kit.owner = own;
       curb(ctx, x, z, ctx.ground(x, z), 1.05, 0.72, shade(h.wall, 0.95), [0.28, 0.36, 0.34]);
+      ctx.intents.push({ k: 'cistern', owner: own, x, z, r: 1.05 });
+      kit.owner = -1;
       cistern = new Vector3(x, ctx.ground(x, z), z);
     }
   }

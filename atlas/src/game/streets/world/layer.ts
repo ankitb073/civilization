@@ -12,8 +12,8 @@ import { unit } from '../../../three/city/record.ts';
 import { riverDist } from '../../../three/city/layout.ts';
 import type { ArmsSpec } from '../../../../../engine/src/export/contract.ts';
 import type { Solid } from '../world.ts';
-import type { Ctx } from './ctx.ts';
-import { Kit } from './kit.ts';
+import { type Ctx, Owners } from './ctx.ts';
+import { Kit, SURFACE } from './kit.ts';
 import { contactMaterial, mudSkin, plainMaterial } from './materials.ts';
 import { compassGate, streetNames } from './names.ts';
 import { Occupancy, type Plan, inside } from './plan.ts';
@@ -36,6 +36,8 @@ export interface LayerInput {
   scenario: { id: string; year: number; arms: ArmsSpec | null; sacked: boolean } | null;
   /** The year whose sack the town awaits (or suffered): the postern faces where it broke in. */
   sackYear: number | null;
+  /** Give the merged meshes the surface attributes the realism look reads (aBox, aDim, aNrm; kit.ts). */
+  tags?: boolean;
 }
 
 export interface Quarter { name: string; x: number; z: number; r: number }
@@ -53,6 +55,9 @@ export interface Layer {
   stats: Record<string, unknown>;
   civ: Civic;
   reach: Reach;
+  /** What every part works from (owners and intents for the hero district), and the parts themselves. */
+  ctx: Ctx;
+  kit: Kit;
   views(): View[];
   loop(): { x: number; z: number; run?: boolean }[];
   /** Can a runner walk from the house of tablets to every place (raised ones: to the foot of their stairs)? */
@@ -73,11 +78,12 @@ export function buildLayer(inp: LayerInput): Layer {
   const kit = new Kit();
   const mud = mudSkin(plainMaterial(), 'detail');
   const plain = plainMaterial();
-  kit.define('mud', 'box', mud, { cast: true });
+  // what each list is made of: fixed for mud and jars, read from each part's colour for the lists that draw many things
+  kit.define('mud', 'box', mud, { cast: true, surface: SURFACE.masonry });
   kit.define('wood', 'box', plain, { cast: true });
   kit.define('cloth', 'box', plain, { cast: true });
   kit.define('pole', 'cyl', plain, { cast: true });
-  kit.define('jar', 'jar', plain, { cast: true });
+  kit.define('jar', 'jar', plain, { cast: true, surface: SURFACE.terracotta });
   kit.define('ball', 'ball', plain, { cast: true });
   kit.define('cone', 'cone', plain, { cast: true });
   kit.define('frustum', 'frustum', plain, { cast: true });
@@ -89,7 +95,7 @@ export function buildLayer(inp: LayerInput): Layer {
   const ctx: Ctx = {
     cityId: rec.id, plan, kit, occ, ground: inp.ground, water: rv.depthAt,
     u: (label: string) => unit(`${rec.id}:streets:${label}`), names, mobile: inp.mobile, sides: [], dress: [],
-    limit: model.P * LOT - 6,
+    limit: model.P * LOT - 6, owners: new Owners(), intents: [],
   };
   const timing: Record<string, number> = {};
   const lap = (k: string, t: number) => { timing[k] = Math.round((performance.now() - t) * 10) / 10; return performance.now(); };
@@ -129,7 +135,7 @@ export function buildLayer(inp: LayerInput): Layer {
   const clutter = streetClutter(ctx);
   const roofs = roofClutter(ctx);
   const par = parapets(ctx);
-  const figs = courtyardTrees(ctx);
+  const figs = treesOwned(ctx, () => courtyardTrees(ctx));
   const hearth = hearths(ctx, inp.scenario?.sacked ? 6 : inp.mobile ? 12 : 20);
   people(ctx, civ);
   const lf = life(ctx, civ, inp.scenario?.arms ?? null, rec.polities[model.cy?.owner ?? -1]?.color ?? '#8e2f1f', inp.reduced);
@@ -153,7 +159,7 @@ export function buildLayer(inp: LayerInput): Layer {
   contact.frustumCulled = false;
   contact.name = 'contact-shadows';
 
-  const group = kit.build({ cell: 64, small: 0.75 });
+  const group = kit.build({ cell: 64, small: 0.75, tags: !!inp.tags });
   group.add(contact, lf.group);
   if (rv.mesh) group.add(rv.mesh);
 
@@ -285,7 +291,7 @@ export function buildLayer(inp: LayerInput): Layer {
   };
 
   return {
-    group, solids: kit.solids, affordances, quarters, river: rv, riverName: rec.site.river?.name ?? null, hearth, life: lf, stats, civ, reach,
+    group, solids: kit.solids, affordances, quarters, river: rv, riverName: rec.site.river?.name ?? null, hearth, life: lf, stats, civ, reach, ctx, kit,
     views, loop, walkTest, route,
     tick(tt: number, cam?: { x: number; z: number }) {
       lf.tick(tt); rv.tick(tt);
@@ -300,6 +306,23 @@ export function buildLayer(inp: LayerInput): Layer {
       group.traverse((o) => { const m = o as Mesh; if ((m as unknown as InstancedMesh).isInstancedMesh) (m as unknown as InstancedMesh).dispose(); });
     },
   };
+}
+
+/** The courtyard trees (world/life.ts) as owned things with an intent each, so the district can redraw them: each
+ *  trunk (a 'pole' put) starts a tree, its crown follows it. */
+function treesOwned(ctx: Ctx, place: () => number): number {
+  const kit = ctx.kit;
+  const put = kit.put;
+  let k = 0;
+  kit.put = function (name, x, y, z, yaw, sx, sy, sz, c) {
+    if (name === 'pole') {
+      const s = sx / 0.26;
+      kit.owner = ctx.owners.id(`tree:${k++}`, x, z);
+      ctx.intents.push({ k: 'tree', owner: kit.owner, x, y: y - 0.9 * s, z, sz: s });
+    }
+    put.call(kit, name, x, y, z, yaw, sx, sy, sz, c);
+  };
+  try { return place(); } finally { kit.put = put; kit.owner = -1; }
 }
 
 /** A* on a 1 m grid of the streets (clear of everything solid near the ground, and of water): a path from a to b

@@ -1,0 +1,4713 @@
+{
+ "name": "Pumi hero-district kit (Runner of the Tablet House)",
+ "version": 1,
+ "generated": "scripts/streets/kit (Blender 5.2 build scripts) + pack.ts; sources in LICENSES.md",
+ "conventions": {
+  "units": "metres; glTF Y-up; a piece faces +Z (its exterior / front); x runs along a wall run",
+  "pivots": "baked into each mesh: every node sits at the origin with identity transform; see each piece's pivot",
+  "lods": "nodes <name> (LOD0), <name>_LOD1, <name>_LOD2; suggested switch distances in lodDistances (m, desktop; halve on phones)",
+  "lodDistances": [
+   0,
+   18,
+   45
+  ],
+  "vertexColors": "COLOR_0 (multiply into base colour per glTF): baked contact occlusion, grime, tint. GLTFLoader enables it.",
+  "textures": "KTX2 (KHR_texture_basisu): load with KTX2Loader (three/examples/jsm/loaders/KTX2Loader + basis transcoder). Geometry: EXT_meshopt_compression, set GLTFLoader.setMeshoptDecoder(MeshoptDecoder). Normals, UVs and colours use KHR_mesh_quantization; positions are float.",
+  "tiers": "hi = <pack>.gltf (desktop, 2K hero textures, UASTC normals); lo = <pack>.lo.gltf (phones, 1K, ETC1S). Both share <pack>.bin (LOD1 and LOD2 geometry) and <pack>.lod0.bin (LOD0 only, loaded only when a LOD0 node is), and reference shared textures in tex/hi or tex/lo; same nodes and pivots in both.",
+  "instancing": "each piece is one mesh with 1-3 primitives (one per material); draw with InstancedMesh per primitive, or merge per cell by material (all pieces share a handful of materials).",
+  "houses": "world.houses footprints are continuous (3.6-7.8 m a side, walls 3.4-5.3 m tall, roof slab 0.4 m). Reference implementation: scripts/streets/kit/viewer.html house(). Per side, in order front, right, back, left, each side frame turned +90 deg about y from the last (x runs along the side from its start corner, exterior +Z, the footprint toward -Z): corner_out at x = 0; wall modules filling x 0.5 .. L-0.5, stretched along x by (L-1)/sum(widths) (keep 0.9-1.1); for walls taller than 3.0 m stack wallband_* (1 m each) and cornerband at y = 3, 4, ... and stretch y so the last band ends at the wall top; at the wall top y = Hw: roof_edge_corner at x = 0, roof_edge_2m filling 0.5 .. L-0.5, beam_ends_2m (optional, long sides) the same; in the frame offset by (-0.1, Hw+0.4, +0.1): parapet_corner at the origin, parapet_2m / parapet_2m_b filling 0.26 .. L+0.2-0.26. roof_field_2m tiles fill the inner rectangle 0.5 .. W-0.5 by 0.5 .. D-0.5 at y = Hw (their surface is y = Hw + 0.4). Doors: door_leaf_s in door_2m at (0.49, 0, -0.34), door_leaf_l pairs in door_3m at (0.77, 0, -0.34) and (2.23, 0, -0.34) mirrored; rotate about y to open (inward, toward -z).",
+  "uvs": "tileable materials map 1 UV unit = tile_m (2 m) from each piece's pivot, so runs of 2 m and 4 m modules tile seamlessly; a 1 m module or a corner leaves a texture phase step at its far end unless the next piece's u is offset by the run's phase so far (sum of nominal widths / 2), as the game does (atlas/src/game/streets/world/assemble.ts); brick courses stay level (v is height). Stretching scales the texture with the piece.",
+  "tint": "COLOR_0 holds baked occlusion and grime; per-house plaster tint goes on top as an instance colour (three multiplies instanceColor x vertex colour x map). Props carry their own tint in COLOR_0 (see each piece's extras).",
+  "collision": "pieces are visual; collide with simple boxes: a wall piece is x 0..W, y 0..H, z -T..0; parapets x 0..W, y 0..0.55, z -0.26..0; stair_flight a wedge from (0,0) to (3.36, 3.0) over z 0..1."
+ },
+ "materials": {
+  "M_MudPlaster": {
+   "set": "mudplaster",
+   "tile_m": 2,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 2048,
+   "lo": 1024,
+   "normal": "etc1s",
+   "notes": "mud-and-straw plaster, tileable 2 m",
+   "mean": [
+    0.3302,
+    0.2266,
+    0.1321
+   ]
+  },
+  "M_MudBrick": {
+   "set": "mudbrick",
+   "tile_m": 2,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 2048,
+   "lo": 1024,
+   "normal": "etc1s",
+   "notes": "sun-dried mud brick, header/stretcher courses, tileable 2 m; v = height so courses stay level",
+   "mean": [
+    0.2494,
+    0.1617,
+    0.0911
+   ]
+  },
+  "M_RoofMud": {
+   "set": "roofmud",
+   "tile_m": 2,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 2048,
+   "lo": 1024,
+   "normal": "etc1s",
+   "notes": "rolled roof mud with straw, tileable 2 m",
+   "mean": [
+    0.3067,
+    0.2156,
+    0.1266
+   ]
+  },
+  "M_Timber": {
+   "set": "timber",
+   "tile_m": null,
+   "trim": true,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 2048,
+   "lo": 1024,
+   "normal": "etc1s",
+   "notes": "trim sheet: v bands plankA 0.75-1, plankB 0.5-0.75, bark 0.25-0.5, pole 0.125-0.25, end grain 0-0.125 (8 tiles); u tiles at 2 m",
+   "mean": [
+    0.182,
+    0.1357,
+    0.093
+   ]
+  },
+  "M_ReedMat": {
+   "set": "reedmat",
+   "tile_m": 0.5,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": true,
+   "hi": 1024,
+   "lo": 512,
+   "normal": "etc1s",
+   "notes": "2/2 twill plaited reed, tileable 0.5 m",
+   "mean": [
+    0.4155,
+    0.2898,
+    0.1253
+   ]
+  },
+  "M_Ground": {
+   "set": "ground",
+   "tile_m": 2.6,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 2048,
+   "lo": 1024,
+   "normal": "etc1s",
+   "notes": "packed earth (test scenes; optional in game)",
+   "mean": [
+    0.2738,
+    0.1802,
+    0.1026
+   ]
+  },
+  "M_Terracotta": {
+   "set": "props_terracotta",
+   "tile_m": 0.5,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 1024,
+   "lo": 512,
+   "normal": "etc1s",
+   "notes": "fired clay, neutral buff (tinted per piece by COLOR_0); Blender v 0..0.875 body (periodic in v), v 0.875..1 a cord-impressed applied band",
+   "mean": [
+    0.6016,
+    0.4332,
+    0.2804
+   ]
+  },
+  "M_ClayRaw": {
+   "set": "props_clayraw",
+   "tile_m": 0.5,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 1024,
+   "lo": 512,
+   "normal": "etc1s",
+   "notes": "unfired clay; v 0.25..1 body (periodic in v), v 0..0.25 four tablet faces (blank, faint ruled lines, stylus pocks, thumb-smoothed)",
+   "mean": [
+    0.2708,
+    0.2118,
+    0.1531
+   ]
+  },
+  "M_Basketry": {
+   "set": "props_basketry",
+   "tile_m": null,
+   "trim": true,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 1024,
+   "lo": 512,
+   "normal": "etc1s",
+   "notes": "trim, u tiles at 0.4 m: coiled 0.625..1, plaited palm leaf 0.25..0.625, two-ply cord 0.0625..0.25, fibre binding 0..0.0625",
+   "mean": [
+    0.3212,
+    0.2356,
+    0.0995
+   ]
+  },
+  "M_Hessian": {
+   "set": "props_hessian",
+   "tile_m": 0.27,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 1024,
+   "lo": 512,
+   "normal": "etc1s",
+   "notes": "coarse undyed sackcloth (Poly Haven hessian_230)",
+   "mean": [
+    0.281,
+    0.2011,
+    0.1031
+   ]
+  },
+  "M_Grain": {
+   "set": "props_grain",
+   "tile_m": 0.15,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 1024,
+   "lo": 512,
+   "normal": "etc1s",
+   "notes": "hulled barley heap",
+   "mean": [
+    0.4345,
+    0.2776,
+    0.0927
+   ]
+  },
+  "M_Textile": {
+   "set": "struct_textile",
+   "tile_m": 0.27,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": true,
+   "hi": 1024,
+   "lo": 512,
+   "normal": "etc1s",
+   "notes": "plain-woven linen, near white: COLOR_0 carries the dye (and the integrator may tint per instance)",
+   "mean": [
+    0.6565,
+    0.574,
+    0.4146
+   ]
+  },
+  "M_TextilePattern": {
+   "set": "struct_textpat",
+   "tile_m": null,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": true,
+   "hi": 2048,
+   "lo": 1024,
+   "normal": "etc1s",
+   "notes": "four whole-cloth woven designs in quadrants (u0 v0 u1 v1): zigzag 0 .5 .5 1, stripes .5 .5 1 1, lozenge 0 0 .5 .5, stepped .5 0 1 .5; invented motifs only",
+   "mean": [
+    0.3074,
+    0.1904,
+    0.1466
+   ]
+  },
+  "M_StructMisc": {
+   "set": "struct_misc",
+   "tile_m": null,
+   "trim": true,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 1024,
+   "lo": 512,
+   "normal": "etc1s",
+   "notes": "trim: v bands rope 0.5-1 (u = 0.12 m of rope), leather 0.25-0.5, bronze 0.125-0.25 (metalness from ORM.b), fired clay 0-0.125",
+   "mean": [
+    0.257,
+    0.1639,
+    0.0816
+   ]
+  },
+  "M_Foliage": {
+   "set": "veg_foliage",
+   "tile_m": null,
+   "trim": false,
+   "alpha": true,
+   "doubleSided": false,
+   "hi": 2048,
+   "lo": 1024,
+   "normal": "etc1s",
+   "notes": "alpha cut-out foliage atlas (regions in textures_veg.py REGIONS): palm half-fronds, reeds, fig leaf clusters, grass, weeds. Cards are emitted front and back with their own normals, so the material is single-sided.",
+   "mean": [
+    0.1978,
+    0.2168,
+    0.1006
+   ]
+  },
+  "M_PalmTrunk": {
+   "set": "veg_palmtrunk",
+   "tile_m": 1.4,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 2048,
+   "lo": 1024,
+   "normal": "etc1s",
+   "notes": "date-palm trunk: leaf-base stubs, tileable; u wraps once round the trunk, v = height / 1.4 m",
+   "mean": [
+    0.1494,
+    0.1167,
+    0.0818
+   ]
+  },
+  "M_Bark": {
+   "set": "veg_bark",
+   "tile_m": 1,
+   "trim": false,
+   "alpha": false,
+   "doubleSided": false,
+   "hi": 1024,
+   "lo": 512,
+   "normal": "etc1s",
+   "notes": "smooth grey fig bark, tileable 1 m",
+   "mean": [
+    0.1365,
+    0.1296,
+    0.1083
+   ]
+  }
+ },
+ "packs": {
+  "arch": {
+   "geometry": "arch.bin",
+   "hi": {
+    "file": "arch.gltf",
+    "bytes": 1116891,
+    "textures": [
+     "tex/hi/timber_bc.ktx2",
+     "tex/hi/timber_n.ktx2",
+     "tex/hi/timber_orm.ktx2",
+     "tex/hi/mudplaster_bc.ktx2",
+     "tex/hi/mudplaster_n.ktx2",
+     "tex/hi/mudplaster_orm.ktx2",
+     "tex/hi/mudbrick_bc.ktx2",
+     "tex/hi/mudbrick_n.ktx2",
+     "tex/hi/mudbrick_orm.ktx2",
+     "tex/hi/roofmud_bc.ktx2",
+     "tex/hi/roofmud_n.ktx2",
+     "tex/hi/roofmud_orm.ktx2",
+     "tex/hi/reedmat_bc.ktx2",
+     "tex/hi/reedmat_n.ktx2",
+     "tex/hi/reedmat_orm.ktx2"
+    ]
+   },
+   "lo": {
+    "file": "arch.lo.gltf",
+    "bytes": 1116891,
+    "textures": [
+     "tex/lo/timber_bc.ktx2",
+     "tex/lo/timber_n.ktx2",
+     "tex/lo/timber_orm.ktx2",
+     "tex/lo/mudplaster_bc.ktx2",
+     "tex/lo/mudplaster_n.ktx2",
+     "tex/lo/mudplaster_orm.ktx2",
+     "tex/lo/mudbrick_bc.ktx2",
+     "tex/lo/mudbrick_n.ktx2",
+     "tex/lo/mudbrick_orm.ktx2",
+     "tex/lo/roofmud_bc.ktx2",
+     "tex/lo/roofmud_n.ktx2",
+     "tex/lo/roofmud_orm.ktx2",
+     "tex/lo/reedmat_bc.ktx2",
+     "tex/lo/reedmat_n.ktx2",
+     "tex/lo/reedmat_orm.ktx2"
+    ]
+   }
+  },
+  "props": {
+   "geometry": "props.bin",
+   "hi": {
+    "file": "props.gltf",
+    "bytes": 527532,
+    "textures": [
+     "tex/hi/props_basketry_bc.ktx2",
+     "tex/hi/props_basketry_n.ktx2",
+     "tex/hi/props_basketry_orm.ktx2",
+     "tex/hi/props_grain_bc.ktx2",
+     "tex/hi/props_grain_n.ktx2",
+     "tex/hi/props_grain_orm.ktx2",
+     "tex/hi/props_terracotta_bc.ktx2",
+     "tex/hi/props_terracotta_n.ktx2",
+     "tex/hi/props_terracotta_orm.ktx2",
+     "tex/hi/timber_bc.ktx2",
+     "tex/hi/timber_n.ktx2",
+     "tex/hi/timber_orm.ktx2",
+     "tex/hi/reedmat_bc.ktx2",
+     "tex/hi/reedmat_n.ktx2",
+     "tex/hi/reedmat_orm.ktx2",
+     "tex/hi/props_clayraw_bc.ktx2",
+     "tex/hi/props_clayraw_n.ktx2",
+     "tex/hi/props_clayraw_orm.ktx2",
+     "tex/hi/props_hessian_bc.ktx2",
+     "tex/hi/props_hessian_n.ktx2",
+     "tex/hi/props_hessian_orm.ktx2",
+     "tex/hi/mudbrick_bc.ktx2",
+     "tex/hi/mudbrick_n.ktx2",
+     "tex/hi/mudbrick_orm.ktx2",
+     "tex/hi/mudplaster_bc.ktx2",
+     "tex/hi/mudplaster_n.ktx2",
+     "tex/hi/mudplaster_orm.ktx2"
+    ]
+   },
+   "lo": {
+    "file": "props.lo.gltf",
+    "bytes": 527532,
+    "textures": [
+     "tex/lo/props_basketry_bc.ktx2",
+     "tex/lo/props_basketry_n.ktx2",
+     "tex/lo/props_basketry_orm.ktx2",
+     "tex/lo/props_grain_bc.ktx2",
+     "tex/lo/props_grain_n.ktx2",
+     "tex/lo/props_grain_orm.ktx2",
+     "tex/lo/props_terracotta_bc.ktx2",
+     "tex/lo/props_terracotta_n.ktx2",
+     "tex/lo/props_terracotta_orm.ktx2",
+     "tex/lo/timber_bc.ktx2",
+     "tex/lo/timber_n.ktx2",
+     "tex/lo/timber_orm.ktx2",
+     "tex/lo/reedmat_bc.ktx2",
+     "tex/lo/reedmat_n.ktx2",
+     "tex/lo/reedmat_orm.ktx2",
+     "tex/lo/props_clayraw_bc.ktx2",
+     "tex/lo/props_clayraw_n.ktx2",
+     "tex/lo/props_clayraw_orm.ktx2",
+     "tex/lo/props_hessian_bc.ktx2",
+     "tex/lo/props_hessian_n.ktx2",
+     "tex/lo/props_hessian_orm.ktx2",
+     "tex/lo/mudbrick_bc.ktx2",
+     "tex/lo/mudbrick_n.ktx2",
+     "tex/lo/mudbrick_orm.ktx2",
+     "tex/lo/mudplaster_bc.ktx2",
+     "tex/lo/mudplaster_n.ktx2",
+     "tex/lo/mudplaster_orm.ktx2"
+    ]
+   }
+  },
+  "props_struct": {
+   "geometry": "props_struct.bin",
+   "hi": {
+    "file": "props_struct.gltf",
+    "bytes": 425571,
+    "textures": [
+     "tex/hi/timber_bc.ktx2",
+     "tex/hi/timber_n.ktx2",
+     "tex/hi/timber_orm.ktx2",
+     "tex/hi/struct_misc_bc.ktx2",
+     "tex/hi/struct_misc_n.ktx2",
+     "tex/hi/struct_misc_orm.ktx2",
+     "tex/hi/struct_textpat_bc.ktx2",
+     "tex/hi/struct_textpat_n.ktx2",
+     "tex/hi/struct_textpat_orm.ktx2",
+     "tex/hi/struct_textile_bc.ktx2",
+     "tex/hi/struct_textile_n.ktx2",
+     "tex/hi/struct_textile_orm.ktx2",
+     "tex/hi/mudplaster_bc.ktx2",
+     "tex/hi/mudplaster_n.ktx2",
+     "tex/hi/mudplaster_orm.ktx2",
+     "tex/hi/reedmat_bc.ktx2",
+     "tex/hi/reedmat_n.ktx2",
+     "tex/hi/reedmat_orm.ktx2",
+     "tex/hi/mudbrick_bc.ktx2",
+     "tex/hi/mudbrick_n.ktx2",
+     "tex/hi/mudbrick_orm.ktx2"
+    ]
+   },
+   "lo": {
+    "file": "props_struct.lo.gltf",
+    "bytes": 425571,
+    "textures": [
+     "tex/lo/timber_bc.ktx2",
+     "tex/lo/timber_n.ktx2",
+     "tex/lo/timber_orm.ktx2",
+     "tex/lo/struct_misc_bc.ktx2",
+     "tex/lo/struct_misc_n.ktx2",
+     "tex/lo/struct_misc_orm.ktx2",
+     "tex/lo/struct_textpat_bc.ktx2",
+     "tex/lo/struct_textpat_n.ktx2",
+     "tex/lo/struct_textpat_orm.ktx2",
+     "tex/lo/struct_textile_bc.ktx2",
+     "tex/lo/struct_textile_n.ktx2",
+     "tex/lo/struct_textile_orm.ktx2",
+     "tex/lo/mudplaster_bc.ktx2",
+     "tex/lo/mudplaster_n.ktx2",
+     "tex/lo/mudplaster_orm.ktx2",
+     "tex/lo/reedmat_bc.ktx2",
+     "tex/lo/reedmat_n.ktx2",
+     "tex/lo/reedmat_orm.ktx2",
+     "tex/lo/mudbrick_bc.ktx2",
+     "tex/lo/mudbrick_n.ktx2",
+     "tex/lo/mudbrick_orm.ktx2"
+    ]
+   }
+  },
+  "veg": {
+   "geometry": "veg.bin",
+   "hi": {
+    "file": "veg.gltf",
+    "bytes": 267265,
+    "textures": [
+     "tex/hi/veg_bark_bc.ktx2",
+     "tex/hi/veg_bark_n.ktx2",
+     "tex/hi/veg_bark_orm.ktx2",
+     "tex/hi/veg_foliage_bc.ktx2",
+     "tex/hi/veg_foliage_n.ktx2",
+     "tex/hi/veg_foliage_orm.ktx2",
+     "tex/hi/veg_palmtrunk_bc.ktx2",
+     "tex/hi/veg_palmtrunk_n.ktx2",
+     "tex/hi/veg_palmtrunk_orm.ktx2"
+    ]
+   },
+   "lo": {
+    "file": "veg.lo.gltf",
+    "bytes": 267265,
+    "textures": [
+     "tex/lo/veg_bark_bc.ktx2",
+     "tex/lo/veg_bark_n.ktx2",
+     "tex/lo/veg_bark_orm.ktx2",
+     "tex/lo/veg_foliage_bc.ktx2",
+     "tex/lo/veg_foliage_n.ktx2",
+     "tex/lo/veg_foliage_orm.ktx2",
+     "tex/lo/veg_palmtrunk_bc.ktx2",
+     "tex/lo/veg_palmtrunk_n.ktx2",
+     "tex/lo/veg_palmtrunk_orm.ktx2"
+    ]
+   }
+  }
+ },
+ "pieces": [
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wall_1m",
+   "kind": "wall",
+   "snap": {
+    "x": 1,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wall_1m",
+     "tris": 481
+    },
+    {
+     "node": "wall_1m_LOD1",
+     "tris": 224
+    },
+    {
+     "node": "wall_1m_LOD2",
+     "tris": 62
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5021
+    ],
+    [
+     1,
+     3,
+     0.0081
+    ]
+   ],
+   "notes": "house wall, one storey: plaster worn to brick along the foot (meets the ends at 0.30 m) and in patches; plain plaster inside face",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wall_1m_b",
+   "kind": "wall",
+   "snap": {
+    "x": 1,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wall_1m_b",
+     "tris": 483
+    },
+    {
+     "node": "wall_1m_b_LOD1",
+     "tris": 224
+    },
+    {
+     "node": "wall_1m_b_LOD2",
+     "tris": 62
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5031
+    ],
+    [
+     1,
+     3,
+     0.0077
+    ]
+   ],
+   "notes": "house wall, one storey: plaster worn to brick along the foot (meets the ends at 0.30 m) and in patches; plain plaster inside face",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wall_2m_a",
+   "kind": "wall",
+   "snap": {
+    "x": 2,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wall_2m_a",
+     "tris": 1009
+    },
+    {
+     "node": "wall_2m_a_LOD1",
+     "tris": 492
+    },
+    {
+     "node": "wall_2m_a_LOD2",
+     "tris": 118
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5014
+    ],
+    [
+     2,
+     3,
+     0.0119
+    ]
+   ],
+   "notes": "house wall, one storey: plaster worn to brick along the foot (meets the ends at 0.30 m) and in patches; plain plaster inside face",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wall_2m_b",
+   "kind": "wall",
+   "snap": {
+    "x": 2,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wall_2m_b",
+     "tris": 1013
+    },
+    {
+     "node": "wall_2m_b_LOD1",
+     "tris": 482
+    },
+    {
+     "node": "wall_2m_b_LOD2",
+     "tris": 118
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.503
+    ],
+    [
+     2,
+     3,
+     0.0164
+    ]
+   ],
+   "notes": "house wall, one storey: plaster worn to brick along the foot (meets the ends at 0.30 m) and in patches; plain plaster inside face",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wall_2m_c",
+   "kind": "wall",
+   "snap": {
+    "x": 2,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wall_2m_c",
+     "tris": 1038
+    },
+    {
+     "node": "wall_2m_c_LOD1",
+     "tris": 535
+    },
+    {
+     "node": "wall_2m_c_LOD2",
+     "tris": 118
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5018
+    ],
+    [
+     2,
+     3,
+     0.0131
+    ]
+   ],
+   "notes": "house wall, one storey: plaster worn to brick along the foot (meets the ends at 0.30 m) and in patches; plain plaster inside face",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wall_4m_a",
+   "kind": "wall",
+   "snap": {
+    "x": 4,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wall_4m_a",
+     "tris": 2099
+    },
+    {
+     "node": "wall_4m_a_LOD1",
+     "tris": 963
+    },
+    {
+     "node": "wall_4m_a_LOD2",
+     "tris": 202
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.504
+    ],
+    [
+     4,
+     3,
+     0.0258
+    ]
+   ],
+   "notes": "house wall, one storey: plaster worn to brick along the foot (meets the ends at 0.30 m) and in patches; plain plaster inside face",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wall_4m_b",
+   "kind": "wall",
+   "snap": {
+    "x": 4,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wall_4m_b",
+     "tris": 2126
+    },
+    {
+     "node": "wall_4m_b_LOD1",
+     "tris": 1035
+    },
+    {
+     "node": "wall_4m_b_LOD2",
+     "tris": 234
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5053
+    ],
+    [
+     4,
+     3,
+     0.0254
+    ]
+   ],
+   "notes": "house wall, one storey: plaster worn to brick along the foot (meets the ends at 0.30 m) and in patches; plain plaster inside face",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wall_4m_c",
+   "kind": "wall",
+   "snap": {
+    "x": 4,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wall_4m_c",
+     "tris": 2014
+    },
+    {
+     "node": "wall_4m_c_LOD1",
+     "tris": 957
+    },
+    {
+     "node": "wall_4m_c_LOD2",
+     "tris": 218
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5052
+    ],
+    [
+     4,
+     3,
+     0.0225
+    ]
+   ],
+   "notes": "house wall, one storey: plaster worn to brick along the foot (meets the ends at 0.30 m) and in patches; plain plaster inside face",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wallband_1m",
+   "kind": "wall",
+   "snap": {
+    "x": 1,
+    "y": 1,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at its foot (stack on a wall or band at y = 3.0 / 1.0); the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wallband_1m",
+     "tris": 149
+    },
+    {
+     "node": "wallband_1m_LOD1",
+     "tris": 66
+    },
+    {
+     "node": "wallband_1m_LOD2",
+     "tris": 22
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5015
+    ],
+    [
+     1,
+     1,
+     0.0052
+    ]
+   ],
+   "notes": "upper band of plaster for taller walls (no worn foot); stack above a wall_*",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wallband_2m",
+   "kind": "wall",
+   "snap": {
+    "x": 2,
+    "y": 1,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at its foot (stack on a wall or band at y = 3.0 / 1.0); the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wallband_2m",
+     "tris": 299
+    },
+    {
+     "node": "wallband_2m_LOD1",
+     "tris": 129
+    },
+    {
+     "node": "wallband_2m_LOD2",
+     "tris": 38
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5017
+    ],
+    [
+     2,
+     1,
+     0.0119
+    ]
+   ],
+   "notes": "upper band of plaster for taller walls (no worn foot); stack above a wall_*",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "wallband_4m",
+   "kind": "wall",
+   "snap": {
+    "x": 4,
+    "y": 1,
+    "z": 0.5,
+    "stretch": "x 0.9-1.1, y 0.85-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at its foot (stack on a wall or band at y = 3.0 / 1.0); the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "wallband_4m",
+     "tris": 599
+    },
+    {
+     "node": "wallband_4m_LOD1",
+     "tris": 248
+    },
+    {
+     "node": "wallband_4m_LOD2",
+     "tris": 62
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5032
+    ],
+    [
+     4,
+     1,
+     0.019
+    ]
+   ],
+   "notes": "upper band of plaster for taller walls (no worn foot); stack above a wall_*",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "corner_out",
+   "kind": "corner",
+   "snap": {
+    "x": 0.5,
+    "y": 3,
+    "z": 0.5
+   },
+   "pivot": "the corner column x 0..0.5, z -0.5..0; exterior faces +Z and -X, rounded arris at the origin. Put one at the start of every side; that side's walls start at x = 0.5, the previous side ends against its -X face",
+   "lods": [
+    {
+     "node": "corner_out",
+     "tris": 1096
+    },
+    {
+     "node": "corner_out_LOD1",
+     "tris": 344
+    },
+    {
+     "node": "corner_out_LOD2",
+     "tris": 62
+    }
+   ],
+   "bbox": [
+    [
+     0.0006,
+     0,
+     -0.5
+    ],
+    [
+     0.5,
+     3,
+     -0.0006
+    ]
+   ],
+   "notes": "external corner, worn hardest along the arris and at the foot",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "cornerband",
+   "kind": "corner",
+   "snap": {
+    "x": 0.5,
+    "y": 1,
+    "z": 0.5
+   },
+   "pivot": "as corner_out, 1 m tall, stack above it",
+   "lods": [
+    {
+     "node": "cornerband",
+     "tris": 399
+    },
+    {
+     "node": "cornerband_LOD1",
+     "tris": 171
+    },
+    {
+     "node": "cornerband_LOD2",
+     "tris": 48
+    }
+   ],
+   "bbox": [
+    [
+     0.0009,
+     0,
+     -0.5
+    ],
+    [
+     0.5,
+     1,
+     -0.0009
+    ]
+   ],
+   "notes": "upper band of an external corner",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "door_2m",
+   "kind": "wall",
+   "snap": {
+    "x": 2,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.95-1.05, y 0.9-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "door_2m",
+     "tris": 1118
+    },
+    {
+     "node": "door_2m_LOD1",
+     "tris": 747
+    },
+    {
+     "node": "door_2m_LOD2",
+     "tris": 342
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     -0.08,
+     -0.5041
+    ],
+    [
+     2,
+     3,
+     0.0228
+    ]
+   ],
+   "notes": "wall with a doorway 0.95 x 1.90 m centred at x = 1.0: rounded, worn jambs, an adzed timber lintel, a timber threshold; hang door_leaf_s in it (see that piece)",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_Timber"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "door_3m",
+   "kind": "wall",
+   "snap": {
+    "x": 3,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.95-1.05, y 0.9-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "door_3m",
+     "tris": 1397
+    },
+    {
+     "node": "door_3m_LOD1",
+     "tris": 885
+    },
+    {
+     "node": "door_3m_LOD2",
+     "tris": 422
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     -0.0816,
+     -0.5023
+    ],
+    [
+     3,
+     3,
+     0.028
+    ]
+   ],
+   "notes": "wall with a wide doorway 1.40 x 2.25 m centred at x = 1.5 (the house of tablets, the palace): lintel of two beams; hang door_leaf_l",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_Timber"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "door_2m_b",
+   "kind": "wall",
+   "snap": {
+    "x": 2,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.95-1.05, y 0.9-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "door_2m_b",
+     "tris": 1127
+    },
+    {
+     "node": "door_2m_b_LOD1",
+     "tris": 723
+    },
+    {
+     "node": "door_2m_b_LOD2",
+     "tris": 354
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     -0.0801,
+     -0.5015
+    ],
+    [
+     2,
+     3,
+     0.0256
+    ]
+   ],
+   "notes": "as door_2m, another wear pattern",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_Timber"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "window_2m",
+   "kind": "wall",
+   "snap": {
+    "x": 2,
+    "y": 3,
+    "z": 0.5,
+    "stretch": "x 0.95-1.05, y 0.9-1.15"
+   },
+   "pivot": "x 0..W along the run from the pivot; y 0 at the foot; the exterior face is the plane z = 0, the wall body runs to z = -0.5; exterior faces +Z",
+   "lods": [
+    {
+     "node": "window_2m",
+     "tris": 1196
+    },
+    {
+     "node": "window_2m_LOD1",
+     "tris": 709
+    },
+    {
+     "node": "window_2m_LOD2",
+     "tris": 332
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.5058
+    ],
+    [
+     2,
+     3,
+     0.0179
+    ]
+   ],
+   "notes": "wall with a small high window 0.50 x 0.42 m (sill at 2.0 m) centred at x = 1.0: timber lintel, a grille of lashed sticks, dark interior behind",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_Timber"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "door_leaf_s",
+   "kind": "door",
+   "snap": {
+    "x": 1.05,
+    "y": 1.95
+   },
+   "pivot": "hinge-post axis at the origin (vertical, y up); the leaf runs along +x when closed, its outer face toward +Z. In door_2m (and door_2m_b): place at (0.49, 0, -0.34) and rotate about y to open (inward)",
+   "lods": [
+    {
+     "node": "door_leaf_s",
+     "tris": 516
+    },
+    {
+     "node": "door_leaf_s_LOD1",
+     "tris": 300
+    },
+    {
+     "node": "door_leaf_s_LOD2",
+     "tris": 122
+    }
+   ],
+   "bbox": [
+    [
+     -0.0509,
+     -0.03,
+     -0.0595
+    ],
+    [
+     1.0284,
+     2.01,
+     0.0825
+    ]
+   ],
+   "notes": "plank door with battens and a pivot post",
+   "materials": [
+    "M_Timber"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "door_leaf_l",
+   "kind": "door",
+   "snap": {
+    "x": 0.74,
+    "y": 2.3
+   },
+   "pivot": "as door_leaf_s; a pair fills door_3m: (0.77, 0, -0.34) and (2.23, 0, -0.34) mirrored",
+   "lods": [
+    {
+     "node": "door_leaf_l",
+     "tris": 468
+    },
+    {
+     "node": "door_leaf_l_LOD1",
+     "tris": 268
+    },
+    {
+     "node": "door_leaf_l_LOD2",
+     "tris": 148
+    }
+   ],
+   "bbox": [
+    [
+     -0.0629,
+     -0.03,
+     -0.0675
+    ],
+    [
+     0.7384,
+     2.36,
+     0.0875
+    ]
+   ],
+   "notes": "one leaf of a double door, heavier battens",
+   "materials": [
+    "M_Timber"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "parapet_1m",
+   "kind": "parapet",
+   "snap": {
+    "x": 1,
+    "y": 0.55,
+    "z": 0.26,
+    "stretch": "x 0.85-1.15, y 0.7-1.3"
+   },
+   "pivot": "x 0..W along the run; y 0 on the roof surface; exterior face z = 0, 0.26 thick toward -z; exterior +Z. Sits on the roof slab with its face flush with the slab's fascia",
+   "lods": [
+    {
+     "node": "parapet_1m",
+     "tris": 402
+    },
+    {
+     "node": "parapet_1m_LOD1",
+     "tris": 218
+    },
+    {
+     "node": "parapet_1m_LOD2",
+     "tris": 98
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     -0.0001,
+     -0.26
+    ],
+    [
+     1,
+     0.55,
+     0
+    ]
+   ],
+   "notes": "roof parapet, rounded eroded top, worn plaster; closed ends so it can stop at a ladder or stair head",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "parapet_2m",
+   "kind": "parapet",
+   "snap": {
+    "x": 2,
+    "y": 0.55,
+    "z": 0.26,
+    "stretch": "x 0.85-1.15, y 0.7-1.3"
+   },
+   "pivot": "x 0..W along the run; y 0 on the roof surface; exterior face z = 0, 0.26 thick toward -z; exterior +Z. Sits on the roof slab with its face flush with the slab's fascia",
+   "lods": [
+    {
+     "node": "parapet_2m",
+     "tris": 803
+    },
+    {
+     "node": "parapet_2m_LOD1",
+     "tris": 475
+    },
+    {
+     "node": "parapet_2m_LOD2",
+     "tris": 166
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.26
+    ],
+    [
+     2.0001,
+     0.55,
+     0
+    ]
+   ],
+   "notes": "roof parapet, rounded eroded top, worn plaster; closed ends so it can stop at a ladder or stair head",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "parapet_2m_b",
+   "kind": "parapet",
+   "snap": {
+    "x": 2,
+    "y": 0.55,
+    "z": 0.26,
+    "stretch": "x 0.85-1.15, y 0.7-1.3"
+   },
+   "pivot": "x 0..W along the run; y 0 on the roof surface; exterior face z = 0, 0.26 thick toward -z; exterior +Z. Sits on the roof slab with its face flush with the slab's fascia",
+   "lods": [
+    {
+     "node": "parapet_2m_b",
+     "tris": 769
+    },
+    {
+     "node": "parapet_2m_b_LOD1",
+     "tris": 342
+    },
+    {
+     "node": "parapet_2m_b_LOD2",
+     "tris": 150
+    }
+   ],
+   "bbox": [
+    [
+     -0.0001,
+     -0.0002,
+     -0.26
+    ],
+    [
+     2,
+     0.55,
+     0
+    ]
+   ],
+   "notes": "roof parapet, rounded eroded top, worn plaster; closed ends so it can stop at a ladder or stair head",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "parapet_corner",
+   "kind": "parapet",
+   "snap": {
+    "x": 0.26,
+    "y": 0.55,
+    "z": 0.26
+   },
+   "pivot": "the corner square x 0..0.26, z -0.26..0; exterior faces +Z and -X (as corner_out)",
+   "lods": [
+    {
+     "node": "parapet_corner",
+     "tris": 117
+    },
+    {
+     "node": "parapet_corner_LOD1",
+     "tris": 68
+    },
+    {
+     "node": "parapet_corner_LOD2",
+     "tris": 38
+    }
+   ],
+   "bbox": [
+    [
+     -0.0001,
+     0,
+     -0.26
+    ],
+    [
+     0.26,
+     0.5489,
+     0
+    ]
+   ],
+   "notes": "mitred parapet corner",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "parapet_stepped_2m",
+   "kind": "parapet",
+   "snap": {
+    "x": 2,
+    "y": 1.02,
+    "z": 0.3,
+    "stretch": "x 0.9-1.1"
+   },
+   "pivot": "x 0..W along the run; y 0 on the roof surface; exterior face z = 0, 0.30 thick toward -z; exterior +Z. Sits on the roof slab with its face flush with the slab's fascia",
+   "lods": [
+    {
+     "node": "parapet_stepped_2m",
+     "tris": 766
+    },
+    {
+     "node": "parapet_stepped_2m_LOD1",
+     "tris": 566
+    },
+    {
+     "node": "parapet_stepped_2m_LOD2",
+     "tris": 226
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     -0.0001,
+     -0.3
+    ],
+    [
+     2,
+     1.02,
+     0
+    ]
+   ],
+   "notes": "low parapet with two stepped merlons (palace, temple, gate tops)",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "roof_edge_2m",
+   "kind": "roof",
+   "snap": {
+    "x": 2,
+    "y": 0.4,
+    "z": 0.6,
+    "stretch": "x 0.8-1.2"
+   },
+   "pivot": "y 0 at the wall top (the slab's underside); the slab top is y = 0.40; the wall's exterior face is z = 0, the slab overhangs to z = +0.10; x 0..2 along the edge; its top strip reaches back to z = -0.5",
+   "lods": [
+    {
+     "node": "roof_edge_2m",
+     "tris": 734
+    },
+    {
+     "node": "roof_edge_2m_LOD1",
+     "tris": 310
+    },
+    {
+     "node": "roof_edge_2m_LOD2",
+     "tris": 92
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     -0.0399,
+     -0.5
+    ],
+    [
+     2,
+     0.3991,
+     0.0993
+    ]
+   ],
+   "notes": "roof slab edge: rounded mud lip worn to rough mud, the reed and brushwood layer under it, a reed-mat soffit",
+   "materials": [
+    "M_MudPlaster",
+    "M_ReedMat",
+    "M_RoofMud"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "roof_edge_corner",
+   "kind": "roof",
+   "snap": {
+    "x": 0.6,
+    "y": 0.4,
+    "z": 0.6
+   },
+   "pivot": "y 0 at the wall top (the slab's underside); the slab top is y = 0.40; the wall's exterior face is z = 0, the slab overhangs to z = +0.10; the house corner at the origin, the piece covers x -0.10..0.50, z -0.50..0.10 (mitred); edges start at x = 0.5 as walls do",
+   "lods": [
+    {
+     "node": "roof_edge_corner",
+     "tris": 428
+    },
+    {
+     "node": "roof_edge_corner_LOD1",
+     "tris": 158
+    },
+    {
+     "node": "roof_edge_corner_LOD2",
+     "tris": 70
+    }
+   ],
+   "bbox": [
+    [
+     -0.1,
+     -0.0386,
+     -0.5
+    ],
+    [
+     0.5,
+     0.3993,
+     0.1
+    ]
+   ],
+   "notes": "roof slab corner",
+   "materials": [
+    "M_MudPlaster",
+    "M_ReedMat",
+    "M_RoofMud"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "roof_field_2m",
+   "kind": "roof",
+   "snap": {
+    "x": 2,
+    "z": 2,
+    "stretch": "x, z 0.5-1.5"
+   },
+   "pivot": "y 0 at the wall top (the slab's underside); the slab top is y = 0.40; the wall's exterior face is z = 0, the slab overhangs to z = +0.10; x 0..2, z 0..-2: fill the slab between the edge strips",
+   "lods": [
+    {
+     "node": "roof_field_2m",
+     "tris": 200
+    },
+    {
+     "node": "roof_field_2m_LOD1",
+     "tris": 32
+    },
+    {
+     "node": "roof_field_2m_LOD2",
+     "tris": 2
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0.3992,
+     -2
+    ],
+    [
+     2,
+     0.4003,
+     0
+    ]
+   ],
+   "notes": "roof top: rolled mud with straw",
+   "materials": [
+    "M_RoofMud"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "beam_ends_2m",
+   "kind": "roof",
+   "snap": {
+    "x": 2,
+    "y": 0.17,
+    "z": 0.46,
+    "stretch": "x 0.75-1.25"
+   },
+   "pivot": "y 0 at the wall top (the logs rest on it); x 0..2 along the wall; logs project 0.28-0.46 beyond the exterior face (z = 0)",
+   "lods": [
+    {
+     "node": "beam_ends_2m",
+     "tris": 232
+    },
+    {
+     "node": "beam_ends_2m_LOD1",
+     "tris": 152
+    },
+    {
+     "node": "beam_ends_2m_LOD2",
+     "tris": 92
+    }
+   ],
+   "bbox": [
+    [
+     0.188,
+     -0.0166,
+     -0.4542
+    ],
+    [
+     1.8022,
+     0.1691,
+     0.3541
+    ]
+   ],
+   "notes": "four poplar roof beams projecting under the slab edge",
+   "materials": [
+    "M_Timber"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "drain_spout",
+   "kind": "roof",
+   "snap": {
+    "x": 0.18,
+    "y": 0.2,
+    "z": 0.48
+   },
+   "pivot": "y 0 on the roof surface; through the parapet foot, its mouth 0.48 m out from the parapet's exterior face (z = 0)",
+   "lods": [
+    {
+     "node": "drain_spout",
+     "tris": 152
+    },
+    {
+     "node": "drain_spout_LOD1",
+     "tris": 96
+    },
+    {
+     "node": "drain_spout_LOD2",
+     "tris": 68
+    }
+   ],
+   "bbox": [
+    [
+     -0.09,
+     -0.0021,
+     -0.35
+    ],
+    [
+     0.09,
+     0.1505,
+     0.48
+    ]
+   ],
+   "notes": "carved half-log rain spout",
+   "materials": [
+    "M_Timber"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "roof_hatch",
+   "kind": "roof",
+   "snap": {
+    "x": 1,
+    "z": 1
+   },
+   "pivot": "centre of the 0.72 m opening at the origin, y 0 on the roof surface; its plank lid lies on the +x side",
+   "lods": [
+    {
+     "node": "roof_hatch",
+     "tris": 1273
+    },
+    {
+     "node": "roof_hatch_LOD1",
+     "tris": 713
+    },
+    {
+     "node": "roof_hatch_LOD2",
+     "tris": 678
+    }
+   ],
+   "bbox": [
+    [
+     -0.52,
+     -0.3,
+     -0.52
+    ],
+    [
+     1.47,
+     0.204,
+     0.52
+    ]
+   ],
+   "notes": "roof hatch: mud curb, timber frame, plank lid",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_Timber"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "stair_flight",
+   "kind": "stair",
+   "snap": {
+    "x": 3.36,
+    "y": 3,
+    "z": 1,
+    "stretch": "x 0.8-1.2, y 0.85-1.2 (keep the slope under ~45 deg)"
+   },
+   "pivot": "foot of the first riser at x = 0, rising toward +x (12 steps, 0.25 x 0.28); against the wall at z = 0 and 1.0 wide toward +z (outside the wall); y 0 at the street",
+   "lods": [
+    {
+     "node": "stair_flight",
+     "tris": 3961
+    },
+    {
+     "node": "stair_flight_LOD1",
+     "tris": 1761
+    },
+    {
+     "node": "stair_flight_LOD2",
+     "tris": 649
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     3.36,
+     3,
+     1.0001
+    ]
+   ],
+   "notes": "solid mud-brick stair, plastered, nosings and tread middles worn to brick",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "stair_landing",
+   "kind": "stair",
+   "snap": {
+    "x": 1,
+    "y": 3,
+    "z": 1,
+    "stretch": "y as the flight"
+   },
+   "pivot": "continues the flight: x 0..1 (place at the flight's x = 3.36), z 0..1 outside the wall, top at y = 3.0",
+   "lods": [
+    {
+     "node": "stair_landing",
+     "tris": 1537
+    },
+    {
+     "node": "stair_landing_LOD1",
+     "tris": 674
+    },
+    {
+     "node": "stair_landing_LOD2",
+     "tris": 100
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     1,
+     3,
+     1.0001
+    ]
+   ],
+   "notes": "landing block at the head of the stair",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "ladder_3m",
+   "kind": "ladder",
+   "snap": {
+    "y": 3.2,
+    "x": 0.56
+   },
+   "pivot": "foot of the rails at the origin, standing along +y, rungs along x; lean it by rotating about x (rails 0.46 apart, rungs every 0.32 m)",
+   "lods": [
+    {
+     "node": "ladder_3m",
+     "tris": 724
+    },
+    {
+     "node": "ladder_3m_LOD1",
+     "tris": 244
+    },
+    {
+     "node": "ladder_3m_LOD2",
+     "tris": 196
+    }
+   ],
+   "bbox": [
+    [
+     -0.2783,
+     -0.0002,
+     -0.0455
+    ],
+    [
+     0.2783,
+     3.2002,
+     0.0453
+    ]
+   ],
+   "notes": "poles with lashed rungs",
+   "materials": [
+    "M_Timber"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "ladder_5m",
+   "kind": "ladder",
+   "snap": {
+    "y": 5,
+    "x": 0.56
+   },
+   "pivot": "foot of the rails at the origin, standing along +y, rungs along x; lean it by rotating about x (rails 0.46 apart, rungs every 0.32 m)",
+   "lods": [
+    {
+     "node": "ladder_5m",
+     "tris": 1180
+    },
+    {
+     "node": "ladder_5m_LOD1",
+     "tris": 388
+    },
+    {
+     "node": "ladder_5m_LOD2",
+     "tris": 316
+    }
+   ],
+   "bbox": [
+    [
+     -0.279,
+     -0.0001,
+     -0.0456
+    ],
+    [
+     0.279,
+     5.0001,
+     0.0462
+    ]
+   ],
+   "notes": "poles with lashed rungs",
+   "materials": [
+    "M_Timber"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "cwall_2m",
+   "kind": "courtyard",
+   "snap": {
+    "x": 2,
+    "y": 2,
+    "z": 0.4,
+    "stretch": "x 0.85-1.15, y 0.8-1.2"
+   },
+   "pivot": "x 0..W along the run, y 0 at the foot, centred on its line (z -0.2..0.2), both faces finished",
+   "lods": [
+    {
+     "node": "cwall_2m",
+     "tris": 1588
+    },
+    {
+     "node": "cwall_2m_LOD1",
+     "tris": 771
+    },
+    {
+     "node": "cwall_2m_LOD2",
+     "tris": 208
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.2109
+    ],
+    [
+     2,
+     2,
+     0.2
+    ]
+   ],
+   "notes": "mud-brick courtyard wall, rounded sagging cap, worn both sides",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "cwall_4m",
+   "kind": "courtyard",
+   "snap": {
+    "x": 4,
+    "y": 2,
+    "z": 0.4,
+    "stretch": "x 0.85-1.15, y 0.8-1.2"
+   },
+   "pivot": "x 0..W along the run, y 0 at the foot, centred on its line (z -0.2..0.2), both faces finished",
+   "lods": [
+    {
+     "node": "cwall_4m",
+     "tris": 3166
+    },
+    {
+     "node": "cwall_4m_LOD1",
+     "tris": 1480
+    },
+    {
+     "node": "cwall_4m_LOD2",
+     "tris": 282
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.2112
+    ],
+    [
+     4,
+     2,
+     0.2
+    ]
+   ],
+   "notes": "mud-brick courtyard wall, rounded sagging cap, worn both sides",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "cwall_end",
+   "kind": "courtyard",
+   "snap": {
+    "x": 1,
+    "y": 2,
+    "z": 0.4
+   },
+   "pivot": "x 0..W along the run, y 0 at the foot, centred on its line (z -0.2..0.2), both faces finished; its x = 0 end is a free, weathered end",
+   "lods": [
+    {
+     "node": "cwall_end",
+     "tris": 731
+    },
+    {
+     "node": "cwall_end_LOD1",
+     "tris": 338
+    },
+    {
+     "node": "cwall_end_LOD2",
+     "tris": 84
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -0.2107
+    ],
+    [
+     1,
+     2,
+     0.2
+    ]
+   ],
+   "notes": "free end of a courtyard wall (slumped, worn arrises)",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "cwall_corner",
+   "kind": "courtyard",
+   "snap": {
+    "x": 0.4,
+    "y": 2,
+    "z": 0.4
+   },
+   "pivot": "corner square x 0..0.4, z -0.4..0, exterior faces +Z and -X (as corner_out): the runs meeting it are centred on z = -0.2 and x = 0.2",
+   "lods": [
+    {
+     "node": "cwall_corner",
+     "tris": 364
+    },
+    {
+     "node": "cwall_corner_LOD1",
+     "tris": 211
+    },
+    {
+     "node": "cwall_corner_LOD2",
+     "tris": 74
+    }
+   ],
+   "bbox": [
+    [
+     -0.0001,
+     0,
+     -0.4
+    ],
+    [
+     0.4,
+     1.9991,
+     0.0001
+    ]
+   ],
+   "notes": "courtyard wall corner",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "citywall_4m",
+   "kind": "citywall",
+   "snap": {
+    "x": 4,
+    "y": 6.8,
+    "z": 3.36,
+    "stretch": "x 0.8-1.2, y 0.8-1.2"
+   },
+   "pivot": "x 0..4 along the run, y 0 at the foot, centred on the wall line (z -1.68..1.68); the outside of the city is +Z; walk at y = 6.8 with stepped merlons on the outer edge and a kerb on the inner",
+   "lods": [
+    {
+     "node": "citywall_4m",
+     "tris": 6333
+    },
+    {
+     "node": "citywall_4m_LOD1",
+     "tris": 3094
+    },
+    {
+     "node": "citywall_4m_LOD2",
+     "tris": 640
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -1.7187
+    ],
+    [
+     4,
+     8.35,
+     1.7184
+    ]
+   ],
+   "notes": "city wall section: gullied, worn foot, wall-walk, merlons",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_RoofMud"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "gate_tower",
+   "kind": "citywall",
+   "snap": {
+    "x": 7,
+    "y": 12.3,
+    "z": 7,
+    "stretch": "y 0.9-1.25 (towers 10.4-12.8 m)"
+   },
+   "pivot": "centre of the footprint (6.4 m square body, buttresses to 7.0), y 0 at the foot; outside of the city +Z; doorways onto the wall-walk on its +-X faces at y = 6.8",
+   "lods": [
+    {
+     "node": "gate_tower",
+     "tris": 20883
+    },
+    {
+     "node": "gate_tower_LOD1",
+     "tris": 11030
+    },
+    {
+     "node": "gate_tower_LOD2",
+     "tris": 1927
+    }
+   ],
+   "bbox": [
+    [
+     -3.8941,
+     0,
+     -3.9374
+    ],
+    [
+     3.9276,
+     11.4,
+     3.9323
+    ]
+   ],
+   "notes": "gate/wall tower: buttresses and niches, slits, corbelled slab on beam ends, stepped merlons",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_Timber",
+    "M_RoofMud"
+   ],
+   "primitives": 4
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "gate_arch",
+   "kind": "citywall",
+   "snap": {
+    "x": 5.6,
+    "y": 6.8,
+    "z": 3.36,
+    "stretch": "x 0.85-1.2"
+   },
+   "pivot": "x 0..5.6 between the two towers' faces, centred on the wall line; a 3.6 m arch springing at 3.3 m centred at x = 2.8; outside +Z",
+   "lods": [
+    {
+     "node": "gate_arch",
+     "tris": 7443
+    },
+    {
+     "node": "gate_arch_LOD1",
+     "tris": 3227
+    },
+    {
+     "node": "gate_arch_LOD2",
+     "tris": 848
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     0,
+     -1.6801
+    ],
+    [
+     5.6,
+     8.35,
+     1.6801
+    ]
+   ],
+   "notes": "gate passage: mud-brick arch, the wall-walk over it",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_RoofMud"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "gate_leaf",
+   "kind": "door",
+   "snap": {
+    "x": 1.78,
+    "y": 3.4
+   },
+   "pivot": "as door_leaf_s (hinge axis at the origin); a pair closes gate_arch below the springing",
+   "lods": [
+    {
+     "node": "gate_leaf",
+     "tris": 1236
+    },
+    {
+     "node": "gate_leaf_LOD1",
+     "tris": 724
+    },
+    {
+     "node": "gate_leaf_LOD2",
+     "tris": 200
+    }
+   ],
+   "bbox": [
+    [
+     -0.0628,
+     -0.03,
+     -0.0695
+    ],
+    [
+     1.7781,
+     3.38,
+     0.0875
+    ]
+   ],
+   "notes": "heavy gate leaf, plank and batten",
+   "materials": [
+    "M_Timber"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "porch_column",
+   "kind": "porch",
+   "snap": {
+    "x": 1.1,
+    "y": 3.6,
+    "z": 0.62
+   },
+   "pivot": "centre of the plinth at the origin, y 0 at its foot; the bolster on top runs along x; set columns 2-4 m apart and lay porch_beam_4m on them at y = 3.6",
+   "lods": [
+    {
+     "node": "porch_column",
+     "tris": 2838
+    },
+    {
+     "node": "porch_column_LOD1",
+     "tris": 1307
+    },
+    {
+     "node": "porch_column_LOD2",
+     "tris": 522
+    }
+   ],
+   "bbox": [
+    [
+     -0.55,
+     0,
+     -0.31
+    ],
+    [
+     0.55,
+     3.6013,
+     0.31
+    ]
+   ],
+   "notes": "temple porch column: mud-plastered timber, brick plinth, timber bolster capital",
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_Timber"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "porch_beam_4m",
+   "kind": "porch",
+   "snap": {
+    "x": 4,
+    "y": 0.32,
+    "z": 0.3,
+    "stretch": "x 0.75-1.5"
+   },
+   "pivot": "x 0..4, y 0 at its underside (on the bolsters, y = 3.6 on porch_column), centred on z",
+   "lods": [
+    {
+     "node": "porch_beam_4m",
+     "tris": 140
+    },
+    {
+     "node": "porch_beam_4m_LOD1",
+     "tris": 140
+    },
+    {
+     "node": "porch_beam_4m_LOD2",
+     "tris": 140
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     -0.0046,
+     -0.1558
+    ],
+    [
+     4,
+     0.3249,
+     0.1553
+    ]
+   ],
+   "notes": "architrave beam",
+   "materials": [
+    "M_Timber"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "arch",
+   "file": "arch.gltf",
+   "fileLo": "arch.lo.gltf",
+   "name": "porch_roof_4m",
+   "kind": "porch",
+   "snap": {
+    "x": 4,
+    "y": 0.52,
+    "z": 3,
+    "stretch": "x 0.75-1.5, z 0.7-1.4"
+   },
+   "pivot": "x 0..4 along the porch front, y 0 on the architrave top (y = 3.92 over porch_column), the front at z = 0 running back to z = -3 (the temple wall)",
+   "lods": [
+    {
+     "node": "porch_roof_4m",
+     "tris": 2312
+    },
+    {
+     "node": "porch_roof_4m_LOD1",
+     "tris": 719
+    },
+    {
+     "node": "porch_roof_4m_LOD2",
+     "tris": 390
+    }
+   ],
+   "bbox": [
+    [
+     0,
+     -0.0129,
+     -3.0006
+    ],
+    [
+     4,
+     0.52,
+     0.2505
+    ]
+   ],
+   "notes": "porch roof: log joists, reed-mat ceiling, mud slab",
+   "materials": [
+    "M_MudPlaster",
+    "M_ReedMat",
+    "M_Timber",
+    "M_RoofMud"
+   ],
+   "primitives": 4
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "pithos",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.92,
+    "height_m": 1.3
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "pithos",
+     "tris": 3360
+    },
+    {
+     "node": "pithos_LOD1",
+     "tris": 1368
+    },
+    {
+     "node": "pithos_LOD2",
+     "tris": 440
+    }
+   ],
+   "bbox": [
+    [
+     -0.4543,
+     -0.0018,
+     -0.4538
+    ],
+    [
+     0.4578,
+     1.3066,
+     0.457
+    ]
+   ],
+   "notes": "big storage pithos, 1.3 m: thick rolled rim, two applied cord-impressed bands",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "pithos_chipped",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.9,
+    "height_m": 1.29
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "pithos_chipped",
+     "tris": 3753
+    },
+    {
+     "node": "pithos_chipped_LOD1",
+     "tris": 1738
+    },
+    {
+     "node": "pithos_chipped_LOD2",
+     "tris": 716
+    }
+   ],
+   "bbox": [
+    [
+     -0.4473,
+     -0.0018,
+     -0.4447
+    ],
+    [
+     0.4459,
+     1.2916,
+     0.4434
+    ]
+   ],
+   "notes": "a second pithos, its rim chipped and a flake spalled off the belly (break faces show the paler fired core)",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "jar_storage",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.6,
+    "height_m": 0.81
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "jar_storage",
+     "tris": 2204
+    },
+    {
+     "node": "jar_storage_LOD1",
+     "tris": 848
+    },
+    {
+     "node": "jar_storage_LOD2",
+     "tris": 392
+    }
+   ],
+   "bbox": [
+    [
+     -0.2593,
+     -0.0014,
+     -0.2594
+    ],
+    [
+     0.2623,
+     0.8211,
+     0.2612
+    ]
+   ],
+   "notes": "storage jar, 0.81 m, two horizontal loop handles on the shoulder",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "jug_small",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.24,
+    "height_m": 0.35
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "jug_small",
+     "tris": 1970
+    },
+    {
+     "node": "jug_small_LOD1",
+     "tris": 760
+    },
+    {
+     "node": "jug_small_LOD2",
+     "tris": 248
+    }
+   ],
+   "bbox": [
+    [
+     -0.1001,
+     -0.0005,
+     -0.0994
+    ],
+    [
+     0.0993,
+     0.3554,
+     0.1384
+    ]
+   ],
+   "notes": "small jug, 0.35 m, a strap handle, two painted bands",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "bowl",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.27,
+    "height_m": 0.11
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "bowl",
+     "tris": 1440
+    },
+    {
+     "node": "bowl_LOD1",
+     "tris": 468
+    },
+    {
+     "node": "bowl_LOD2",
+     "tris": 180
+    }
+   ],
+   "bbox": [
+    [
+     -0.1324,
+     -0.0005,
+     -0.1313
+    ],
+    [
+     0.1306,
+     0.11,
+     0.1306
+    ]
+   ],
+   "notes": "carinated bowl, 0.27 m across",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "bowl_stack",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.28,
+    "height_m": 0.19
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "bowl_stack",
+     "tris": 2860
+    },
+    {
+     "node": "bowl_stack_LOD1",
+     "tris": 1120
+    },
+    {
+     "node": "bowl_stack_LOD2",
+     "tris": 448
+    }
+   ],
+   "bbox": [
+    [
+     -0.1345,
+     -0.0008,
+     -0.1335
+    ],
+    [
+     0.1387,
+     0.1795,
+     0.1321
+    ]
+   ],
+   "notes": "four carinated bowls stacked",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "lamp_a",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.17,
+    "height_m": 0.05
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "lamp_a",
+     "tris": 1052
+    },
+    {
+     "node": "lamp_a_LOD1",
+     "tris": 460
+    },
+    {
+     "node": "lamp_a_LOD2",
+     "tris": 160
+    }
+   ],
+   "bbox": [
+    [
+     -0.0836,
+     -0.0003,
+     -0.0837
+    ],
+    [
+     0.1031,
+     0.0438,
+     0.0819
+    ]
+   ],
+   "notes": "saucer oil lamp with one pinched spout, a burnt wick and soot; 0.15 m",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "lamp_b",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.15,
+    "height_m": 0.06
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "lamp_b",
+     "tris": 1100
+    },
+    {
+     "node": "lamp_b_LOD1",
+     "tris": 460
+    },
+    {
+     "node": "lamp_b_LOD2",
+     "tris": 180
+    }
+   ],
+   "bbox": [
+    [
+     -0.0751,
+     -0.0003,
+     -0.0751
+    ],
+    [
+     0.0961,
+     0.0578,
+     0.0767
+    ]
+   ],
+   "notes": "deeper saucer lamp on a low foot, tighter pinch; 0.13 m",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "jar_broken",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.75,
+    "height_m": 0.45
+   },
+   "pivot": "its rest point on the ground (y = 0); lies along x; front +Z",
+   "lods": [
+    {
+     "node": "jar_broken",
+     "tris": 2268
+    },
+    {
+     "node": "jar_broken_LOD1",
+     "tris": 1207
+    },
+    {
+     "node": "jar_broken_LOD2",
+     "tris": 464
+    }
+   ],
+   "bbox": [
+    [
+     -0.269,
+     -0.012,
+     -0.2379
+    ],
+    [
+     0.3962,
+     0.4051,
+     0.196
+    ]
+   ],
+   "notes": "a storage jar lying on its side, the shoulder broken away",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "shards",
+   "kind": "pottery",
+   "snap": {
+    "footprint_m": 0.6,
+    "height_m": 0.04
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "shards",
+     "tris": 252
+    },
+    {
+     "node": "shards_LOD1",
+     "tris": 180
+    },
+    {
+     "node": "shards_LOD2",
+     "tris": 96
+    }
+   ],
+   "bbox": [
+    [
+     -0.2781,
+     0,
+     -0.1404
+    ],
+    [
+     0.2917,
+     0.0405,
+     0.1877
+    ]
+   ],
+   "notes": "a scatter of potsherds, 0.6 m across",
+   "materials": [
+    "M_Terracotta"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "tannur",
+   "kind": "oven",
+   "snap": {
+    "footprint_m": 1.1,
+    "height_m": 0.9
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "tannur",
+     "tris": 3985
+    },
+    {
+     "node": "tannur_LOD1",
+     "tris": 1997
+    },
+    {
+     "node": "tannur_LOD2",
+     "tris": 490
+    }
+   ],
+   "bbox": [
+    [
+     -0.5282,
+     -0.0107,
+     -0.5267
+    ],
+    [
+     0.5301,
+     0.8963,
+     0.5219
+    ]
+   ],
+   "notes": "clay bread oven (tannur), 0.9 m: open mouth, a side vent at the foot, a mud-plaster skirt, soot at the mouth and inside",
+   "materials": [
+    "M_Terracotta",
+    "M_MudPlaster"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "potters_wheel",
+   "kind": "craft",
+   "snap": {
+    "footprint_m": 0.9,
+    "height_m": 0.42
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "potters_wheel",
+     "tris": 2660
+    },
+    {
+     "node": "potters_wheel_LOD1",
+     "tris": 1204
+    },
+    {
+     "node": "potters_wheel_LOD2",
+     "tris": 624
+    }
+   ],
+   "bbox": [
+    [
+     -0.285,
+     -0.0004,
+     -0.285
+    ],
+    [
+     0.6002,
+     0.3594,
+     0.2984
+    ]
+   ],
+   "notes": "a slow wheel (tournette): a basalt pivot stone, a heavy wooden wheel-head with a pot being thrown, and a water bowl",
+   "materials": [
+    "M_ClayRaw",
+    "M_Timber",
+    "M_Terracotta"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "tablet_board",
+   "kind": "craft",
+   "snap": {
+    "x": 1.6,
+    "z": 0.42,
+    "height_m": 0.5
+   },
+   "pivot": "centre of the board on the ground (y = 0); board along x; front +Z",
+   "lods": [
+    {
+     "node": "tablet_board",
+     "tris": 2736
+    },
+    {
+     "node": "tablet_board_LOD1",
+     "tris": 1296
+    },
+    {
+     "node": "tablet_board_LOD2",
+     "tris": 432
+    }
+   ],
+   "bbox": [
+    [
+     -0.8,
+     0,
+     -0.2119
+    ],
+    [
+     0.81,
+     0.4765,
+     0.2064
+    ]
+   ],
+   "notes": "clay tablets drying on a plank board on two mud-brick piers: 24 blank or lightly marked tablets (invented ruling and stylus pocks, no script)",
+   "materials": [
+    "M_ClayRaw",
+    "M_MudBrick",
+    "M_Timber"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "tablet",
+   "kind": "craft",
+   "snap": {
+    "footprint_m": 0.11,
+    "height_m": 0.03
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "tablet",
+     "tris": 300
+    },
+    {
+     "node": "tablet_LOD1",
+     "tris": 108
+    },
+    {
+     "node": "tablet_LOD2",
+     "tris": 12
+    }
+   ],
+   "bbox": [
+    [
+     -0.055,
+     0,
+     -0.0375
+    ],
+    [
+     0.055,
+     0.0317,
+     0.0375
+    ]
+   ],
+   "notes": "a single clay tablet, 11 x 7.5 cm, ruled faintly (invented, no script)",
+   "materials": [
+    "M_ClayRaw"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "sack_closed",
+   "kind": "sack",
+   "snap": {
+    "footprint_m": 0.58,
+    "height_m": 0.84
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "sack_closed",
+     "tris": 2834
+    },
+    {
+     "node": "sack_closed_LOD1",
+     "tris": 918
+    },
+    {
+     "node": "sack_closed_LOD2",
+     "tris": 220
+    }
+   ],
+   "bbox": [
+    [
+     -0.2716,
+     0,
+     -0.2378
+    ],
+    [
+     0.2768,
+     0.845,
+     0.2415
+    ]
+   ],
+   "notes": "a full grain sack, its neck tied with cord",
+   "materials": [
+    "M_Hessian",
+    "M_Basketry"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "sack_open",
+   "kind": "sack",
+   "snap": {
+    "footprint_m": 0.6,
+    "height_m": 0.7
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "sack_open",
+     "tris": 2454
+    },
+    {
+     "node": "sack_open_LOD1",
+     "tris": 936
+    },
+    {
+     "node": "sack_open_LOD2",
+     "tris": 292
+    }
+   ],
+   "bbox": [
+    [
+     -0.3432,
+     0,
+     -0.2767
+    ],
+    [
+     0.3357,
+     0.7021,
+     0.3033
+    ]
+   ],
+   "notes": "an open grain sack, the neck rolled down, barley heaped in it",
+   "materials": [
+    "M_Hessian",
+    "M_Grain"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "sack_slumped",
+   "kind": "sack",
+   "snap": {
+    "footprint_m": 0.7,
+    "height_m": 0.5
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "sack_slumped",
+     "tris": 2640
+    },
+    {
+     "node": "sack_slumped_LOD1",
+     "tris": 828
+    },
+    {
+     "node": "sack_slumped_LOD2",
+     "tris": 220
+    }
+   ],
+   "bbox": [
+    [
+     -0.2621,
+     0,
+     -0.2188
+    ],
+    [
+     0.6426,
+     0.5239,
+     0.2182
+    ]
+   ],
+   "notes": "a half-empty sack slumped over, its tied neck fallen sideways",
+   "materials": [
+    "M_Hessian"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "basket_grain",
+   "kind": "basket",
+   "snap": {
+    "footprint_m": 0.58,
+    "height_m": 0.36
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "basket_grain",
+     "tris": 2410
+    },
+    {
+     "node": "basket_grain_LOD1",
+     "tris": 904
+    },
+    {
+     "node": "basket_grain_LOD2",
+     "tris": 332
+    }
+   ],
+   "bbox": [
+    [
+     -0.2825,
+     -0.0015,
+     -0.2801
+    ],
+    [
+     0.2821,
+     0.3636,
+     0.2808
+    ]
+   ],
+   "notes": "a wide coiled grain basket, 0.56 m, heaped with barley",
+   "materials": [
+    "M_Basketry",
+    "M_Grain"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "basket_tall",
+   "kind": "basket",
+   "snap": {
+    "footprint_m": 0.38,
+    "height_m": 0.72
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "basket_tall",
+     "tris": 2788
+    },
+    {
+     "node": "basket_tall_LOD1",
+     "tris": 992
+    },
+    {
+     "node": "basket_tall_LOD2",
+     "tris": 340
+    }
+   ],
+   "bbox": [
+    [
+     -0.1802,
+     -0.0014,
+     -0.1803
+    ],
+    [
+     0.1811,
+     0.6769,
+     0.179
+    ]
+   ],
+   "notes": "a tall plaited palm-leaf basket with two cord handles, 0.58 m",
+   "materials": [
+    "M_Basketry"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "tray_winnowing",
+   "kind": "basket",
+   "snap": {
+    "footprint_m": 0.62,
+    "height_m": 0.06
+   },
+   "pivot": "base centre on the ground (y = 0); upright along +Y; front +Z",
+   "lods": [
+    {
+     "node": "tray_winnowing",
+     "tris": 1952
+    },
+    {
+     "node": "tray_winnowing_LOD1",
+     "tris": 680
+    },
+    {
+     "node": "tray_winnowing_LOD2",
+     "tris": 140
+    }
+   ],
+   "bbox": [
+    [
+     -0.3103,
+     -0.0027,
+     -0.3103
+    ],
+    [
+     0.3103,
+     0.0621,
+     0.3103
+    ]
+   ],
+   "notes": "a flat coiled winnowing tray, 0.62 m, a little grain on it",
+   "materials": [
+    "M_Basketry",
+    "M_Grain"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "mat_flat",
+   "kind": "mat",
+   "snap": {
+    "x": 2,
+    "z": 1
+   },
+   "pivot": "centre on the ground (y = 0); long side along x",
+   "lods": [
+    {
+     "node": "mat_flat",
+     "tris": 1728
+    },
+    {
+     "node": "mat_flat_LOD1",
+     "tris": 312
+    },
+    {
+     "node": "mat_flat_LOD2",
+     "tris": 16
+    }
+   ],
+   "bbox": [
+    [
+     -1.0868,
+     -0.004,
+     -0.5
+    ],
+    [
+     1.0894,
+     0.0307,
+     0.5
+    ]
+   ],
+   "notes": "a plaited reed mat, 2 x 1 m, lying flat, its ends frayed",
+   "materials": [
+    "M_ReedMat"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "mat_rolled",
+   "kind": "mat",
+   "snap": {
+    "x": 1,
+    "footprint_m": 0.15
+   },
+   "pivot": "centre of the roll on the ground (y = 0); roll axis along x",
+   "lods": [
+    {
+     "node": "mat_rolled",
+     "tris": 1696
+    },
+    {
+     "node": "mat_rolled_LOD1",
+     "tris": 464
+    },
+    {
+     "node": "mat_rolled_LOD2",
+     "tris": 84
+    }
+   ],
+   "bbox": [
+    [
+     -0.5,
+     -0.012,
+     -0.0792
+    ],
+    [
+     0.5,
+     0.1463,
+     0.0792
+    ]
+   ],
+   "notes": "a reed mat rolled up and tied, 1 m long",
+   "materials": [
+    "M_ReedMat",
+    "M_Basketry"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "firewood_stack",
+   "kind": "wood",
+   "snap": {
+    "x": 1.3,
+    "z": 0.5,
+    "height_m": 0.7
+   },
+   "pivot": "the wall line at the back of the stack, on the ground (y = 0); stack in front toward +Z; along x",
+   "lods": [
+    {
+     "node": "firewood_stack",
+     "tris": 924
+    },
+    {
+     "node": "firewood_stack_LOD1",
+     "tris": 500
+    },
+    {
+     "node": "firewood_stack_LOD2",
+     "tris": 132
+    }
+   ],
+   "bbox": [
+    [
+     -0.6908,
+     -0.0164,
+     -0.0081
+    ],
+    [
+     0.6476,
+     0.527,
+     0.7121
+    ]
+   ],
+   "notes": "split logs and branches stacked against a wall, 1.2 m long",
+   "materials": [
+    "M_Timber"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props",
+   "file": "props.gltf",
+   "fileLo": "props.lo.gltf",
+   "name": "firewood_bundle",
+   "kind": "wood",
+   "snap": {
+    "x": 1.05,
+    "footprint_m": 0.24
+   },
+   "pivot": "centre on the ground (y = 0); along x",
+   "lods": [
+    {
+     "node": "firewood_bundle",
+     "tris": 788
+    },
+    {
+     "node": "firewood_bundle_LOD1",
+     "tris": 260
+    },
+    {
+     "node": "firewood_bundle_LOD2",
+     "tris": 60
+    }
+   ],
+   "bbox": [
+    [
+     -0.5536,
+     0,
+     -0.1059
+    ],
+    [
+     0.5918,
+     0.1946,
+     0.1056
+    ]
+   ],
+   "notes": "a bundle of brushwood tied with two cords, 1 m, lying",
+   "materials": [
+    "M_Timber",
+    "M_Basketry"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "stall_large",
+   "kind": "prop",
+   "snap": {
+    "x": 3.4,
+    "y": 2.7,
+    "z": 2.6
+   },
+   "pivot": "base centre on the ground; the counter and the low front edge of the awning face +Z",
+   "lods": [
+    {
+     "node": "stall_large",
+     "tris": 5664
+    },
+    {
+     "node": "stall_large_LOD1",
+     "tris": 1261
+    },
+    {
+     "node": "stall_large_LOD2",
+     "tris": 223
+    }
+   ],
+   "bbox": [
+    [
+     -1.63,
+     -0.0504,
+     -1.0793
+    ],
+    [
+     1.65,
+     2.7178,
+     1.1521
+    ]
+   ],
+   "notes": "market stall 3 x 2 m: four lashed poles, a middle rafter, a draped linen awning with a hanging valance, a plank counter on trestles. Awning dyed madder in COLOR_0 (dye in extras); tint its M_Textile primitive per instance with instanceColor = target / dye.",
+   "dye": [
+    0.54,
+    0.17,
+    0.11
+   ],
+   "materials": [
+    "M_Timber",
+    "M_Textile",
+    "M_StructMisc"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "stall_lean",
+   "kind": "prop",
+   "snap": {
+    "x": 2.7,
+    "y": 1.6,
+    "z": 2.5
+   },
+   "pivot": "centre of its back edge on the ground, on the face of the wall it leans on (the wall is behind it, toward -Z); the stall stands in front, toward +Z",
+   "lods": [
+    {
+     "node": "stall_lean",
+     "tris": 5172
+    },
+    {
+     "node": "stall_lean_LOD1",
+     "tris": 1067
+    },
+    {
+     "node": "stall_lean_LOD2",
+     "tris": 176
+    }
+   ],
+   "bbox": [
+    [
+     -1.32,
+     -0.0505,
+     -0.13
+    ],
+    [
+     1.34,
+     2.5428,
+     1.6305
+    ]
+   ],
+   "notes": "lean-to stall: a ridge pole on pegs driven into the wall, two front posts, rafters, an indigo awning tucked at the wall with a front valance, a plank table, a reed mat. Tint the M_Textile primitive with instanceColor = target / dye.",
+   "dye": [
+    0.18,
+    0.25,
+    0.42
+   ],
+   "materials": [
+    "M_Timber",
+    "M_Textile",
+    "M_StructMisc",
+    "M_ReedMat"
+   ],
+   "primitives": 4
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "well_head",
+   "kind": "prop",
+   "snap": {
+    "x": 4,
+    "y": 2.4,
+    "z": 1.7
+   },
+   "pivot": "the well's centre on the ground; the forked post stands at x = 2.3; the sweep's fulcrum (shaduf_pole's origin) is at (2.299999952316284, 2.309999942779541, 0)",
+   "lods": [
+    {
+     "node": "well_head",
+     "tris": 5678
+    },
+    {
+     "node": "well_head_LOD1",
+     "tris": 2366
+    },
+    {
+     "node": "well_head_LOD2",
+     "tris": 840
+    }
+   ],
+   "bbox": [
+    [
+     -1.8575,
+     -0.1011,
+     -0.8098
+    ],
+    [
+     2.6,
+     2.3683,
+     0.8083
+    ]
+   ],
+   "notes": "public well: a mud-brick curb plastered and worn (rope grooves in the rim, brick lining showing inside, the dark shaft), a forked post with the pin, a mud trough. Pair with shaduf_pole and shaduf_bucket.",
+   "fulcrum": [
+    2.299999952316284,
+    2.309999942779541,
+    0
+   ],
+   "materials": [
+    "M_MudPlaster",
+    "M_MudBrick",
+    "M_Timber",
+    "M_StructMisc"
+   ],
+   "primitives": 4
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "shaduf_pole",
+   "kind": "prop",
+   "snap": {
+    "x": 4.1,
+    "y": 2
+   },
+   "pivot": "the fulcrum (place it at well_head's fulcrum); the long arm toward -x raised 35 degrees. Rotate about +Z: 0 (rest) to about +32 degrees lowers the bucket to the curb",
+   "lods": [
+    {
+     "node": "shaduf_pole",
+     "tris": 1284
+    },
+    {
+     "node": "shaduf_pole_LOD1",
+     "tris": 966
+    },
+    {
+     "node": "shaduf_pole_LOD2",
+     "tris": 118
+    }
+   ],
+   "bbox": [
+    [
+     -2.3119,
+     -1.069,
+     -0.1894
+    ],
+    [
+     1.3048,
+     1.6343,
+     0.1843
+    ]
+   ],
+   "notes": "the water sweep: a tapering pole, lashed to the pin, a mud counterweight bound with rope at the short end",
+   "tip": [
+    -2.2936,
+    1.606,
+    0
+   ],
+   "materials": [
+    "M_Timber",
+    "M_StructMisc",
+    "M_MudPlaster"
+   ],
+   "primitives": 3
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "shaduf_bucket",
+   "kind": "prop",
+   "snap": {
+    "y": 2.55
+   },
+   "pivot": "the top of the rope: hang it at shaduf_pole's tip (extras.tip, rotated with the pole) and keep it vertical; rope 2.05 m, then a hooped leather bucket",
+   "lods": [
+    {
+     "node": "shaduf_bucket",
+     "tris": 440
+    },
+    {
+     "node": "shaduf_bucket_LOD1",
+     "tris": 292
+    },
+    {
+     "node": "shaduf_bucket_LOD2",
+     "tris": 182
+    }
+   ],
+   "bbox": [
+    [
+     -0.1705,
+     -2.53,
+     -0.169
+    ],
+    [
+     0.1693,
+     -0.02,
+     0.1735
+    ]
+   ],
+   "notes": "rope and leather bucket for the water sweep",
+   "materials": [
+    "M_StructMisc",
+    "M_Timber"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "cart",
+   "kind": "prop",
+   "snap": {
+    "x": 1.7,
+    "y": 1,
+    "z": 3.4
+   },
+   "pivot": "the ground under the axle's centre; the shafts point to +Z and rest on the ground",
+   "lods": [
+    {
+     "node": "cart",
+     "tris": 5084
+    },
+    {
+     "node": "cart_LOD1",
+     "tris": 1160
+    },
+    {
+     "node": "cart_LOD2",
+     "tris": 724
+    }
+   ],
+   "bbox": [
+    [
+     -0.7875,
+     -0.0002,
+     -0.8033
+    ],
+    [
+     0.7875,
+     1.2547,
+     2.4791
+    ]
+   ],
+   "notes": "a two-wheeled cart, parked: solid tripartite disc wheels (three planks, two battens, raised naves) on a fixed axle with linchpins, a plank bed with low board sides, the side beams running on as shafts with a lashed harness bar. No animal.",
+   "materials": [
+    "M_Timber",
+    "M_StructMisc"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "loom",
+   "kind": "prop",
+   "snap": {
+    "x": 2,
+    "y": 2.35,
+    "z": 0.75
+   },
+   "pivot": "centre of its foot line projected to the wall: the origin is on the wall face at the ground; the loom leans on that wall (toward -Z) and stands in front of it (+Z)",
+   "lods": [
+    {
+     "node": "loom",
+     "tris": 6888
+    },
+    {
+     "node": "loom_LOD1",
+     "tris": 3056
+    },
+    {
+     "node": "loom_LOD2",
+     "tris": 750
+    }
+   ],
+   "bbox": [
+    [
+     -1,
+     -0.0134,
+     0.0224
+    ],
+    [
+     1.1319,
+     2.3321,
+     0.7253
+    ]
+   ],
+   "notes": "a warp-weighted loom leaning on a wall: bark-covered uprights, the cloth beam with woven cloth wound on it, a web with stepped bands, shed rod and heddle rod on pegs, warp threads in two sheds, two rows of fired-clay doughnut weights, a weaving sword",
+   "materials": [
+    "M_Timber",
+    "M_Textile",
+    "M_TextilePattern",
+    "M_StructMisc"
+   ],
+   "primitives": 4
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "cloth_hang_a",
+   "kind": "cloth",
+   "snap": {
+    "x": 1.1,
+    "y": 0.85
+   },
+   "pivot": "the line at the top of the fold (the cloth hangs over a line along x through the origin; its longer side toward +Z)",
+   "lods": [
+    {
+     "node": "cloth_hang_a",
+     "tris": 884
+    },
+    {
+     "node": "cloth_hang_a_LOD1",
+     "tris": 208
+    },
+    {
+     "node": "cloth_hang_a_LOD2",
+     "tris": 48
+    }
+   ],
+   "bbox": [
+    [
+     -0.55,
+     -0.8671,
+     -0.0751
+    ],
+    [
+     0.55,
+     -0.0103,
+     0.0704
+    ]
+   ],
+   "notes": "woven cloth with the 'zigzag' band design folded over a line, soft folds; string several on a rope between poles",
+   "materials": [
+    "M_TextilePattern"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "cloth_hang_b",
+   "kind": "cloth",
+   "snap": {
+    "x": 0.9,
+    "y": 0.66
+   },
+   "pivot": "the line at the top of the fold (the cloth hangs over a line along x through the origin; its longer side toward +Z)",
+   "lods": [
+    {
+     "node": "cloth_hang_b",
+     "tris": 560
+    },
+    {
+     "node": "cloth_hang_b_LOD1",
+     "tris": 140
+    },
+    {
+     "node": "cloth_hang_b_LOD2",
+     "tris": 30
+    }
+   ],
+   "bbox": [
+    [
+     -0.45,
+     -0.6725,
+     -0.0699
+    ],
+    [
+     0.45,
+     -0.0012,
+     0.0642
+    ]
+   ],
+   "notes": "plain linen dyed indigo folded over a line, soft folds; string several on a rope between poles",
+   "dye": [
+    0.18,
+    0.25,
+    0.42
+   ],
+   "materials": [
+    "M_Textile"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "cloth_hang_c",
+   "kind": "cloth",
+   "snap": {
+    "x": 1,
+    "y": 0.74
+   },
+   "pivot": "the line at the top of the fold (the cloth hangs over a line along x through the origin; its longer side toward +Z)",
+   "lods": [
+    {
+     "node": "cloth_hang_c",
+     "tris": 690
+    },
+    {
+     "node": "cloth_hang_c_LOD1",
+     "tris": 176
+    },
+    {
+     "node": "cloth_hang_c_LOD2",
+     "tris": 30
+    }
+   ],
+   "bbox": [
+    [
+     -0.5,
+     -0.754,
+     -0.0612
+    ],
+    [
+     0.5,
+     0.0064,
+     0.066
+    ]
+   ],
+   "notes": "woven cloth with the 'lozenge' band design folded over a line, soft folds; string several on a rope between poles",
+   "materials": [
+    "M_TextilePattern"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "cloth_hang_d",
+   "kind": "cloth",
+   "snap": {
+    "x": 0.8,
+    "y": 0.55
+   },
+   "pivot": "the line at the top of the fold (the cloth hangs over a line along x through the origin; its longer side toward +Z)",
+   "lods": [
+    {
+     "node": "cloth_hang_d",
+     "tris": 408
+    },
+    {
+     "node": "cloth_hang_d_LOD1",
+     "tris": 96
+    },
+    {
+     "node": "cloth_hang_d_LOD2",
+     "tris": 30
+    }
+   ],
+   "bbox": [
+    [
+     -0.4,
+     -0.559,
+     -0.0536
+    ],
+    [
+     0.4,
+     0.01,
+     0.0607
+    ]
+   ],
+   "notes": "plain linen dyed saffron folded over a line, soft folds; string several on a rope between poles",
+   "dye": [
+    0.8,
+    0.57,
+    0.2
+   ],
+   "materials": [
+    "M_Textile"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "cloth_line",
+   "kind": "prop",
+   "snap": {
+    "x": 4.5,
+    "y": 2.15,
+    "z": 0.6
+   },
+   "pivot": "base centre between the two poles on the ground; the line runs along x",
+   "lods": [
+    {
+     "node": "cloth_line",
+     "tris": 3324
+    },
+    {
+     "node": "cloth_line_LOD1",
+     "tris": 914
+    },
+    {
+     "node": "cloth_line_LOD2",
+     "tris": 123
+    }
+   ],
+   "bbox": [
+    [
+     -2.2708,
+     -0.0506,
+     -0.0698
+    ],
+    [
+     2.2712,
+     2.1405,
+     0.0723
+    ]
+   ],
+   "notes": "a drying line: two poles and a sagging rope with four cloths (two woven designs, indigo and saffron linen) folded over it",
+   "materials": [
+    "M_Timber",
+    "M_StructMisc",
+    "M_TextilePattern",
+    "M_Textile"
+   ],
+   "primitives": 4
+  },
+  {
+   "pack": "props_struct",
+   "file": "props_struct.gltf",
+   "fileLo": "props_struct.lo.gltf",
+   "name": "scale",
+   "kind": "prop",
+   "snap": {
+    "x": 1.2,
+    "y": 2.2,
+    "z": 0.6
+   },
+   "pivot": "the post's foot on the ground; the arm and pans toward +x",
+   "lods": [
+    {
+     "node": "scale",
+     "tris": 1472
+    },
+    {
+     "node": "scale_LOD1",
+     "tris": 595
+    },
+    {
+     "node": "scale_LOD2",
+     "tris": 415
+    }
+   ],
+   "bbox": [
+    [
+     -0.0678,
+     -0.05,
+     -0.1329
+    ],
+    [
+     1.125,
+     2.2,
+     0.4402
+    ]
+   ],
+   "notes": "the weigher's scale: a post with an arm, a balance beam hung on a cord, two bronze pans on three cords each, barrel-shaped weights (dark stone) on a pan and on the ground",
+   "materials": [
+    "M_Timber",
+    "M_StructMisc"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "palm_mature",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.35,
+    "height": 11.5,
+    "crown_r": 4.5
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "palm_mature",
+     "tris": 8721
+    },
+    {
+     "node": "palm_mature_LOD1",
+     "tris": 2832
+    },
+    {
+     "node": "palm_mature_LOD2",
+     "tris": 609
+    }
+   ],
+   "bbox": [
+    [
+     -5.263,
+     -0.0815,
+     -4.8326
+    ],
+    [
+     3.9872,
+     11.9444,
+     4.2113
+    ]
+   ],
+   "notes": "date palm, ~11.5 m overall (trunk 6.8 m): curved trunk of leaf-base stubs, 38 fronds and a skirt of dead ones",
+   "materials": [
+    "M_PalmTrunk",
+    "M_Foliage"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "palm_young",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.35,
+    "height": 4.5,
+    "crown_r": 2.8
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "palm_young",
+     "tris": 3896
+    },
+    {
+     "node": "palm_young_LOD1",
+     "tris": 1328
+    },
+    {
+     "node": "palm_young_LOD2",
+     "tris": 270
+    }
+   ],
+   "bbox": [
+    [
+     -2.6939,
+     -0.18,
+     -2.4018
+    ],
+    [
+     2.2806,
+     3.8395,
+     2.654
+    ]
+   ],
+   "notes": "young date palm, ~4.5 m overall: short thick trunk, upright crown",
+   "materials": [
+    "M_PalmTrunk",
+    "M_Foliage"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "fig_tree",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.3,
+    "height": 4.4,
+    "crown_r": 3.2
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "fig_tree",
+     "tris": 7432
+    },
+    {
+     "node": "fig_tree_LOD1",
+     "tris": 2064
+    },
+    {
+     "node": "fig_tree_LOD2",
+     "tris": 638
+    }
+   ],
+   "bbox": [
+    [
+     -2.3567,
+     -0.0619,
+     -3.5292
+    ],
+    [
+     3.4964,
+     4.1562,
+     3.3396
+    ]
+   ],
+   "notes": "fig tree: four grey stems, wide low crown of lobed leaves",
+   "materials": [
+    "M_Bark",
+    "M_Foliage"
+   ],
+   "primitives": 2
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "reeds_a",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.6,
+    "height": 3
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "reeds_a",
+     "tris": 384
+    },
+    {
+     "node": "reeds_a_LOD1",
+     "tris": 88
+    },
+    {
+     "node": "reeds_a_LOD2",
+     "tris": 20
+    }
+   ],
+   "bbox": [
+    [
+     -1.1116,
+     -0.0004,
+     -0.9588
+    ],
+    [
+     0.9072,
+     2.728,
+     0.7645
+    ]
+   ],
+   "notes": "reed clump (Phragmites) with plumes, for the riverbank",
+   "materials": [
+    "M_Foliage"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "reeds_b",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.6,
+    "height": 2.6
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "reeds_b",
+     "tris": 384
+    },
+    {
+     "node": "reeds_b_LOD1",
+     "tris": 88
+    },
+    {
+     "node": "reeds_b_LOD2",
+     "tris": 20
+    }
+   ],
+   "bbox": [
+    [
+     -0.7116,
+     -0.0003,
+     -0.7757
+    ],
+    [
+     0.8998,
+     2.7822,
+     0.7062
+    ]
+   ],
+   "notes": "reed clump, drier, later in the season",
+   "materials": [
+    "M_Foliage"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "reed_edge_4m",
+   "kind": "vegetation",
+   "snap": {
+    "x": 4,
+    "height": 1.6
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "reed_edge_4m",
+     "tris": 584
+    },
+    {
+     "node": "reed_edge_4m_LOD1",
+     "tris": 144
+    },
+    {
+     "node": "reed_edge_4m_LOD2",
+     "tris": 24
+    }
+   ],
+   "bbox": [
+    [
+     -0.281,
+     -0.0003,
+     -0.685
+    ],
+    [
+     4.3732,
+     1.5439,
+     0.7138
+    ]
+   ],
+   "notes": "a 4 m strip of low reeds, rushes and grass along a bank (x 0..4)",
+   "materials": [
+    "M_Foliage"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "grass_a",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.3,
+    "height": 0.45
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "grass_a",
+     "tris": 48
+    },
+    {
+     "node": "grass_a_LOD1",
+     "tris": 20
+    },
+    {
+     "node": "grass_a_LOD2",
+     "tris": 8
+    }
+   ],
+   "bbox": [
+    [
+     -0.4441,
+     -0.0003,
+     -0.3887
+    ],
+    [
+     0.3235,
+     0.4435,
+     0.3068
+    ]
+   ],
+   "notes": "grass tuft, green and straw",
+   "materials": [
+    "M_Foliage"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "grass_b",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.3,
+    "height": 0.45
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "grass_b",
+     "tris": 48
+    },
+    {
+     "node": "grass_b_LOD1",
+     "tris": 20
+    },
+    {
+     "node": "grass_b_LOD2",
+     "tris": 8
+    }
+   ],
+   "bbox": [
+    [
+     -0.4104,
+     -0.0003,
+     -0.3057
+    ],
+    [
+     0.4186,
+     0.4374,
+     0.3967
+    ]
+   ],
+   "notes": "dry grass tuft",
+   "materials": [
+    "M_Foliage"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "grass_c",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.25,
+    "height": 0.3
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "grass_c",
+     "tris": 24
+    },
+    {
+     "node": "grass_c_LOD1",
+     "tris": 8
+    },
+    {
+     "node": "grass_c_LOD2",
+     "tris": 8
+    }
+   ],
+   "bbox": [
+    [
+     -0.2402,
+     -0.0003,
+     -0.3212
+    ],
+    [
+     0.1606,
+     0.2977,
+     0.2378
+    ]
+   ],
+   "notes": "small sparse tuft, mixed",
+   "materials": [
+    "M_Foliage"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "weed_thistle",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.3,
+    "height": 0.6
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "weed_thistle",
+     "tris": 24
+    },
+    {
+     "node": "weed_thistle_LOD1",
+     "tris": 8
+    },
+    {
+     "node": "weed_thistle_LOD2",
+     "tris": 8
+    }
+   ],
+   "bbox": [
+    [
+     -0.3558,
+     -0.0002,
+     -0.3087
+    ],
+    [
+     0.3062,
+     0.5773,
+     0.3567
+    ]
+   ],
+   "notes": "dry thistle",
+   "materials": [
+    "M_Foliage"
+   ],
+   "primitives": 1
+  },
+  {
+   "pack": "veg",
+   "file": "veg.gltf",
+   "fileLo": "veg.lo.gltf",
+   "name": "weed_stalks",
+   "kind": "vegetation",
+   "snap": {
+    "footprint_r": 0.3,
+    "height": 0.6
+   },
+   "pivot": "trunk or clump base at the origin on the ground; y up; turn freely about y",
+   "lods": [
+    {
+     "node": "weed_stalks",
+     "tris": 24
+    },
+    {
+     "node": "weed_stalks_LOD1",
+     "tris": 8
+    },
+    {
+     "node": "weed_stalks_LOD2",
+     "tris": 8
+    }
+   ],
+   "bbox": [
+    [
+     -0.4335,
+     -0.0002,
+     -0.2756
+    ],
+    [
+     0.3482,
+     0.629,
+     0.3511
+    ]
+   ],
+   "notes": "dry umbel stalks",
+   "materials": [
+    "M_Foliage"
+   ],
+   "primitives": 1
+  }
+ ],
+ "download": {
+  "note": "bytes on the wire before HTTP compression (gzip shrinks the .gltf JSON ~5x; .bin and .ktx2 are already compressed). LOD0 geometry is in <pack>.lod0.bin (geometryLod0), fetched only by a viewer that draws LOD0; the game draws LOD1 and LOD2.",
+  "geometryLod0": 2296516,
+  "hi": {
+   "geometry": 1483048,
+   "json": 854211,
+   "textures": 17596306,
+   "total": 19933565
+  },
+  "lo": {
+   "geometry": 1483048,
+   "json": 854211,
+   "textures": 5281771,
+   "total": 7619030
+  }
+ }
+}

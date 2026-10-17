@@ -5,7 +5,7 @@
 // jars, benches and awnings along the street, and the clutter of a lived-on roof.
 
 import { Vector3 } from 'three';
-import { C, type Ctx, type HouseDress, type SideInfo, onSide, yawAlong } from './ctx.ts';
+import { C, type Ctx, type HouseDress, type SideInfo, houseOwner, onSide, yawAlong } from './ctx.ts';
 import { type House, type Rect, type Side, gapBetween, sides } from './plan.ts';
 import { mix, shade, vary, type RGB } from '../../../three/city/style.ts';
 
@@ -108,6 +108,8 @@ export function facades(ctx: Ctx) {
   const { kit } = ctx;
   ctx.plan.houses.forEach((h, i) => {
     if (h.kind !== 'house') return;
+    const owner = houseOwner(ctx, i);
+    kit.owner = owner;
     const d = ctx.dress[i];
     const ss = ctx.sides[i];
     const g = h.ground;
@@ -146,13 +148,16 @@ export function facades(ctx: Ctx) {
         kit.put('wood', x, y, z, yaw, 0.48, 0.36, 0.05, C.void);
         const [lx, lz] = onSide(s, t, 0.06);
         kit.put('wood', lx, y - 0.22, lz, yaw, 0.62, 0.07, 0.14, C.timber);
+        ctx.intents.push({ k: 'window', owner, house: i, side: s.k, t, y });
       }
     }
     // the ends of the roof beams, in a row under the roof on the long walls of some houses
     if (ctx.u(`vigas:${h.id}`) < 0.55) {
       const long = h.hd >= h.hw ? [ss[0], ss[1]] : [ss[2], ss[3]];
+      const along: number[] = [];
       for (const s of long) {
         if (s.open < 1.5) continue;
+        along.push(s.k);
         const n = Math.floor((s.half * 2 - 0.6) / 0.62);
         const yaw = yawAlong(s);
         for (let k = 0; k < n; k++) {
@@ -161,8 +166,10 @@ export function facades(ctx: Ctx) {
           kit.put('wood', x, g + h.top - 0.2, z, yaw, 0.15, 0.15, 0.3, vary(C.timberDark, ctx.u(`vg:${h.id}:${s.k}:${k}`), 0.12));
         }
       }
+      if (along.length) ctx.intents.push({ k: 'vigas', owner, house: i, sides: along });
     }
   });
+  kit.owner = -1;
 }
 
 // ---------------------------------------------------------------- stairs up to the roof
@@ -172,6 +179,7 @@ export function facades(ctx: Ctx) {
  *  in past the wall). */
 export function sideStair(ctx: Ctx, s: Side, t0: number, t1: number, g: number, top: number, width: number, col: RGB, out = 0.05, land = 1.4, landing = 1.0): Vector3[] {
   const { kit } = ctx;
+  ctx.intents.push({ k: 'stair', owner: kit.owner, side: { ...s }, t0, t1, g, top, width, out, landing });
   const dir = Math.sign(t1 - t0);
   const tL = t1 - dir * landing;
   const run = Math.abs(tL - t0);
@@ -245,7 +253,9 @@ export function houseStairs(ctx: Ctx, want: number, out: { name: string; path: V
     const yaw = yawAlong(s);
     const [mx, mz] = onSide(s, 0, 0.6);
     if (!ctx.occ.clear({ x: mx, z: mz, rot: yaw, hw: s.half - 0.2, hd: 0.5 }, 0.05, h.ground + 0.1, h.ground + 2)) continue;
+    ctx.kit.owner = houseOwner(ctx, c.i);
     out.push({ name: `house ${h.id}`, path: sideStair(ctx, s, t0, t1, h.ground, h.roof, 1.0, shade(h.wall, 0.95)) });
+    ctx.kit.owner = -1;
     ctx.dress[c.i].access = 'stair';
     ctx.dress[c.i].gaps.push({ k: s.k, t: t1 - dir * 0.5, w: 1.6 });
     used.add(c.i);
@@ -305,7 +315,11 @@ export function lowWalls(ctx: Ctx, near: (i: number, r: number) => number[]) {
     const t = street.t - street.sgn * 0.25;
     const a3 = new Vector3(...onSide3(p.sa, t, -0.12, A.ground + h / 2));
     const b3 = new Vector3(...onSide3(p.sa, t, p.gap + 0.12, A.ground + h / 2));
-    kit.beam('mud', a3, b3, 0.36, h, shade(mix(A.wall, ctx.plan.houses[p.b].wall, 0.5), 0.97), true);
+    kit.owner = ctx.owners.id(`lw:${p.a}:${p.b}`, (a3.x + b3.x) / 2, (a3.z + b3.z) / 2);
+    // as thick as the kit's courtyard wall (cwall_*: 0.4 m), which redraws it in the hero district
+    kit.beam('mud', a3, b3, 0.4, h, shade(mix(A.wall, ctx.plan.houses[p.b].wall, 0.5), 0.97), true);
+    ctx.intents.push({ k: 'lowWall', owner: kit.owner, a: [a3.x, a3.y, a3.z], b: [b3.x, b3.y, b3.z], h, th: 0.4 });
+    kit.owner = -1;
     ctx.occ.add({ x: (a3.x + b3.x) / 2, z: (a3.z + b3.z) / 2, rot: Math.atan2(-(b3.z - a3.z), b3.x - a3.x), hw: a3.distanceTo(b3) / 2, hd: 0.2 }, A.ground, A.ground + h);
     n++;
   }
@@ -424,7 +438,10 @@ export function streetClutter(ctx: Ctx) {
         const ht = r * (2.3 + 0.6 * ctx.u(`jh:${h.id}:${s.k}:${k}`));
         const [x, z] = onSide(s, t, r + 0.08);
         if (ctx.occ.blocked(x, z, r * 0.8, g + 0.1, g + 1.2)) continue;
+        kit.owner = houseOwner(ctx, i);
         kit.put('jar', x, g + ht / 2, z, ctx.u(`jy:${h.id}:${k}`) * TAU, r * 2, ht, r * 2, vary(ctx.u(`jc:${h.id}:${k}`) < 0.5 ? C.clay : C.buff, ctx.u(`jv:${h.id}:${k}`), 0.12));
+        kit.owner = -1;
+        ctx.intents.push({ k: 'jar', owner: houseOwner(ctx, i), x, y: g, z, yaw: ctx.u(`jy:${h.id}:${k}`) * TAU, r, h: ht });
         kit.solidBox(x, g + ht / 2, z, 0, r * 0.75, ht / 2, r * 0.75);
         ctx.occ.add({ x, z, rot: 0, hw: r, hd: r }, g, g + ht);
         jars++;
@@ -445,10 +462,13 @@ export function streetClutter(ctx: Ctx) {
         const [x, z] = onSide(s, t, 0.3);
         const rect = { x, z, rot: yaw, hw: 0.6, hd: 0.25 };
         if (ctx.occ.clear(rect, 0.05, g + 0.1, g + 1)) {
+          kit.owner = houseOwner(ctx, i);
+          ctx.intents.push({ k: 'firewood', owner: kit.owner, x, y: g, z, yaw, nx: s.nx, nz: s.nz });
           for (let k = 0; k < 7; k++) {
             const [lx, lz] = onSide(s, t + ((k % 4) - 1.5) * 0.05, 0.12 + (k % 4) * 0.12);
             kit.put('wood', lx, g + 0.09 + Math.floor(k / 4) * 0.17, lz, yaw + 0.04 * (ctx.u(`lg:${h.id}:${k}`) - 0.5), 1.15, 0.16, 0.15, vary(C.timber, ctx.u(`lg:${h.id}:${k}`), 0.18));
           }
+          kit.owner = -1;
           kit.solidBox(x, g + 0.25, z, yaw, 0.6, 0.25, 0.22);
           ctx.occ.add(rect, g, g + 0.5);
         }
@@ -497,26 +517,42 @@ export function roofClutter(ctx: Ctx) {
       // sleeping mats and a jar
       const [x, z] = at((ctx.u(`mt:${h.id}`) - 0.5) * 0.8, (ctx.u(`mt2:${h.id}`) - 0.5) * 0.8);
       if (keep(x, z)) {
-        kit.put('cloth', x, y + 0.03, z, h.rot + 0.1 * (ctx.u(`mr:${h.id}`) - 0.5), 1.9, 0.04, 0.85, vary(CLOTHS[Math.floor(ctx.u(`mc:${h.id}`) * 6)], ctx.u(`mv:${h.id}`), 0.08));
+        const own = houseOwner(ctx, i);
+        kit.owner = own;
+        const mc = vary(CLOTHS[Math.floor(ctx.u(`mc:${h.id}`) * 6)], ctx.u(`mv:${h.id}`), 0.08);
+        const myaw = h.rot + 0.1 * (ctx.u(`mr:${h.id}`) - 0.5);
+        kit.put('cloth', x, y + 0.03, z, myaw, 1.9, 0.04, 0.85, mc);
+        ctx.intents.push({ k: 'mat', owner: own, x, y, z, yaw: myaw, c: mc });
         const [jx, jz] = at((ctx.u(`mj:${h.id}`) - 0.5) * 1.6, 0.85);
         if (keep(jx, jz)) {
           kit.put('jar', jx, y + 0.42, jz, 0, 0.6, 0.84, 0.6, C.clay);
+          ctx.intents.push({ k: 'jar', owner: own, x: jx, y, z: jz, yaw: ctx.u(`mjy:${h.id}`) * TAU, r: 0.3, h: 0.84 });
           kit.solidBox(jx, y + 0.42, jz, 0, 0.24, 0.42, 0.24);
         }
+        kit.owner = -1;
         n++;
       }
     } else if (r1 < 0.55) {
       // a domed bread oven
       const [x, z] = at((ctx.u(`ov:${h.id}`) - 0.5) * 1.4, (ctx.u(`ov2:${h.id}`) - 0.5) * 1.4);
       if (keep(x, z)) {
+        kit.owner = houseOwner(ctx, i);
         kit.put('ball', x, y + 0.32, z, 0, 1.0, 0.8, 1.0, shade(h.wall, 0.82));
+        ctx.intents.push({ k: 'oven', owner: kit.owner, x, y, z, yaw: h.rot + ctx.u(`ovy:${h.id}`) * TAU });
+        kit.owner = -1;
         kit.solidBox(x, y + 0.3, z, 0, 0.42, 0.3, 0.42);
         n++;
       }
     } else if (r1 < 0.64) {
       // grain spread to dry
       const [x, z] = at((ctx.u(`gr:${h.id}`) - 0.5) * 0.7, (ctx.u(`gr2:${h.id}`) - 0.5) * 0.7);
-      if (keep(x, z)) { kit.put('cloth', x, y + 0.025, z, h.rot, 2.4, 0.03, 1.6, vary(C.grain, ctx.u(`grc:${h.id}`), 0.06)); n++; }
+      if (keep(x, z)) {
+        kit.owner = houseOwner(ctx, i);
+        kit.put('cloth', x, y + 0.025, z, h.rot, 2.4, 0.03, 1.6, vary(C.grain, ctx.u(`grc:${h.id}`), 0.06));
+        ctx.intents.push({ k: 'grain', owner: kit.owner, x, y, z, yaw: h.rot, w: 2.4, d: 1.6 });
+        kit.owner = -1;
+        n++;
+      }
     }
   });
   return n;
@@ -532,7 +568,9 @@ export function parapets(ctx: Ctx) {
     if (ctx.u(`par:${h.id}`) > (d.role ? 1 : 0.78)) return;
     const ph = 0.26 + 0.14 * ctx.u(`parh:${h.id}`);
     d.parapet = ph;
-    const th = 0.2;
+    // as thick as the kit's parapet pieces (0.26 m), which redraw it in the hero district, its face on the slab's edge
+    const th = 0.26;
+    kit.owner = houseOwner(ctx, i);
     const col = shade(h.wall, 1.02);
     // the roof slab's edge, inset by half the parapet's thickness
     const slab: Rect = { x: h.x, z: h.z, rot: h.rot, hw: h.rhw - th / 2, hd: h.rhd - th / 2 };
@@ -548,9 +586,11 @@ export function parapets(ctx: Ctx) {
         if (b - a < 0.25) continue;
         const pa = new Vector3(...onSide3(s, a, 0, h.roof + ph / 2)), pb = new Vector3(...onSide3(s, b, 0, h.roof + ph / 2));
         kit.beam('mud', pa, pb, th, ph, col, true);
+        ctx.intents.push({ k: 'parapet', owner: kit.owner, house: i, side: { ...s }, a, b, h: ph, th, roof: h.roof });
         n++;
       }
     }
+    kit.owner = -1;
   });
   return n;
 }

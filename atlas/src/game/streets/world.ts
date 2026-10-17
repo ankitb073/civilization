@@ -22,6 +22,7 @@ import type { Affordances } from './affordances.ts';
 import { HeightGrid, type Plan, hidePart, readPlan } from './world/plan.ts';
 import { groundSkin, mudSkin } from './world/materials.ts';
 import { buildLayer, type Layer, type Quarter, type View } from './world/layer.ts';
+import { createDistrict, type District } from './world/district.ts';
 
 /** Metres per lot (one drawn building's plot): a Bronze Age house comes out 5–8 m across and 3.4–5.3 m to the roof. */
 export const LOT = 8;
@@ -37,6 +38,10 @@ export interface WorldOptions {
   /** Show the city after this year's sack (burnt quarters), not on its eve (the default). */
   sacked?: boolean;
   reducedMotion?: boolean;
+  /** Give the streets layer's merged meshes the surface attributes the realism look reads (world/kit.ts). */
+  surfaceTags?: boolean;
+  /** Draw the hero district with the modular kit (default on; `#/streets?kit=0` turns it off). */
+  district?: boolean;
 }
 let worldOpts: WorldOptions = {};
 export function setWorldOptions(o: WorldOptions) { worldOpts = o; }
@@ -70,6 +75,9 @@ export interface StreetsCity {
   river: { name: string | null; edgeDist(x: number, z: number): number; level: number };
   plan: Plan;
   layer: Layer;
+  /** The hero district (world/district.ts): its shape, the kit's group, and `ready` once the near ring is in. Null
+   *  when turned off. */
+  district: District | null;
   /** Counts and timings of the streets layer (for the probes). */
   stats: Record<string, unknown>;
   /** Framings for the screenshot script, and a walkable loop through the places. */
@@ -191,10 +199,16 @@ export function buildStreets(scene: Scene, rec: CityRecord, year: number, opts: 
   const sackYear = rec.sacks.includes(cy.year) ? cy.year : sc && sc.outcome === 'sacked' ? sc.year : null;
   const layer = buildLayer({
     rec, model, plan, solids, ground: heightAt, mobile: opts.mobile, reduced,
-    scenario: sc ? { id: sc.id, year: sc.year, arms: sc.arms, sacked: !!wo.sacked } : null, sackYear,
+    scenario: sc ? { id: sc.id, year: sc.year, arms: sc.arms, sacked: !!wo.sacked } : null, sackYear, tags: !!wo.surfaceTags,
   });
   for (const s of layer.solids) solids.push(s);
   root.add(layer.group);
+
+  // ---- the hero district: the modular kit over the model, streamed in after the first frame
+  const tk = performance.now();
+  const kitOn = wo.district ?? (typeof location === 'undefined' || !/[?&]kit=0\b/.test(location.hash));
+  const district = kitOn ? createDistrict({ ctx: layer.ctx, layer, model, mobile: opts.mobile, reduced, root }) : null;
+  const districtMs = Math.round(performance.now() - tk);
 
   // ---- the land beyond the city's ground: rim heights carried out to hills, coloured like the rim
   const rim = rimOf(vertices, P);
@@ -232,19 +246,21 @@ export function buildStreets(scene: Scene, rec: CityRecord, year: number, opts: 
     prevHook.apply(this, args);
     const camera = args[2];
     const t = reduced ? 40 : performance.now() / 1000;
+    district?.tick(camera as Camera, args[0], scene);
     layer.tick(t, (camera as Camera).position);
     hearth.update(t, camera as Camera);
     if (model.smoke.length) smoke.update(t, camera as Camera);
   };
 
-  const stats = { ...layer.stats, modelSolids, solids: solids.length, buildMs: Math.round(performance.now() - t0) };
+  const stats = { ...layer.stats, modelSolids, solids: solids.length, districtMs, buildMs: Math.round(performance.now() - t0) };
   return {
     rec, cy, model, name: sc?.cityName ?? cy.name, city, root, P, limit: P - 6, solids, ground: { vertices, indices }, sun, smoke, heightAt,
     affordances: layer.affordances, quarters: layer.quarters,
     river: { name: layer.riverName, edgeDist: layer.river.edgeDist, level: layer.river.level },
-    plan, layer, stats, views: layer.views, loop: layer.loop,
+    plan, layer, district, stats, views: layer.views, loop: layer.loop,
     dispose() {
       scene.onBeforeRender = prevHook;
+      district?.dispose();
       layer.dispose();
       model.dispose();
       smoke.dispose();

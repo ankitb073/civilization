@@ -4,6 +4,7 @@ import type { Kit } from './kit.ts';
 import type { House, Occupancy, Plan, Side } from './plan.ts';
 import type { StreetNames } from './names.ts';
 import type { RGB } from '../../../three/city/style.ts';
+import type { Intent } from './intents.ts';
 
 export interface Ctx {
   cityId: string;
@@ -24,6 +25,28 @@ export interface Ctx {
   dress: HouseDress[];
   /** The walkable limit (m from the temple square), as the physics' ring of walls. */
   limit?: number;
+  /** Who owns what the layer places (houses, stalls, wall runs …), for the hero district (owners.ts). */
+  owners: Owners;
+  /** What the layer placed, as the modular kit needs to redraw it (intents.ts). */
+  intents: Intent[];
+}
+
+/** Stable ids for the things the layer dresses, each with the point that decides which district cell it falls in. */
+export class Owners {
+  readonly pos: { key: string; x: number; z: number }[] = [];
+  private byKey = new Map<string, number>();
+  id(key: string, x: number, z: number): number {
+    let i = this.byKey.get(key);
+    if (i === undefined) { i = this.pos.length; this.pos.push({ key, x, z }); this.byKey.set(key, i); }
+    return i;
+  }
+  get(key: string): number { return this.byKey.get(key) ?? -1; }
+}
+
+/** The owner id of house i (registered on first use). */
+export function houseOwner(ctx: Ctx, i: number): number {
+  const h = ctx.plan.houses[i];
+  return ctx.owners.id(`h:${i}`, h.x, h.z);
 }
 
 export interface SideInfo extends Side {

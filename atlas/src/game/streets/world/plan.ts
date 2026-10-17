@@ -37,6 +37,8 @@ export interface House extends Rect {
   h1: number; h2: number; h3: number;
   /** A burnt house: the model's parts for it (ash, charred walls, embers), which the streets redraw. */
   burntParts?: DrawnPart[];
+  /** The model's own parts for it (the body, the roof slab, the room on the roof), which the hero district redraws. */
+  parts?: DrawnPart[];
 }
 
 /** A side of a rectangle: its midpoint, outward normal, the unit vector along it and half its length. */
@@ -96,7 +98,7 @@ export function gapBetween(a: Rect, b: Rect): number {
 
 // ---------------------------------------------------------------- reading the model's parts
 
-export interface DrawnPart { x: number; y: number; z: number; rot: number; sx: number; sy: number; sz: number; c: RGB; mesh: InstancedMesh; i: number }
+export interface DrawnPart { x: number; y: number; z: number; rot: number; sx: number; sy: number; sz: number; c: RGB; mesh: InstancedMesh; i: number; orig?: Float32Array }
 
 const gamma = (c: number) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
 
@@ -123,8 +125,30 @@ export function drawnParts(group: Group, type: string): DrawnPart[] {
 /** Hide one drawn part in this model's copy (scale it to nothing). */
 export function hidePart(p: DrawnPart) {
   const e = p.mesh.instanceMatrix.array as Float32Array;
+  p.orig ??= e.slice(p.i * 16, p.i * 16 + 16);
   new Matrix4().makeScale(0, 0, 0).setPosition(p.x, p.y, p.z).toArray(e, p.i * 16);
   p.mesh.instanceMatrix.needsUpdate = true;
+}
+
+/** Shrink one drawn part a little toward its own axis and base (by `m` metres a side at `lot` metres per unit), so
+ *  something drawn on its faces does not fight it; or put it back as the model drew it (m = 0). */
+export function shrinkPart(p: DrawnPart, m: number, lot: number) {
+  const e = p.mesh.instanceMatrix.array as Float32Array;
+  p.orig ??= e.slice(p.i * 16, p.i * 16 + 16);
+  const o = p.orig;
+  if (m <= 0) { e.set(o, p.i * 16); p.mesh.instanceMatrix.needsUpdate = true; return; }
+  const k = (s: number) => Math.max(0, 1 - (2 * m) / Math.max(1e-6, s * lot));
+  const kx = k(p.sx), kz = k(p.sz), ky = Math.max(0, 1 - m / Math.max(1e-6, p.sy * lot));
+  const M = new Matrix4().fromArray(o).multiply(new Matrix4().makeScale(kx, ky, kz));
+  M.toArray(e, p.i * 16);
+  p.mesh.instanceMatrix.needsUpdate = true;
+}
+
+/** Every part the model drew, of any shape, in lots. */
+export function allParts(group: Group): DrawnPart[] {
+  const types = new Set<string>();
+  group.traverse((o) => { const im = o as InstancedMesh; if (im.isInstancedMesh) types.add(im.geometry.type); });
+  return [...types].flatMap((t) => drawnParts(group, t));
 }
 
 export interface WallPlan {
@@ -199,6 +223,7 @@ export function readPlan(model: CityModel, LOT: number, heightAt: (x: number, z:
     const roof = slab ? (h + slab.sy) * LOT : h * LOT;
     houses.push({
       ...base, kind: 'house', flat: !!slab, hw: (body.sx * LOT) / 2, hd: (body.sz * LOT) / 2, top: h * LOT, roof,
+      parts: [body, ...(slab ? [slab] : []), ...(upperP ? [upperP] : [])],
       rhw: slab ? (slab.sx * LOT) / 2 : (body.sx * LOT) / 2, rhd: slab ? (slab.sz * LOT) / 2 : (body.sz * LOT) / 2,
       wall: body.c, roofC: slab?.c ?? body.c,
       upper: upperP ? {

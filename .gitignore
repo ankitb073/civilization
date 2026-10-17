@@ -8,3 +8,4 @@ atlas/public/downloads/
 atlas/public/s/
 atlas/public/sitemap.xml
 .claude/
+__pycache__/

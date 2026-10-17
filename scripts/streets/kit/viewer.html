@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kit check</title>
+<style>
+  :root { --bg: #1b1a18; --fg: #e8e2d6; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px/1.4 system-ui, sans-serif; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  #hud { position: fixed; left: 8px; top: 8px; background: #000a; padding: 6px 8px; border-radius: 4px; white-space: pre; }
+</style>
+<script type="importmap">{ "imports": { "three": "/three/build/three.module.js", "three/addons/": "/three/examples/jsm/" } }</script>
+</head>
+<body>
+<div id="hud">loading…</div>
+<script type="module">
+// Loads the packed kit exactly as the game would (GLTFLoader + KTX2Loader + MeshoptDecoder), assembles a short street
+// from kit.json's conventions with one InstancedMesh per (piece, primitive), and reports draw calls, triangles, load
+// time and texture count. ?tier=hi|lo  ?view=street|grid|roof  ?lod=0|1|2|auto
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+const q = new URLSearchParams(location.search);
+const tier = q.get('tier') ?? 'hi', view = q.get('view') ?? 'street', lodQ = q.get('lod') ?? 'auto';
+const hud = document.getElementById('hud');
+const t0 = performance.now();
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.AgXToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9fb6cc);
+scene.fog = new THREE.Fog(0xb9c3c9, 60, 260);
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.05, 600);
+
+const sun = new THREE.DirectionalLight(0xfff0d8, 3.2);
+sun.position.set(-30, 22, 18);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 140 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.03;
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xbcd2e8, 0x8a6f52, 1.1));
+
+const ktx2 = new KTX2Loader().setTranscoderPath('/three/examples/jsm/libs/basis/').detectSupport(renderer);
+const loader = new GLTFLoader().setKTX2Loader(ktx2).setMeshoptDecoder(MeshoptDecoder);
+
+const kit = await (await fetch('/kit/kit.json')).json();
+const packs = {};
+const tl = performance.now();
+await Promise.all(Object.keys(kit.packs).map(async (p) => {
+  const f = kit.packs[p][tier]?.file;
+  if (!f) return;
+  packs[p] = await loader.loadAsync('/kit/' + f);
+}));
+const loadMs = performance.now() - tl;
+
+// piece name -> Mesh[] per LOD (each Mesh may be a Group of primitives)
+function nodeOf(pack, node) {
+  const g = packs[pack];
+  if (!g) return null;
+  return g.scene.getObjectByName(node);
+}
+const pieceInfo = Object.fromEntries(kit.pieces.map((p) => [p.name, p]));
+const instances = new Map();   // key piece|lod -> matrices[]
+function put(name, m, lod = 0) {
+  const k = `${name}|${lod}`;
+  if (!instances.has(k)) instances.set(k, []);
+  instances.get(k).push(m.clone());
+}
+const M = (x, y, z, ry = 0, sx = 1, sy = 1, sz = 1) => new THREE.Matrix4().compose(
+  new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry), new THREE.Vector3(sx, sy, sz));
+
+// ---------------------------------------------------------------- a house from kit.json conventions
+// Side frames: x along the run, exterior +Z; a footprint W x D with its front-left corner at `o`, turned `rot`.
+const WIDTH = { wall_1m: 1, wall_2m_a: 2, wall_2m_b: 2, wall_4m_a: 4, wall_4m_b: 4, door_2m: 2, door_3m: 3, window_2m: 2,
+  wallband_1m: 1, wallband_2m: 2, wallband_4m: 4, parapet_2m: 2, parapet_2m_b: 2, roof_edge_2m: 2, beam_ends_2m: 2 };
+function run(names, L, F, y = 0, x0 = 0.5) {
+  const tot = names.reduce((a, n) => a + WIDTH[n], 0);
+  const k = (L - 0.5 - x0) / tot;
+  let x = x0;
+  for (const n of names) { put(n, F.clone().multiply(M(x, y, 0, 0, k, 1, 1)), 0); x += WIDTH[n] * k; }
+}
+function house(ox, oz, rot, W, D, sides, band = true) {
+  const top = 3 + (band ? 1 : 0);
+  const corners = [[0, 0], [W, 0], [W, -D], [0, -D]];
+  for (let k = 0; k < 4; k++) {
+    const L = k % 2 ? D : W;
+    const [cx, cz] = corners[k];
+    // the front side runs +x with its exterior +z; each next side turns +90 deg about y (its x then runs -z)
+    const F = M(ox, 0, oz, rot).multiply(M(cx, 0, cz, k * Math.PI / 2));
+    put('corner_out', F.clone());
+    run(sides[k], L, F);
+    if (band) {
+      put('cornerband', F.clone().multiply(M(0, 3, 0)));
+      run(sides[k].map((n) => n.startsWith('wall_4') ? 'wallband_4m' : n === 'wall_1m' ? 'wallband_1m' : 'wallband_2m'), L, F, 3);
+    }
+    put('roof_edge_corner', F.clone().multiply(M(0, top, 0)));
+    run(Array(Math.max(1, Math.round((L - 1) / 2))).fill('roof_edge_2m'), L, F, top);
+    if (k === 0) run(Array(Math.max(1, Math.round((L - 1) / 2))).fill('beam_ends_2m'), L, F, top);
+    const PF = F.clone().multiply(M(-0.1, top + 0.4, 0.1));
+    put('parapet_corner', PF.clone());
+    run(Array(Math.max(1, Math.round((L - 0.32) / 2))).fill(k % 2 ? 'parapet_2m_b' : 'parapet_2m'), L + 0.2, PF, 0, 0.26);
+  }
+  const nx = Math.max(1, Math.round((W - 1) / 2)), nz = Math.max(1, Math.round((D - 1) / 2));
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+    put('roof_field_2m', M(ox, 0, oz, rot).multiply(M(0.5 + i * (W - 1) / nx, top, -0.5 - j * (D - 1) / nz, 0, (W - 1) / (2 * nx), 1, (D - 1) / (2 * nz))));
+  }
+}
+
+if (view === 'grid') {
+  // every piece's LOD0 in a grid, for a visual check of materials and pivots
+  let i = 0;
+  for (const p of kit.pieces) {
+    const x = (i % 10) * 9, z = -Math.floor(i / 10) * 9;
+    put(p.name, M(x, 0, z), 0);
+    i++;
+  }
+  camera.position.set(-12, 22, 20); camera.lookAt(30, 0, -25);
+} else {
+  // a lane 3.6 m wide: houses on both sides, fronts facing it
+  house(-9, -3.6, 0, 7, 6, [['wall_2m_a', 'door_2m', 'window_2m'], ['wall_4m_a', 'wall_1m'], ['wall_4m_b', 'wall_2m_a'], ['wall_4m_b', 'wall_1m']]);
+  house(-1.2, -3.9, 0, 6, 7, [['door_3m', 'window_2m'], ['wall_4m_a', 'wall_2m_b'], ['wall_4m_a', 'wall_1m'], ['wall_2m_b', 'wall_4m_b']], false);
+  house(6, -3.6, 0, 7, 6, [['window_2m', 'wall_2m_b', 'door_2m'], ['wall_4m_b', 'wall_1m'], ['wall_4m_a', 'wall_2m_a'], ['wall_4m_a', 'wall_1m']]);
+  house(4.5, 0.2, Math.PI, 7, 6, [['window_2m', 'door_2m', 'wall_2m_a'], ['wall_4m_b', 'wall_1m'], ['wall_4m_a', 'wall_2m_b'], ['wall_4m_a', 'wall_1m']]);
+  house(19, 0.4, Math.PI, 8, 6, [['wall_2m_b', 'door_3m', 'wall_2m_a'], ['wall_4m_a', 'wall_1m'], ['wall_4m_b', 'wall_2m_b', 'wall_1m'], ['wall_4m_b', 'wall_1m']], false);
+  for (let k = 0; k < 3; k++) {
+    put('citywall_4m', M(34, 0, -1.8 + 9.2 + 4 * (k + 1), Math.PI / 2));
+    put('citywall_4m', M(34, 0, -1.8 - 9.2 - 4 * k, Math.PI / 2));
+  }
+  put('gate_tower', M(34, 0, -1.8 - 6, Math.PI / 2, 1, 1.08, 1));
+  put('gate_tower', M(34, 0, -1.8 + 6, Math.PI / 2, 1, 1.08, 1));
+  put('gate_arch', M(34, 0, -1.8 + 2.8, Math.PI / 2));
+  const P = (n, x, z, r = 0) => { if (pieceInfo[n]) put(n, M(x, 0, z, r)); };
+  // props and vegetation when their packs exist (names from kit.json)
+  const names = kit.pieces.map((p) => p.name);
+  const pick = (re) => names.filter((n) => re.test(n));
+  pick(/jar|pithos/).slice(0, 4).forEach((n, i) => P(n, -6.2 + i * 0.75, -3.0, i));
+  pick(/sack/).slice(0, 2).forEach((n, i) => P(n, 2.6 + i * 0.7, -0.5, i));
+  pick(/basket/).slice(0, 2).forEach((n, i) => P(n, 3.8 + i * 0.6, -0.6, i));
+  pick(/palm/).slice(0, 1).forEach((n) => P(n, -4, -12));
+  pick(/fig/).slice(0, 1).forEach((n) => P(n, 9, 6));
+  pick(/stall/).slice(0, 1).forEach((n) => P(n, 26, -2.5, Math.PI));
+  pick(/grass|weed/).slice(0, 6).forEach((n, i) => P(n, -8 + i * 2.7, -3.2 + (i % 2) * 3.4, i));
+  if (view === 'roof') { camera.position.set(-9, 8.5, 1); camera.lookAt(6, 4, -4); }
+  else if (view === 'close') { camera.position.set(-6.2, 1.5, -2.2); camera.lookAt(-5.0, 1.0, -3.6); }
+  else { camera.position.set(-12, 1.65, -1.6); camera.lookAt(4, 2.2, -2.0); }
+}
+
+// build InstancedMeshes: one per (piece LOD node, primitive)
+let texSet = new Set();
+const camPos = camera.position.clone();
+for (const [k, mats] of instances) {
+  const [name, lod0] = k.split('|');
+  const info = pieceInfo[name];
+  if (!info) continue;
+  let lod = Number(lod0);
+  if (lodQ !== 'auto') lod = Number(lodQ);
+  const groups = [0, 1, 2].map(() => []);
+  for (const m of mats) {
+    const p = new THREE.Vector3().setFromMatrixPosition(m);
+    const d = p.distanceTo(camPos);
+    const ld = kit.conventions.lodDistances.map((v) => (tier === 'lo' ? v / 2 : v));
+    const l = lodQ === 'auto' ? (d < ld[1] ? 0 : d < ld[2] ? 1 : 2) : lod;
+    groups[l].push(m);
+  }
+  groups.forEach((ms, l) => {
+    if (!ms.length) return;
+    const node = nodeOf(info.pack, info.lods[Math.min(l, info.lods.length - 1)].node);
+    if (!node) return;
+    node.updateWorldMatrix(true, true);
+    node.traverse((o) => {
+      if (!o.isMesh) return;
+      const im = new THREE.InstancedMesh(o.geometry, o.material, ms.length);
+      ms.forEach((m, i) => im.setMatrixAt(i, m.clone().multiply(o.matrixWorld)));
+      im.castShadow = true; im.receiveShadow = true;
+      for (const key of ['map', 'normalMap', 'roughnessMap', 'aoMap']) if (o.material[key]) texSet.add(o.material[key].uuid);
+      scene.add(im);
+    });
+  });
+}
+// ground: the kit's packed earth if present, else flat
+const groundMat = (() => {
+  for (const g of Object.values(packs)) {
+    let m = null;
+    g.scene.traverse((o) => { if (o.isMesh && o.material.name === 'M_Ground') m = o.material; });
+    if (m) return m;
+  }
+  return new THREE.MeshStandardMaterial({ color: 0x8a7458, roughness: 0.95 });
+})();
+const gg = new THREE.PlaneGeometry(300, 300);
+gg.rotateX(-Math.PI / 2);
+const uv = gg.attributes.uv;
+for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 300 / 2.6, uv.getY(i) * 300 / 2.6);
+const ground = new THREE.Mesh(gg, groundMat);
+ground.receiveShadow = true;
+scene.add(ground);
+
+renderer.render(scene, camera);
+renderer.render(scene, camera);
+const info = renderer.info;
+const withShadow = { calls: info.render.calls, triangles: info.render.triangles };
+renderer.shadowMap.autoUpdate = false;
+renderer.render(scene, camera);
+const res = {
+  tier, view, loadMs: Math.round(loadMs), totalMs: Math.round(performance.now() - t0),
+  calls: info.render.calls, triangles: info.render.triangles, callsWithShadowPass: withShadow.calls,
+  trianglesWithShadowPass: withShadow.triangles, textures: info.memory.textures, geometries: info.memory.geometries,
+  instancedMeshes: scene.children.filter((o) => o.isInstancedMesh).length,
+};
+renderer.shadowMap.autoUpdate = true;
+hud.textContent = JSON.stringify(res, null, 1);
+window.__kitResult = res;
+// frame time over 60 frames
+let n = 0, ts = performance.now();
+function tick() {
+  renderer.render(scene, camera);
+  if (++n < 60) requestAnimationFrame(tick);
+  else { res.msPerFrame = +((performance.now() - ts) / 60).toFixed(2); hud.textContent = JSON.stringify(res, null, 1); window.__kitDone = true; }
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

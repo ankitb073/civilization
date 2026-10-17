@@ -1,0 +1,5 @@
+{
+ "M_Foliage": {"set": "veg_foliage", "alpha": true, "cutoff": 0.4, "doubleSided": false, "hi": 2048, "lo": 1024, "normal": "etc1s", "roughness": 1.0, "notes": "alpha cut-out foliage atlas (regions in textures_veg.py REGIONS): palm half-fronds, reeds, fig leaf clusters, grass, weeds. Cards are emitted front and back with their own normals, so the material is single-sided."},
+ "M_PalmTrunk": {"set": "veg_palmtrunk", "tile_m": 1.4, "hi": 2048, "lo": 1024, "normal": "etc1s", "roughness": 1.0, "notes": "date-palm trunk: leaf-base stubs, tileable; u wraps once round the trunk, v = height / 1.4 m"},
+ "M_Bark": {"set": "veg_bark", "tile_m": 1.0, "hi": 1024, "lo": 512, "normal": "etc1s", "roughness": 1.0, "notes": "smooth grey fig bark, tileable 1 m"}
+}

@@ -6,7 +6,7 @@
 
 import { Vector3 } from 'three';
 import type { Ladder } from '../affordances.ts';
-import { C, type Ctx, onSide } from './ctx.ts';
+import { C, type Ctx, houseOwner, onSide } from './ctx.ts';
 import { beamQuat } from './kit.ts';
 import { type Side, gapBetween, inside, sides } from './plan.ts';
 import type { PlankRec } from './houses.ts';
@@ -28,6 +28,7 @@ export function ladderAt(ctx: Ctx, s: Side, t: number, gBase: number, yTop: numb
   const dir = E.clone().sub(F).normalize();
   const T = E.clone().addScaledVector(dir, 0.85);
   const col = vary(C.wood, ctx.u(`lad:${label}:${s.x.toFixed(1)}`), 0.1);
+  ctx.intents.push({ k: 'ladder', owner: kit.owner, F: [F.x, F.y, F.z], T: [T.x, T.y, T.z], n: [n.x, n.z] });
   for (const sg of [-1, 1]) {
     const o = tan.clone().multiplyScalar(0.24 * sg);
     kit.beam('wood', F.clone().add(o), T.clone().add(o), 0.07, 0.07, col, false, n);
@@ -74,7 +75,9 @@ function placeLadder(ctx: Ctx, i: number, salt = ''): Ladder | null {
       const rect = { x: cx, z: cz, rot: Math.atan2(-s.tz, s.tx), hw: 0.42, hd: 0.75 };
       if (!ctx.occ.clear(rect, 0.05, h.ground + 0.1, h.ground + 2.2)) continue;
       if (ctx.water(cx, cz) > 0) continue;
+      ctx.kit.owner = houseOwner(ctx, i);
       const lad = ladderAt(ctx, s, t, ctx.ground(cx, cz), h.roof, 0.8, `${h.id}`);
+      ctx.kit.owner = -1;
       d.gaps.push({ k: s.k, t, w: 1.2 });
       d.access ??= 'ladder';
       return lad;
@@ -164,7 +167,9 @@ export function laddersAndReach(ctx: Ctx, planks: PlankRec[], near: (i: number, 
     for (const s of sides(U)) {
       const [x, z] = onSide(s, 0, 1.2);
       if (!inside(h, x, z, -0.5)) continue;
+      ctx.kit.owner = houseOwner(ctx, i);
       ladders.push(ladderAt(ctx, s, (ctx.u(`upt:${h.id}`) - 0.5) * Math.max(0, s.half - 0.6), h.roof, U.roof, 0.6, `u${h.id}`));
+      ctx.kit.owner = -1;
       uppersReached++;
       break;
     }

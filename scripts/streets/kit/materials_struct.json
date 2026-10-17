@@ -1,0 +1,5 @@
+{
+ "M_Textile": {"set": "struct_textile", "tile_m": 0.27, "hi": 1024, "lo": 512, "normal": "etc1s", "roughness": 1.0, "doubleSided": true, "notes": "plain-woven linen, near white: COLOR_0 carries the dye (and the integrator may tint per instance)"},
+ "M_TextilePattern": {"set": "struct_textpat", "hi": 2048, "lo": 1024, "normal": "etc1s", "roughness": 1.0, "doubleSided": true, "notes": "four whole-cloth woven designs in quadrants (u0 v0 u1 v1): zigzag 0 .5 .5 1, stripes .5 .5 1 1, lozenge 0 0 .5 .5, stepped .5 0 1 .5; invented motifs only"},
+ "M_StructMisc": {"set": "struct_misc", "trim": true, "hi": 1024, "lo": 512, "normal": "etc1s", "roughness": 1.0, "metallic": 1.0, "notes": "trim: v bands rope 0.5-1 (u = 0.12 m of rope), leather 0.25-0.5, bronze 0.125-0.25 (metalness from ORM.b), fired clay 0-0.125"}
+}

@@ -8,11 +8,12 @@
 // 2. (default) shoots the street world: loads #/streets (Pumi, sc-919, before the sack) from a built dist at desktop
 //    1440×900 and phone 390×844 (DPR 2, 4× CPU slowdown), runs axe, screenshots the market, the house of tablets, a
 //    rooftop and the river, walks one scripted loop through the streets, and reports frame times (median, p95), draw
-//    calls, triangles, colliders, ladders, places, load time and the JS downloaded.
+//    calls, triangles, colliders, ladders, places, load time and the JS downloaded; and the hero district's kit (decision
+//    0034): its download, and the time until its near ring is drawn (with --net=4g, under slow 4G on the phone).
 //
 // Usage: node atlas/scripts/streets-world.ts --fingerprint [--save=f.json | --compare=f.json]
 //        node atlas/scripts/streets-world.ts [--out=dir] [--dist=atlas/dist] [--only=desktop|phone] [--seconds=20]
-//          [--q=sc=sc-919] [--tag=after]
+//          [--q=sc=sc-919] [--tag=after] [--port=4198]
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -137,7 +138,7 @@ async function shoot() {
   const Q = arg('q', '');
   const AXE = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8');
   mkdirSync(OUT, { recursive: true });
-  const PORT = 4198;
+  const PORT = Number(arg('port', '4198'));
   const server = await serveDist(resolve(arg('dist', join(ROOT, 'dist'))), PORT);
   const base = `http://127.0.0.1:${PORT}/civilization/`;
   // errand=0: the free city, without the day's errand (its dialogues would hold the runner still)
@@ -180,6 +181,15 @@ async function shoot() {
       const failed = await page.evaluate(() => document.querySelector('.st-load--err')?.textContent ?? null);
       if (failed) { console.log('failed to load:', failed, errors); throw new Error(failed); }
       const loadMs = Date.now() - t0;
+      // the hero district (world/district.ts): its kit streams after the first frame; time it to `ready` (the near
+      // ring drawn by the kit) under the same CPU and network conditions as the load
+      const district = await page.evaluate(async () => {
+        const d = (window as any).__palimpsestStreets?.city?.district;
+        if (!d) return null;
+        await Promise.race([d.ready, new Promise((r) => setTimeout(r, 600000))]);
+        return d.stats();
+      });
+      const districtMs = Date.now() - t0;
       if (s.throttle > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       if (arg('net', '') === '4g' && s.mobile) await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
       await page.evaluate(() => document.fonts.ready);
@@ -283,7 +293,8 @@ async function shoot() {
       const res = {
         size: `${s.width}×${s.height} @${s.dpr}x${s.throttle > 1 ? `, ${s.throttle}× CPU` : ''}`,
         loadMs, world, walk, climbs, frames, axe, errors: errors.slice(0, 12), files,
-        download: { jsKB: kb(/\.js(\?|$)/), dataKB: kb(/data\/.*\.json/), modelKB: kb(/\.glb$/), chunks: wire.filter((w) => /\.js$/.test(w.url)).map((w) => `${w.url.replace(/^.*\//, '')} ${Math.round(w.bytes / 1024)} KB`) },
+        download: { jsKB: kb(/\.js(\?|$)/), dataKB: kb(/data\/.*\.json/), modelKB: kb(/\.glb$/), kitKB: kb(/game\/streets\/kit\//), chunks: wire.filter((w) => /\.js$/.test(w.url)).map((w) => `${w.url.replace(/^.*\//, '')} ${Math.round(w.bytes / 1024)} KB`) },
+        district: district ? { readyMs: districtMs, stats: district } : null,
       };
       summary[s.name] = res;
       console.log(`\n== ${s.name} ${res.size}: load ${loadMs} ms`);

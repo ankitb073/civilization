@@ -1,0 +1,8 @@
+{
+ "M_MudPlaster": {"set": "mudplaster", "tile_m": 2.0, "hi": 2048, "lo": 1024, "normal": "etc1s", "roughness": 1.0, "notes": "mud-and-straw plaster, tileable 2 m"},
+ "M_MudBrick": {"set": "mudbrick", "tile_m": 2.0, "hi": 2048, "lo": 1024, "normal": "etc1s", "roughness": 1.0, "notes": "sun-dried mud brick, header/stretcher courses, tileable 2 m; v = height so courses stay level"},
+ "M_RoofMud": {"set": "roofmud", "tile_m": 2.0, "hi": 2048, "lo": 1024, "normal": "etc1s", "roughness": 1.0, "notes": "rolled roof mud with straw, tileable 2 m"},
+ "M_Timber": {"set": "timber", "trim": true, "hi": 2048, "lo": 1024, "normal": "etc1s", "roughness": 1.0, "notes": "trim sheet: v bands plankA 0.75-1, plankB 0.5-0.75, bark 0.25-0.5, pole 0.125-0.25, end grain 0-0.125 (8 tiles); u tiles at 2 m"},
+ "M_ReedMat": {"set": "reedmat", "tile_m": 0.5, "hi": 1024, "lo": 512, "normal": "etc1s", "roughness": 1.0, "doubleSided": true, "notes": "2/2 twill plaited reed, tileable 0.5 m"},
+ "M_Ground": {"set": "ground", "tile_m": 2.6, "hi": 2048, "lo": 1024, "normal": "etc1s", "roughness": 1.0, "notes": "packed earth (test scenes; optional in game)"}
+}

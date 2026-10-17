@@ -4,6 +4,14 @@
 // mesh per material and 64 m cell (a few dozen draw calls, frustum-culled per cell, so the sun's small shadow camera
 // draws only the cells under it), with small parts in a "near" mesh per cell that is hidden with distance.
 // Nothing here draws from Math.random: callers pass hashes of the city id.
+//
+// Two tags ride along with every part:
+// - its surface (what it is made of: masonry, wood, cloth …), from the list's `surface` option or, for lists that
+//   draw several things (wood, pole, ball …), from its colour. With `build({ tags: true })` each merged mesh carries
+//   per-vertex aBox = (local x, local y 0..1 from base to top, local z, yaw), aDim = (size x, y, z, surface id) and
+//   aNrm (the local normal), which the realism look reads to give every part its material (docs/streets/lookdev.md).
+// - its owner (a house, a stall, a wall run …: `kit.owner` while it is placed), so the hero district can take an
+//   owner's parts away (collapse their vertices, no extra draw call) when the modular kit draws that owner instead.
 
 import {
   BoxGeometry, BufferAttribute, BufferGeometry, ConeGeometry, CylinderGeometry, Group, IcosahedronGeometry,
@@ -14,6 +22,62 @@ import type { Solid } from '../world.ts';
 
 const LIN = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 const UP = new Vector3(0, 1, 0);
+
+// ---------------------------------------------------------------- surfaces
+
+/** What a part is made of (aDim.w). The realism look (look/materials.ts) gives each its scanned material. */
+export const SURFACE = {
+  masonry: 0, roof: 1, wood: 2, cloth: 3, reed: 4, terracotta: 5, stone: 6, foliage: 7, opening: 8, metal: 9, grain: 10,
+  monument: 11, fort: 12, plaster: 13,
+} as const;
+export type SurfaceId = (typeof SURFACE)[keyof typeof SURFACE];
+
+function hsv(r: number, g: number, b: number) {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d > 1e-6) {
+    if (mx === r) h = ((g - b) / d) % 6;
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+  }
+  return { h, s: mx > 0 ? d / mx : 0, v: mx };
+}
+const near = (c: RGB, t: RGB, tol = 0.05) => Math.abs(c[0] - t[0]) < tol && Math.abs(c[1] - t[1]) < tol && Math.abs(c[2] - t[2]) < tol;
+const BRONZE: RGB = [0.62, 0.45, 0.24], REED: RGB = [0.8, 0.69, 0.48], STONE: RGB = [0.72, 0.66, 0.56], LINEN: RGB = [0.9, 0.86, 0.77];
+
+/** A part's surface from its list and its (sRGB) colour, for lists that draw more than one thing. */
+export function surfaceOf(list: string, srgb: RGB): SurfaceId {
+  const { h, s, v } = hsv(srgb[0], srgb[1], srgb[2]);
+  const green = srgb[1] > srgb[0] * 1.02 && srgb[1] > srgb[2];
+  const brown = h >= 15 && h <= 40 && s >= 0.3 && s <= 0.62 && v <= 0.64;
+  switch (list) {
+    case 'mud': return SURFACE.masonry;
+    case 'wood':
+      if (v < 0.22) return SURFACE.opening;
+      if (near(srgb, BRONZE)) return SURFACE.metal;
+      return SURFACE.wood;
+    case 'cloth': return near(srgb, REED, 0.06) ? SURFACE.reed : SURFACE.cloth;
+    case 'pole':
+      if (near(srgb, BRONZE)) return SURFACE.metal;
+      if (brown) return SURFACE.wood;
+      if (v > 0.55 && s < 0.45 && h >= 20 && h <= 45) return SURFACE.masonry;
+      if (h > 150 && h < 220 && v < 0.4) return SURFACE.metal; // water in a vat or a well
+      return SURFACE.cloth;
+    case 'jar': return SURFACE.terracotta;
+    case 'ball':
+      if (green) return SURFACE.foliage;
+      if (s < 0.15) return near(srgb, LINEN, 0.08) ? SURFACE.cloth : SURFACE.stone;
+      if (v > 0.6 && s < 0.45) return SURFACE.masonry;
+      return SURFACE.terracotta;
+    case 'cone': return s > 0.3 && v > 0.6 ? SURFACE.grain : SURFACE.metal;
+    case 'frustum': return brown ? SURFACE.wood : SURFACE.cloth;
+    case 'rock': return near(srgb, STONE, 0.12) || s < 0.25 ? SURFACE.stone : SURFACE.terracotta;
+    default: return SURFACE.masonry;
+  }
+}
+
+// ---------------------------------------------------------------- unit shapes
 
 /** Darken the foot of a unit geometry (a cheap ambient occlusion in its vertex colours), as the city's parts do. */
 function ao(g: BufferGeometry, lo: number, hi = 1): BufferGeometry {
@@ -52,19 +116,32 @@ export function kitGeometries() {
 }
 export type KitShape = keyof ReturnType<typeof kitGeometries>;
 
-interface List { geo: BufferGeometry; mat: Material; m: number[]; c: number[]; cast: boolean; receive: boolean; order: number }
+type SurfaceRule = SurfaceId | ((srgb: RGB) => SurfaceId);
+interface List {
+  name: string; geo: BufferGeometry; mat: Material; m: number[]; c: number[]; s: number[]; o: number[];
+  cast: boolean; receive: boolean; order: number; surface: SurfaceRule | null;
+}
 
 const _m = new Matrix4(), _q = new Quaternion(), _p = new Vector3(), _s = new Vector3(), _a = new Vector3(), _b = new Vector3();
 
+/** Where an owner's parts went in the built meshes: a mesh and a range of its vertices. */
+interface Range { mesh: Mesh; start: number; count: number }
+
 export class Kit {
   readonly solids: Solid[] = [];
+  /** Who owns the parts placed from now on (a house, a stall, a wall run …; -1: nobody the district replaces). */
+  owner = -1;
+  /** The surface of the next parts, overriding the list's rule (null: the list's own). */
+  surface: SurfaceId | null = null;
   private lists = new Map<string, List>();
   private geos = kitGeometries();
+  private ranges = new Map<number, Range[]>();
 
-  /** A list draws `shape` with `mat`; `cast` and `receive` set its shadows. */
-  define(name: string, shape: KitShape | BufferGeometry, mat: Material, opts: { cast?: boolean; receive?: boolean; order?: number } = {}) {
+  /** A list draws `shape` with `mat`; `cast` and `receive` set its shadows; `surface` says what its parts are made of
+   *  (an id, or a rule from each part's sRGB colour; by default the rule `surfaceOf` keeps for the list's name). */
+  define(name: string, shape: KitShape | BufferGeometry, mat: Material, opts: { cast?: boolean; receive?: boolean; order?: number; surface?: SurfaceRule } = {}) {
     const geo = typeof shape === 'string' ? this.geos[shape] : shape;
-    this.lists.set(name, { geo, mat, m: [], c: [], cast: opts.cast ?? false, receive: opts.receive ?? true, order: opts.order ?? 0 });
+    this.lists.set(name, { name, geo, mat, m: [], c: [], s: [], o: [], cast: opts.cast ?? false, receive: opts.receive ?? true, order: opts.order ?? 0, surface: opts.surface ?? null });
   }
 
   count(name?: string): number {
@@ -86,6 +163,9 @@ export class Kit {
     _m.compose(p, q, s);
     for (let i = 0; i < 16; i++) l.m.push(_m.elements[i]);
     l.c.push(LIN(c[0]), LIN(c[1]), LIN(c[2]));
+    const rule = this.surface ?? l.surface;
+    l.s.push(rule === null ? surfaceOf(name, c) : typeof rule === 'function' ? rule(c) : rule);
+    l.o.push(this.owner);
   }
 
   /** A box standing on y0 (its base), turned `yaw`; with `solid`, it also collides. */
@@ -121,9 +201,10 @@ export class Kit {
 
   /** Build the parts as merged meshes, one per material and cell (cells `cell` metres square), frustum-culled, so
    *  the camera and the sun's shadow camera draw only the cells they see. Small parts (under `small` metres across)
-   *  go in a separate "near" mesh per cell, which `near()` hides beyond a distance and which casts no shadow. */
-  build(opts: { cell?: number; small?: number } = {}): Group {
-    const cell = opts.cell ?? 64, small = opts.small ?? 0.75;
+   *  go in a separate "near" mesh per cell, which `near()` hides beyond a distance and which casts no shadow. With
+   *  `tags`, every mesh also carries the surface attributes (aBox, aDim, aNrm) for the realism look. */
+  build(opts: { cell?: number; small?: number; tags?: boolean } = {}): Group {
+    const cell = opts.cell ?? 64, small = opts.small ?? 0.75, tags = opts.tags ?? false;
     const g = new Group();
     g.name = 'streets-detail';
     interface Bucket { mat: Material; near: boolean; cast: boolean; receive: boolean; order: number; items: [List, number][]; verts: number; ix: number; iz: number }
@@ -145,10 +226,31 @@ export class Kit {
         b.verts += vc;
       }
     }
+    // each unit shape's own frame, for the tags: local y from 0 at its base to 1 at its top
+    const local = new Map<BufferGeometry, { p: Float32Array; n: Float32Array }>();
+    const localOf = (geo: BufferGeometry) => {
+      let f = local.get(geo);
+      if (!f) {
+        const P = geo.attributes.position, Nn = geo.attributes.normal;
+        let y0 = Infinity, y1 = -Infinity;
+        for (let i = 0; i < P.count; i++) { y0 = Math.min(y0, P.getY(i)); y1 = Math.max(y1, P.getY(i)); }
+        const pp = new Float32Array(P.count * 3), np = new Float32Array(P.count * 3);
+        for (let i = 0; i < P.count; i++) {
+          pp[i * 3] = P.getX(i); pp[i * 3 + 1] = (P.getY(i) - y0) / Math.max(1e-6, y1 - y0); pp[i * 3 + 2] = P.getZ(i);
+          np[i * 3] = Nn.getX(i); np[i * 3 + 1] = Nn.getY(i); np[i * 3 + 2] = Nn.getZ(i);
+        }
+        f = { p: pp, n: np };
+        local.set(geo, f);
+      }
+      return f;
+    };
     const M = new Matrix4(), N = new Matrix3(), v = new Vector3();
     this.cells = [];
+    this.ranges.clear();
     for (const b of buckets.values()) {
       const pos = new Float32Array(b.verts * 3), nor = new Float32Array(b.verts * 3), col = new Float32Array(b.verts * 3);
+      const box = tags ? new Float32Array(b.verts * 4) : null, dim = tags ? new Float32Array(b.verts * 4) : null, lnr = tags ? new Float32Array(b.verts * 3) : null;
+      const mesh = new Mesh(undefined, b.mat);
       let k = 0;
       for (const [l, i] of b.items) {
         const geo = flatOf(l.geo);
@@ -156,6 +258,7 @@ export class Kit {
         M.fromArray(l.m, i * 16);
         N.getNormalMatrix(M);
         const r = l.c[i * 3], gg = l.c[i * 3 + 1], bb = l.c[i * 3 + 2];
+        const start = k;
         for (let j = 0; j < P.count; j++, k++) {
           v.fromBufferAttribute(P, j).applyMatrix4(M);
           pos[k * 3] = v.x; pos[k * 3 + 1] = v.y; pos[k * 3 + 2] = v.z;
@@ -164,13 +267,40 @@ export class Kit {
           const ao = Cc ? Cc.getX(j) : 1;
           col[k * 3] = r * ao; col[k * 3 + 1] = gg * ao; col[k * 3 + 2] = bb * ao;
         }
+        if (box && dim && lnr) {
+          const e = l.m, o = i * 16;
+          const sx = Math.hypot(e[o], e[o + 1], e[o + 2]), sy = Math.hypot(e[o + 4], e[o + 5], e[o + 6]), sz = Math.hypot(e[o + 8], e[o + 9], e[o + 10]);
+          const yaw = Math.atan2(-e[o + 2], e[o]);
+          const surf = l.s[i];
+          const { p: lp, n: ln } = localOf(geo);
+          for (let j = 0, q = start; j < P.count; j++, q++) {
+            box[q * 4] = lp[j * 3]; box[q * 4 + 1] = lp[j * 3 + 1]; box[q * 4 + 2] = lp[j * 3 + 2]; box[q * 4 + 3] = yaw;
+            lnr[q * 3] = ln[j * 3]; lnr[q * 3 + 1] = ln[j * 3 + 1]; lnr[q * 3 + 2] = ln[j * 3 + 2];
+            dim[q * 4] = sx; dim[q * 4 + 1] = sy; dim[q * 4 + 2] = sz; dim[q * 4 + 3] = surf;
+          }
+        }
+        // the owner's vertices in this mesh (runs of one owner's parts merge into one range)
+        const ow = l.o[i];
+        if (ow >= 0) {
+          let rs = this.ranges.get(ow);
+          if (!rs) { rs = []; this.ranges.set(ow, rs); }
+          const last = rs[rs.length - 1];
+          if (last && last.mesh === mesh && last.start + last.count === start) last.count += k - start;
+          else rs.push({ mesh, start, count: k - start });
+        }
       }
       const geo = new BufferGeometry();
       geo.setAttribute('position', new BufferAttribute(pos, 3));
       geo.setAttribute('normal', new BufferAttribute(nor, 3));
       geo.setAttribute('color', new BufferAttribute(col, 3));
+      if (box && dim && lnr) {
+        geo.setAttribute('aBox', new BufferAttribute(box, 4));
+        geo.setAttribute('aDim', new BufferAttribute(dim, 4));
+        geo.setAttribute('aNrm', new BufferAttribute(lnr, 3));
+        mesh.userData.lookTagged = true;
+      }
       geo.computeBoundingSphere();
-      const mesh = new Mesh(geo, b.mat);
+      mesh.geometry = geo;
       mesh.castShadow = b.cast;
       mesh.receiveShadow = b.receive;
       mesh.renderOrder = b.order;
@@ -184,6 +314,25 @@ export class Kit {
     return g;
   }
 
+  /** Owners with parts in the built meshes. */
+  owners(): number[] { return [...this.ranges.keys()]; }
+
+  /** Take an owner's parts out of the built meshes (their vertices collapse; the draw calls stay as they were). */
+  hideOwner(owner: number) {
+    const rs = this.ranges.get(owner);
+    if (!rs) return;
+    for (const r of rs) {
+      const a = r.mesh.geometry.attributes.position as BufferAttribute;
+      const arr = a.array as Float32Array;
+      // collapse onto the range's first vertex: degenerate triangles, nothing drawn, the bounds unchanged
+      const x = arr[r.start * 3], y = arr[r.start * 3 + 1], z = arr[r.start * 3 + 2];
+      for (let k = r.start; k < r.start + r.count; k++) { arr[k * 3] = x; arr[k * 3 + 1] = y; arr[k * 3 + 2] = z; }
+      a.addUpdateRange(r.start * 3, r.count * 3);
+      a.needsUpdate = true;
+    }
+    this.ranges.delete(owner);
+  }
+
   /** Show the near parts only within `dist` metres of (x, z) (call a few times a second). */
   near(x: number, z: number, dist: number) {
     for (const c of this.cells) if (c.near) c.mesh.visible = Math.hypot(c.x - x, c.z - z) < dist + c.r;
@@ -193,7 +342,7 @@ export class Kit {
   cells: { mesh: Mesh; near: boolean; x: number; z: number; r: number }[] = [];
   triangles = 0;
 
-  disposeBuilt() { for (const c of this.cells) c.mesh.geometry.dispose(); this.cells = []; }
+  disposeBuilt() { for (const c of this.cells) c.mesh.geometry.dispose(); this.cells = []; this.ranges.clear(); }
 
   dispose() { for (const g of Object.values(this.geos)) g.dispose(); }
 }
