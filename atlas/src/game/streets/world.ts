@@ -1,30 +1,53 @@
 // Streets: the city of the record at walking scale. The city module (three/city) builds the town in lots; here one lot
-// is LOT metres, the land runs on past the city's own ground to hills and a hazy horizon, and every solid part of the
-// model (houses, walls, temple, palace, trees) becomes a physics shape: a box where the part is a box, else the convex
-// hull of the part's own vertices. The ground becomes a triangle mesh. Nothing here reads anything but the model.
+// is LOT metres (docs/streets/hld.md: 1 lot = 8 m), the land runs on past the city's own ground to hills and a hazy
+// horizon, and every solid part of the model (houses, walls, temple, palace, trees) becomes a physics shape: a box
+// where the part is a box, else the convex hull of the part's own vertices. The ground becomes a triangle mesh.
+// On top of the model, the streets layer (world/layer.ts) adds what street level needs (doors, parapets, ladders,
+// stairs, planks, stalls, a well, banners …), its colliders join the model's in `solids` (physics.ts builds them all),
+// and the runner reads ladders, places and water from `affordances` (affordances.ts).
 
 import {
-  BackSide, BufferAttribute, BufferGeometry, Color, DirectionalLight, Fog, Group, HemisphereLight, InstancedMesh, Matrix4,
-  Mesh, MeshBasicMaterial, MeshLambertMaterial, Quaternion, SphereGeometry, Vector3, type Material, type Scene,
+  BackSide, BufferAttribute, BufferGeometry, type Camera, Color, DirectionalLight, Fog, Group, HemisphereLight,
+  InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, MeshLambertMaterial, Quaternion, SphereGeometry, Vector3,
+  type Material, type Scene,
 } from 'three';
 import { buildCity, type CityGroupData } from '../../three/city/index.ts';
 import type { CityModel } from '../../three/city/model.ts';
-import { cityAt, hash, type CityRecord, type CityYear } from '../../three/city/record.ts';
+import { hash, type CityRecord, type CityYear } from '../../three/city/record.ts';
 import { vnoise } from '../../three/city/layout.ts';
 import { biomeOf, mix, shade, type RGB } from '../../three/city/style.ts';
-import { SmokeColumns } from './smoke.ts';
+import type { ArmsSpec } from '../../../../engine/src/export/contract.ts';
+import { FIRE, HEARTH, SmokeColumns } from './smoke.ts';
+import type { Affordances } from './affordances.ts';
+import { HeightGrid, type Plan, hidePart, readPlan } from './world/plan.ts';
+import { groundSkin, mudSkin } from './world/materials.ts';
+import { buildLayer, type Layer, type Quarter, type View } from './world/layer.ts';
 
-/** Metres per lot (one drawn building's plot): an Iron Age house comes out 6–9 m across and 4–6 m to the eaves. */
-export const LOT = 9;
+/** Metres per lot (one drawn building's plot): a Bronze Age house comes out 5–8 m across and 3.4–5.3 m to the roof. */
+export const LOT = 8;
 
 export type Solid =
   | { kind: 'box'; x: number; y: number; z: number; hx: number; hy: number; hz: number; q: Quaternion }
   | { kind: 'hull'; points: Float32Array };
 
+/** What the view tells the world before it is built (StreetsView sets it from the route and the scenario). */
+export interface WorldOptions {
+  /** The scenario being played: its id (for the names its texts give), year, outcome and the state's arms. */
+  scenario?: { id: string; year: number; outcome: string; arms: ArmsSpec | null; cityName: string } | null;
+  /** Show the city after this year's sack (burnt quarters), not on its eve (the default). */
+  sacked?: boolean;
+  reducedMotion?: boolean;
+}
+let worldOpts: WorldOptions = {};
+export function setWorldOptions(o: WorldOptions) { worldOpts = o; }
+
 export interface StreetsCity {
   rec: CityRecord;
+  /** The city at the year as drawn (before the year's sack unless the options say otherwise). */
   cy: CityYear;
   model: CityModel;
+  /** The city's name for the HUD: the scenario's form when there is one ("Pumi", not the page's "Pummi"). */
+  name: string;
   /** The city's group (in lots, scaled by LOT). */
   city: Group;
   /** Everything added to the scene. */
@@ -36,9 +59,22 @@ export interface StreetsCity {
   solids: Solid[];
   ground: { vertices: Float32Array; indices: Uint32Array };
   sun: DirectionalLight;
+  /** The sack's smoke (model.smoke). Hearth smoke updates itself. */
   smoke: SmokeColumns;
-  /** Ground height (metres) at a point, from the city ground mesh (0 off the mesh). */
+  /** Ground height (metres) at a point, from the city ground mesh (0 off the mesh). Fast (a grid). */
   heightAt(x: number, z: number): number;
+  /** Ladders, places and water, for the runner (affordances.ts). */
+  affordances: Affordances;
+  /** Named quarters (the HUD shows them between places), and the river's name and distance to its edge (m). */
+  quarters: Quarter[];
+  river: { name: string | null; edgeDist(x: number, z: number): number; level: number };
+  plan: Plan;
+  layer: Layer;
+  /** Counts and timings of the streets layer (for the probes). */
+  stats: Record<string, unknown>;
+  /** Framings for the screenshot script, and a walkable loop through the places. */
+  views(): View[];
+  loop(): { x: number; z: number; run?: boolean }[];
   dispose(): void;
 }
 
@@ -47,29 +83,34 @@ const SKY_HAZE = new Color('#e6d6b8');
 export const FOG = new Color('#ddcdb0');
 
 export function buildStreets(scene: Scene, rec: CityRecord, year: number, opts: { mobile: boolean }): StreetsCity {
+  const t0 = performance.now();
+  const wo = worldOpts;
+  const reduced = wo.reducedMotion ?? (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const root = new Group();
   root.name = 'streets';
-  const city = buildCity(rec, year, { plinth: false, textureSize: opts.mobile ? 1024 : 2048, theme: 'light' });
+  const city = buildCity(rec, year, { plinth: false, textureSize: opts.mobile ? 1024 : 2048, theme: 'light', beforeSack: !wo.sacked });
   const model = (city.userData as CityGroupData).model;
   city.scale.setScalar(LOT);
   root.add(city);
   root.updateMatrixWorld(true);
-  const cy = cityAt(rec, year);
+  const cy = model.cy!;
   const P = model.P * LOT;
 
   // ---- the ground mesh (find it among the model's meshes: indexed, with uvs and a painted map)
   let groundMesh: Mesh | null = null;
+  let waterDisc: Mesh | null = null;
   city.traverse((o) => {
     const m = o as Mesh;
     if (!m.isMesh || (m as unknown as InstancedMesh).isInstancedMesh) return;
     const g = m.geometry;
     const mat = m.material as MeshLambertMaterial;
     if (g.index && g.attributes.uv && mat.map) groundMesh = m;
+    if (g.type === 'CircleGeometry') waterDisc = m;
   });
   if (!groundMesh) throw new Error('streets: the city has no ground');
   const gm = groundMesh as Mesh;
   gm.receiveShadow = true;
-  groundDetail(gm.material as MeshLambertMaterial);
+  groundSkin(gm.material as MeshLambertMaterial, LOT, model.L.roads);
   const gpos = gm.geometry.attributes.position as BufferAttribute;
   const vertices = new Float32Array(gpos.count * 3);
   const v = new Vector3();
@@ -78,6 +119,23 @@ export function buildStreets(scene: Scene, rec: CityRecord, year: number, opts: 
     vertices[3 * i] = v.x; vertices[3 * i + 1] = v.y; vertices[3 * i + 2] = v.z;
   }
   const indices = new Uint32Array(gm.geometry.index!.array);
+  const hg = new HeightGrid(vertices, indices, P, 1);
+  const heightAt = (x: number, z: number) => hg.at(x, z);
+
+  // ---- the plan, read from the model's parts; the streets' own edits to this copy of the model
+  const plan = readPlan(model, LOT, heightAt);
+  for (const c of plan.walls?.crenels ?? []) hidePart(c); // redrawn as merlons on the walk's outer edge
+  for (const h of plan.houses) for (const p of h.burntParts ?? []) hidePart(p); // redrawn as broken shells (world/burnt.ts)
+  if (waterDisc && !model.L.coast) (waterDisc as Mesh).visible = false; // the river has its own surface
+  // the walls of houses, walls and monuments: the mud-plaster skin (on the model's box parts, in this scene only)
+  const skins: Material[] = [];
+  city.traverse((o) => {
+    const im = o as InstancedMesh;
+    if (!im.isInstancedMesh || im.geometry.type !== 'BoxGeometry' || (im.material as Material).transparent) return;
+    const m = mudSkin((im.material as MeshLambertMaterial).clone(), 'city');
+    im.material = m;
+    skins.push(m);
+  });
 
   // ---- solids from the instanced parts
   const solids: Solid[] = [];
@@ -111,7 +169,7 @@ export function buildStreets(scene: Scene, rec: CityRecord, year: number, opts: 
       im.getMatrixAt(i, M);
       W.multiplyMatrices(im.matrixWorld, M);
       W.decompose(pos, q, scl);
-      if (scl.y < 0.1 || scl.x < 0.02 || scl.z < 0.02) continue; // painted-on slivers (rails, ash)
+      if (scl.y < 0.1 || scl.x < 0.02 || scl.z < 0.02) continue; // painted-on slivers (rails, ash) and hidden parts
       if (box) {
         // unit box with its base at y 0: centre is half a height up
         const c = new Vector3(0, 0.5, 0).applyMatrix4(W);
@@ -126,6 +184,17 @@ export function buildStreets(scene: Scene, rec: CityRecord, year: number, opts: 
       }
     }
   });
+  const modelSolids = solids.length;
+
+  // ---- the streets layer
+  const sc = wo.scenario ?? null;
+  const sackYear = rec.sacks.includes(cy.year) ? cy.year : sc && sc.outcome === 'sacked' ? sc.year : null;
+  const layer = buildLayer({
+    rec, model, plan, solids, ground: heightAt, mobile: opts.mobile, reduced,
+    scenario: sc ? { id: sc.id, year: sc.year, arms: sc.arms, sacked: !!wo.sacked } : null, sackYear,
+  });
+  for (const s of layer.solids) solids.push(s);
+  root.add(layer.group);
 
   // ---- the land beyond the city's ground: rim heights carried out to hills, coloured like the rim
   const rim = rimOf(vertices, P);
@@ -145,57 +214,48 @@ export function buildStreets(scene: Scene, rec: CityRecord, year: number, opts: 
   const sm = opts.mobile ? 1024 : 2048;
   sun.shadow.mapSize.set(sm, sm);
   const R = opts.mobile ? 22 : 34;
-  const sc = sun.shadow.camera;
-  sc.left = -R; sc.right = R; sc.top = R; sc.bottom = -R; sc.near = 1; sc.far = 160;
+  const shc = sun.shadow.camera;
+  shc.left = -R; shc.right = R; shc.top = R; shc.bottom = -R; shc.near = 1; shc.far = 160;
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.03;
   root.add(hemi, sun, sun.target);
 
-  const heightAt = (x: number, z: number) => groundHeight(vertices, indices, x, z, P);
-  const smoke = new SmokeColumns(model.smoke, LOT, FOG);
+  // ---- smoke: the sack's fires (when shown) and the hearths of a living town
+  const smoke = new SmokeColumns(model.smoke, LOT, FOG, FIRE);
   root.add(smoke.mesh);
+  const hearth = new SmokeColumns(layer.hearth, 1, FOG, HEARTH);
+  root.add(hearth.mesh);
 
+  // ---- one tick per frame, before the scene is drawn (the game's loop needs no change)
+  const prevHook = scene.onBeforeRender;
+  scene.onBeforeRender = function (...args) {
+    prevHook.apply(this, args);
+    const camera = args[2];
+    const t = reduced ? 40 : performance.now() / 1000;
+    layer.tick(t, (camera as Camera).position);
+    hearth.update(t, camera as Camera);
+    if (model.smoke.length) smoke.update(t, camera as Camera);
+  };
+
+  const stats = { ...layer.stats, modelSolids, solids: solids.length, buildMs: Math.round(performance.now() - t0) };
   return {
-    rec, cy, model, city, root, P, limit: P - 6, solids, ground: { vertices, indices }, sun, smoke, heightAt,
+    rec, cy, model, name: sc?.cityName ?? cy.name, city, root, P, limit: P - 6, solids, ground: { vertices, indices }, sun, smoke, heightAt,
+    affordances: layer.affordances, quarters: layer.quarters,
+    river: { name: layer.riverName, edgeDist: layer.river.edgeDist, level: layer.river.level },
+    plan, layer, stats, views: layer.views, loop: layer.loop,
     dispose() {
+      scene.onBeforeRender = prevHook;
+      layer.dispose();
       model.dispose();
       smoke.dispose();
+      hearth.dispose();
+      for (const m of skins) m.dispose();
       outer.geometry.dispose();
       (outer.material as Material).dispose();
       sky.geometry.dispose();
       (sky.material as Material).dispose();
     },
   };
-}
-
-/** The city's painted ground is made to be seen from above; at walking scale it is one flat colour, which hides how
- *  fast the runner goes. Mottle it in this scene: blotches a few metres across and a finer grain, faded out with
- *  distance so it does not shimmer. (Wraps the city ground material's own shader edit, on this model's instance.) */
-function groundDetail(mat: MeshLambertMaterial) {
-  const prev = mat.onBeforeCompile;
-  const key = mat.customProgramCacheKey();
-  mat.onBeforeCompile = (sh, r) => {
-    prev.call(mat, sh, r);
-    if (!sh.fragmentShader.includes('varying vec3 vLot;')) return;
-    sh.fragmentShader = sh.fragmentShader
-      .replace('void main() {', `float stHash(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 23758.5453); }
-float stNoise(vec2 p) {
-  vec2 i = floor(p), f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(stHash(i), stHash(i + vec2(1.0, 0.0)), u.x), mix(stHash(i + vec2(0.0, 1.0)), stHash(i + vec2(1.0, 1.0)), u.x), u.y);
-}
-void main() {`)
-      .replace('#include <color_fragment>', `#include <color_fragment>
-{
-  vec2 w = vLot.xz * ${LOT.toFixed(1)};
-  float fw = fwidth(w.x) + fwidth(w.y);
-  float blot = stNoise(w * 0.3) * 0.65 + stNoise(w * 0.9 + 7.1) * 0.35;
-  float grain = (stNoise(w * 3.1 + 3.3) - 0.5) * (1.0 - smoothstep(0.08, 0.45, fw * 3.1));
-  diffuseColor.rgb *= 0.86 + 0.26 * blot + 0.16 * grain;
-}`);
-  };
-  mat.customProgramCacheKey = () => `${key}+streets-detail`;
-  mat.needsUpdate = true;
 }
 
 /** Rim heights by angle (180 steps), from the ground vertices nearest the edge. */
@@ -297,21 +357,4 @@ function skyDome(r: number): Mesh {
   m.name = 'sky';
   m.frustumCulled = false;
   return m;
-}
-
-/** Height of the city ground under (x, z): a coarse search over its triangles (used for spawn and probes, not per frame). */
-function groundHeight(V: Float32Array, I: Uint32Array, x: number, z: number, P: number): number {
-  if (Math.hypot(x, z) > P) return 0;
-  for (let t = 0; t < I.length; t += 3) {
-    const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
-    const x0 = V[a], z0 = V[a + 2], x1 = V[b], z1 = V[b + 2], x2 = V[c], z2 = V[c + 2];
-    const d = (z1 - z2) * (x0 - x2) + (x2 - x1) * (z0 - z2);
-    if (Math.abs(d) < 1e-9) continue;
-    const l0 = ((z1 - z2) * (x - x2) + (x2 - x1) * (z - z2)) / d;
-    const l1 = ((z2 - z0) * (x - x2) + (x0 - x2) * (z - z2)) / d;
-    const l2 = 1 - l0 - l1;
-    if (l0 < -1e-6 || l1 < -1e-6 || l2 < -1e-6) continue;
-    return l0 * V[a + 1] + l1 * V[b + 1] + l2 * V[c + 1];
-  }
-  return 0;
 }

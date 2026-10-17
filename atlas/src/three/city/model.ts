@@ -26,7 +26,15 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export interface Anchor { key: 'temple' | 'palace' | 'harbour' | 'river' | 'rail' | 'walls'; kicker: string; text: string; x: number; y: number; z: number }
 export interface Smoke { x: number; y: number; z: number; k: number; seed: number; dark?: boolean }
-export interface ModelOpts { plinth?: boolean; textureSize?: number; theme?: 'light' | 'dark' }
+export interface ModelOpts {
+  plinth?: boolean;
+  textureSize?: number;
+  theme?: 'light' | 'dark';
+  /** Draw the city as it stood before a sack in the drawn year itself: no burnt quarters, breached walls or sooted
+   *  temple and palace for that year's sack (an earlier sack within 20 years still shows). Off by default; used by the
+   *  streets game, whose first days come before the sack. */
+  beforeSack?: boolean;
+}
 
 let sharedGeos: ReturnType<typeof makeGeometries> | null = null;
 
@@ -90,7 +98,7 @@ export class CityModel {
 
   constructor(rec: CityRecord, opts: ModelOpts = {}) {
     this.rec = rec;
-    this.opts = { plinth: opts.plinth ?? true, textureSize: opts.textureSize ?? 1024, theme: opts.theme ?? 'light' };
+    this.opts = { plinth: opts.plinth ?? true, textureSize: opts.textureSize ?? 1024, theme: opts.theme ?? 'light', beforeSack: opts.beforeSack ?? false };
     this.L = layoutOf(rec);
     this.T = trackOf(rec);
     this.biome = biomeOf(rec.site.biome);
@@ -168,7 +176,8 @@ float lotHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.545
   setYear(year: number): boolean {
     const t0 = performance.now();
     const rec = this.rec, L = this.L;
-    const cy = cityAt(rec, year);
+    let cy = cityAt(rec, year);
+    if (this.opts.beforeSack && cy.sack && cy.sack.year === cy.year) cy = { ...cy, sack: sackBefore(rec, cy.year) };
     const prev = this.cy;
     if (prev && prev.year === cy.year) return false;
     this.cy = cy;
@@ -1313,6 +1322,13 @@ float lotHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.545
     this.tex?.dispose();
     for (const m of [this.mat, this.puffMat, this.waterMat, this.groundMat, this.sideMat]) m.dispose();
   }
+}
+
+/** The most recent sack within SACK_YEARS before (not in) year y, as cityAt() reports one. */
+function sackBefore(rec: CityRecord, y: number): CityYear['sack'] {
+  let sack: CityYear['sack'] = null;
+  for (const s of rec.sacks) if (s < y && y - s <= SACK_YEARS) sack = { year: s, ago: y - s };
+  return sack;
 }
 
 function angDist(a: number, b: number): number {

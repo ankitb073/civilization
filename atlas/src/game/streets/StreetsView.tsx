@@ -1,30 +1,48 @@
-// #/streets[?city=set:N&y=YEAR | ?sc=sc-N] — the Streets movement spike: a runner of the palace tablet house in a city
-// of the record, in the week of its siege (lazy-loaded; three.js and Rapier live in this route's chunks). Defaults to
-// the Tablet House's model scenario, sc-18225 (Nodoruegeremo, AY 2234).
+// #/streets[?sc=sc-N | ?city=set:N][&y=YEAR][&sacked=1] — Runner of the Tablet House: a runner of the palace tablet
+// house in a city of the record, in the week of its siege (lazy-loaded; three.js and Rapier live in this route's
+// chunks). Defaults to Pumi, AY 332, the Sack of Himi (sc-919), on the eve of the sack (days 1–3); `sacked=1` shows the
+// burnt city. The HUD: the city and the enemy, the place the runner is at, and a "Sound on" button (the Tablet House's
+// soundscape, beat `muster`; muted until tapped on phones).
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { ScenariosJson } from '../../../../engine/src/export/contract.ts';
+import type { Scenario, ScenariosJson } from '../../../../engine/src/export/contract.ts';
 import { fetchJson } from '../../data.ts';
 import { reducedMotion, route } from '../../state.ts';
+import { Sound, soundAvailable } from '../tablet/sound.ts';
+import { placeAt, type Place } from './affordances.ts';
 import { StreetsGame } from './game.ts';
+import { setWorldOptions } from './world.ts';
 import './streets.css';
+import './world/hud.css';
 
-const DEFAULT_SC = 'sc-18225';
-const FALLBACK = { city: 'set:151', year: 2234 };
+const DEFAULT_SC = 'sc-919';
+const FALLBACK = { city: 'set:17', year: 332 };
 const HINT_KEY = 'pal-streets-hint-v1';
 
-async function pickCity(params: URLSearchParams): Promise<{ city: string; year: number; scenario: string | null; enemy: string | null }> {
+interface Pick { city: string; year: number; scenario: Scenario | null }
+
+async function pickCity(params: URLSearchParams): Promise<Pick> {
   const city = params.get('city');
   const y = Number(params.get('y'));
-  if (city && /^set:\d+$/.test(city)) return { city, year: Number.isFinite(y) && params.has('y') ? y : FALLBACK.year, scenario: null, enemy: null };
+  const hasY = params.has('y') && Number.isFinite(y);
+  let list: Scenario[] = [];
+  try { list = (await fetchJson<ScenariosJson>('scenarios.json')).scenarios; } catch { /* no scenarios export */ }
+  if (city && /^set:\d+$/.test(city)) {
+    // a city by id: its scenario's names and arms when it has one at that year
+    const year = hasY ? y : city === FALLBACK.city ? FALLBACK.year : list.find((s) => s.city.id === city)?.year ?? FALLBACK.year;
+    return { city, year, scenario: list.find((s) => s.city.id === city && s.year === year) ?? null };
+  }
   const want = params.get('sc') ?? DEFAULT_SC;
-  try {
-    const j = await fetchJson<ScenariosJson>('scenarios.json');
-    const sc = j.scenarios.find((s) => s.id === want) ?? j.scenarios.find((s) => s.id === DEFAULT_SC) ?? j.scenarios[0];
-    if (sc) return { city: sc.city.id, year: params.has('y') && Number.isFinite(y) ? y : sc.year, scenario: sc.id, enemy: sc.enemy.name };
-  } catch { /* no scenarios export: the model scenario's city */ }
-  return { ...FALLBACK, scenario: null, enemy: null };
+  const sc = list.find((s) => s.id === want) ?? list.find((s) => s.id === DEFAULT_SC) ?? list[0];
+  if (sc) return { city: sc.city.id, year: hasY ? y : sc.year, scenario: sc };
+  return { ...FALLBACK, scenario: null };
 }
+
+/** What the HUD says about where the runner is: a place, else a named quarter, else the river. */
+interface Where { name: string; note: string | null; kind: string }
+const KIND: Record<string, string> = {
+  'tablet-house': 'Tablet house', palace: 'Palace', temple: 'Temple', market: 'Market', gate: 'Gate', walls: 'Walls', well: 'Well', house: 'House',
+};
 
 function readHint(): boolean {
   try { return localStorage.getItem(HINT_KEY) !== '1'; } catch { return true; }
@@ -43,11 +61,17 @@ export function StreetsView() {
   const [failed, setFailed] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [title, setTitle] = useState<{ name: string; year: number; enemy: string | null } | null>(null);
+  const [where, setWhere] = useState<Where | null>(null);
+  const [soundOn, setSoundOn] = useState(false);
+  const sound = useRef<Sound | null>(null);
+  const soundWanted = useRef(false);
+  const soundTouched = useRef(false);
   const [hint, setHint] = useState(readHint);
   const [locked, setLocked] = useState(false);
   const touch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
   const mobile = touch || (typeof matchMedia !== 'undefined' && matchMedia('(max-width: 767px)').matches);
   const showStats = route.peek().params.get('stats') === '1';
+  const sackedView = route.peek().params.get('sacked') === '1';
   const [fps, setFps] = useState('');
 
   useEffect(() => {
@@ -67,15 +91,33 @@ export function StreetsView() {
     game.input.onUse = () => { if (!dead) { setHint(false); saveHint(); } };
     const onLock = () => setLocked(document.pointerLockElement === canvas);
     document.addEventListener('pointerlockchange', onLock);
+    let whereT = 0;
     (async () => {
-      const pick = await pickCity(route.peek().params);
+      const params = route.peek().params;
+      const pick = await pickCity(params);
+      const sc = pick.scenario;
+      setWorldOptions({
+        scenario: sc ? { id: sc.id, year: sc.year, outcome: sc.outcome, arms: sc.state.arms ?? null, cityName: sc.city.name } : null,
+        sacked: params.get('sacked') === '1',
+        reducedMotion,
+      });
+      sound.current = new Sound(sc?.id ?? pick.city);
       await game.load(pick.city, pick.year, (s) => { if (!dead) setStep(s); });
       if (dead) return;
-      const cy = game.city!.cy;
-      setTitle({ name: cy.name, year: cy.year, enemy: pick.enemy });
-      document.title = `Streets of ${cy.name}, AY ${cy.year} — Palimpsest`;
+      const c = game.city!;
+      setTitle({ name: c.name, year: c.cy.year, enemy: sc?.enemy.name ?? null });
+      document.title = `Runner of the Tablet House: ${c.name}, AY ${c.cy.year} — Palimpsest`;
       game.start();
       setReady(true);
+      // where the runner is, a few times a second
+      let last = '';
+      whereT = window.setInterval(() => {
+        const o = game.runner?.object.position;
+        if (!o || !game.city) return;
+        const w = whereOf(game.city.affordances.places, game.city.quarters, game.city.river, o.x, o.y, o.z);
+        const k = w ? `${w.kind}|${w.name}|${w.note}` : '';
+        if (k !== last) { last = k; setWhere(w); }
+      }, 250);
     })().catch((e) => { if (!dead) setFailed(String((e as Error)?.message ?? e)); });
     let statsT = 0;
     if (showStats) {
@@ -90,6 +132,8 @@ export function StreetsView() {
     return () => {
       dead = true;
       clearInterval(statsT);
+      clearInterval(whereT);
+      sound.current?.dispose();
       ro.disconnect();
       document.removeEventListener('pointerlockchange', onLock);
       game.dispose();
@@ -99,6 +143,35 @@ export function StreetsView() {
   }, []);
 
   const dismiss = () => { setHint(false); saveHint(); };
+
+  // sound: off until asked on phones; on a computer it starts with the first key or click, unless switched off
+  const toggleSound = async () => {
+    soundTouched.current = true;
+    soundWanted.current = !soundWanted.current;
+    setSoundOn(soundWanted.current);
+    const s = sound.current;
+    if (!s) return;
+    if (!soundWanted.current) { s.disable(); return; }
+    const ok = await s.enable('muster');
+    if (!ok && soundWanted.current) { soundWanted.current = false; setSoundOn(false); }
+  };
+  useEffect(() => {
+    if (!ready || touch || !soundAvailable()) return;
+    const first = () => {
+      window.removeEventListener('keydown', first, true);
+      window.removeEventListener('pointerdown', first, true);
+      if (!soundTouched.current && !soundWanted.current) void toggleSound();
+    };
+    const keyM = (e: KeyboardEvent) => { if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey) { e.preventDefault(); void toggleSound(); } };
+    window.addEventListener('keydown', first, true);
+    window.addEventListener('pointerdown', first, true);
+    window.addEventListener('keydown', keyM);
+    return () => {
+      window.removeEventListener('keydown', first, true);
+      window.removeEventListener('pointerdown', first, true);
+      window.removeEventListener('keydown', keyM);
+    };
+  }, [ready]);
 
   return (
     <section class={`st${touch ? ' st--touch' : ''}${ready ? ' is-ready' : ''}`} aria-labelledby="st-title">
@@ -124,10 +197,24 @@ export function StreetsView() {
         {title && (
           <p class="st-hud__where">
             <span class="st-hud__city">{title.name}</span>
-            <span class="st-hud__when">AY {title.year}{title.enemy ? ` · ${title.enemy} at the walls` : ''}</span>
+            <span class="st-hud__when">AY {title.year}{title.enemy ? (sackedView ? ` · after ${title.enemy} came` : ` · ${title.enemy} is coming`) : ''}</span>
           </p>
         )}
       </header>
+      {ready && soundAvailable() && (
+        <button
+          type="button" class={`st-sound${soundOn ? ' is-on' : ''}`} onClick={() => void toggleSound()} aria-pressed={soundOn}
+          aria-label={soundOn ? 'Sound off (M)' : 'Sound on (M)'}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />{soundOn ? <path d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /> : <path d="M15.5 9.5l5 5M20.5 9.5l-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />}</svg>
+          {touch && !soundOn && <span>Sound on</span>}
+        </button>
+      )}
+      {ready && (
+        <p class={`st-where${where ? ' is-on' : ''}`} aria-live="polite">
+          {where && <><span class="st-where__kind">{where.kind}</span><span class="st-where__name">{where.name}</span>{where.note && <span class="st-where__note">{where.note}</span>}</>}
+        </p>
+      )}
       {showStats && fps && <p class="st-stats" aria-live="off">{fps}</p>}
 
       <p id="st-controls" class="sr-only">
@@ -167,4 +254,13 @@ export function StreetsView() {
       )}
     </section>
   );
+}
+
+function whereOf(places: Place[], quarters: { name: string; x: number; z: number; r: number }[], river: { name: string | null; edgeDist(x: number, z: number): number }, x: number, y: number, z: number): Where | null {
+  const p = placeAt({ places, ladders: [], waterDepthAt: () => 0 }, x, z);
+  if (p && Math.abs(p.pos.y - y) < 4.5) return { name: p.name, note: p.note ?? null, kind: KIND[p.kind] ?? '' };
+  const q = quarters.find((qq) => Math.hypot(qq.x - x, qq.z - z) < qq.r);
+  if (q) return { name: q.name, note: null, kind: 'Quarter' };
+  if (river.name && river.edgeDist(x, z) < 7) return { name: `The ${river.name}`, note: null, kind: 'River' };
+  return null;
 }

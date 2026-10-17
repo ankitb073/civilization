@@ -1,0 +1,77 @@
+/* #/streets — the world's part of the HUD: the place the runner is at (bottom centre, between the thumbs) and the
+   sound button (top right). Loaded with the streets chunk; same look in both themes, like the rest of the HUD. */
+.st-where {
+  position: absolute;
+  left: 50%;
+  bottom: max(64px, calc(env(safe-area-inset-bottom, 0px) + 56px));
+  transform: translate(-50%, 6px);
+  margin: 0;
+  max-width: min(440px, calc(100% - 200px));
+  padding: 7px 14px 8px;
+  border-radius: 12px;
+  background: var(--st-panel, rgb(24 18 13 / 0.72));
+  border: 1px solid var(--st-line, rgb(255 236 200 / 0.2));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--st-ink, #fbf3e2);
+  text-align: center;
+  line-height: 1.2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.st-where.is-on { opacity: 1; transform: translate(-50%, 0); }
+.st-where:empty { padding: 0; border: 0; }
+.st-where__kind {
+  display: block;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--st-gold, #f0c987);
+}
+.st-where__name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-where__note {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--st-ink-2, #e5d6ba);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st--touch .st-where { bottom: max(132px, calc(env(safe-area-inset-bottom, 0px) + 124px)); max-width: calc(100% - 48px); }
+
+.st-sound {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 11px;
+  justify-content: center;
+  border-radius: 20px;
+  background: var(--st-panel, rgb(24 18 13 / 0.72));
+  border: 1px solid var(--st-line, rgb(255 236 200 / 0.2));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--st-ink, #fbf3e2);
+  font: 600 0.8rem/1 var(--font-ui);
+  cursor: pointer;
+}
+.st-sound:hover { background: rgb(40 30 20 / 0.86); }
+.st-sound:focus-visible { outline: 2px solid var(--st-gold, #f0c987); outline-offset: 2px; }
+.st-sound.is-on { color: var(--st-gold, #f0c987); }
+.st .st-stats { top: max(60px, calc(env(safe-area-inset-top, 0px) + 58px)); }
+@media (prefers-reduced-motion: reduce) {
+  .st-where { transition: none; transform: translate(-50%, 0); }
+}
