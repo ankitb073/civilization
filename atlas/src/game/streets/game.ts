@@ -256,6 +256,18 @@ export class StreetsGame {
           if (d > bd) { bd = d; best = a; }
         }
         spawn.x = tab.pos.x; spawn.z = tab.pos.z; spawn.y = gy; spawn.facing = best;
+        // a step or two out from the door, so the view behind the runner has room to stand at its own distance (at the
+        // door itself its collision sweep pulls it in against the wall, and the runner fills the screen)
+        const fx = Math.sin(best), fz = Math.cos(best);
+        let room = -1;
+        for (let t = 0; t <= 4.01; t += 0.5) {
+          const x = tab.pos.x + fx * t, z = tab.pos.z + fz * t;
+          const g2 = this.phys.groundAt(x, z, gy + 2);
+          if (g2 === null || Math.abs(g2 - gy) > 0.35 || !this.phys.free(x, g2 + 0.02, z)) break;
+          const back = this.phys.rayFlat(x, g2 + 1.7, z, -fx, -fz, 8);
+          if (back > room) { room = back; spawn.x = x; spawn.z = z; spawn.y = g2; }
+          if (back >= 5.2) break;
+        }
       }
     }
     this.phys.teleport(spawn.x, spawn.y + 0.05, spawn.z);
@@ -278,13 +290,15 @@ export class StreetsGame {
     this.ready = true;
   }
 
-  /** The runner's model: the realistic hero under the realism look (LOD1 on the phone tiers), runner.glb under the
+  /** The runner's model: the realistic hero under the realism look (LOD1 on phone-low), runner.glb under the
    *  classic look; `?hero=1` or `?hero=0` in the route asks for one or the other. */
   private runnerUrl(pick: LookPick): string {
     const q = new URLSearchParams(location.hash.split('?')[1] ?? '');
     const want = q.get('hero');
     if (want === '0') return RUNNER_URL;
-    if (pick.look === 'realism' && pick.tier) return pick.tier === 'phone' || pick.tier === 'phone-low' ? HERO_LOD1_URL : HERO_URL;
+    // (LOD1 only on phone-low: the third-person hero always stands a third or more of the screen high, where LOD1's
+    // 11k triangles and 1K maps read soft; look/index.ts TIERS.hero)
+    if (pick.look === 'realism' && pick.tier) return pick.tier === 'phone-low' ? HERO_LOD1_URL : HERO_URL;
     return want === '1' ? HERO_URL : RUNNER_URL;
   }
 
@@ -1291,11 +1305,25 @@ export class StreetsGame {
    *  itself then). The runner turns to face it too when standing. */
   face(x: number, z: number, pitch = 0.16) {
     const f = this.curr;
-    const yaw = Math.atan2(x - f.x, z - f.z);
+    const want = Math.atan2(x - f.x, z - f.z);
+    // the view a little to one side when a wall stands right behind the runner (its sweep would pull it in close and
+    // the runner would fill the screen): the turn, within 40°, that leaves the most room behind
+    let yaw = want;
+    if (this.phys) {
+      const head = { x: f.x, y: f.y + 1.6, z: f.z };
+      const roomAt = (a: number) => this.phys!.sweep(head, { x: f.x - Math.sin(a) * this.cam.want, y: f.y + 1.6 + this.cam.want * 0.3, z: f.z - Math.cos(a) * this.cam.want });
+      let best = roomAt(want);
+      if (best < this.cam.want * 0.85) {
+        for (const d of [0.25, -0.25, 0.45, -0.45, 0.7, -0.7]) {
+          const r = roomAt(want + d);
+          if (r > best + 0.3) { best = r; yaw = want + d; }
+        }
+      }
+    }
     if (this.opts.reducedMotion) { this.cam.stopSwing(); this.cam.yaw = yaw; }
     else this.cam.swingTo(yaw);
     this.cam.pitch = pitch;
-    if (this.speed < 0.3 && !this.trav && this.grounded) { this.heading = yaw; this.lastFacing = yaw; }
+    if (this.speed < 0.3 && !this.trav && this.grounded) { this.heading = want; this.lastFacing = want; }
   }
 
   /** Steer by script: a list of waypoints (metres), each walked or run, with jumps. */

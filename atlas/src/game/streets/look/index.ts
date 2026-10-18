@@ -76,9 +76,9 @@ export const TIERS: Record<TierName, LookTier> = {
     sets: { full: 'full-512', heroAlbedo: false },
     ibl: 'small',
     quality: { parallax: 0, detail: true, detailFar: 45 },
-    post: { ao: 0.5, prepass: false, contactShadows: false, aa: 'taau', scale: 0.75, dof: false, motionBlur: false, bloom: false, shafts: false },
+    post: { ao: 0.5, prepass: false, contactShadows: false, aa: 'taau', scale: 0.85, dof: false, motionBlur: false, bloom: false, shafts: false },
     shadow: { csm: false, size: 2048, cascades: 1, maxFar: 0, radius: 34 },
-    sky: '2k', mirror: 0, dprCap: 1.25, anisotropy: 4, toneMapping: 'agx', reeds: 0.3, fps: 30, hero: 'lod1',
+    sky: '2k', mirror: 0, dprCap: 1.5, anisotropy: 4, toneMapping: 'agx', reeds: 0.3, fps: 30, hero: 'lod0',
   },
   'phone-low': {
     name: 'phone-low',
