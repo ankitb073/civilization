@@ -117,7 +117,7 @@ export function Explainer({ docs, warId, world }: { docs: number; warId?: string
       </button>
       <h2 id="explainer-t" class="explainer__t">What is this?</h2>
       <p class="explainer__p">
-        <strong>{world}</strong> never existed. It was simulated decade by decade for five thousand years — and its archive holds{' '}
+        <strong>{world}</strong>: five thousand years of states, wars, faiths and tongues, and an archive of{' '}
         {docs.toLocaleString('en-US')} documents, every one checked against what really happened.
       </p>
       <div class="explainer__ways">

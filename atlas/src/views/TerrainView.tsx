@@ -463,13 +463,13 @@ function CinemaOverlay({ world }: { world: string }) {
       <div class="t3c__card" ref={(el) => { ov.title = el ?? undefined; }}>
         <div class="wordmark t3c__big">Palimpsest</div>
         <div class="t3c__rule" />
-        <div class="t3c__sub">5,000 years of a world that never existed</div>
+        <div class="t3c__sub">5,000 years of {world}</div>
         <div class="t3c__meta">{world} · AY 0 – 5000</div>
       </div>
       <div class="t3c__card t3c__card--end" ref={(el) => { ov.end = el ?? undefined; }}>
         <div class="wordmark t3c__big">Palimpsest</div>
         <div class="t3c__rule" />
-        <div class="t3c__sub">Every border, city and war, simulated — and the archive they left behind</div>
+        <div class="t3c__sub">Every border, city and war — and the archive they left behind</div>
         <div class="t3c__url">ankitb073.github.io/civilization</div>
       </div>
     </div>

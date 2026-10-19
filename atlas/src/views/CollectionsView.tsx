@@ -73,7 +73,7 @@ function CollectionPage({ c }: { c: Collection }) {
       <header class="collections__head">
         <a class="eyebrow" href="#/collections">← Collections</a>
         <h1 class="h-page">{c.title}</h1>
-        <p class="collections__lede">{c.blurb}{rival ? ' Each opens side by side with the ground truth.' : ''}</p>
+        <p class="collections__lede">{c.blurb}{rival ? ' Each opens side by side with the record.' : ''}</p>
         {hist && (
           <div class="actions">
             <a class="btn btn--accent" href={`#/p/${(cont ?? c.items[0]).id}`}>{cont ? `Continue reading: ${cont.part}` : `Start reading: ${partName(c, 0)}`}</a>

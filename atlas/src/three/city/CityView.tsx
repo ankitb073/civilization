@@ -268,7 +268,7 @@ function Facts({ rec, cy, ownerName }: { rec: CityRecord; cy: CityYear; ownerNam
           </div>
         ))}
       </dl>
-      <p class="c3d__note">Everything here is generated from the record. Layout and variety come from hashes of the city's id: the same city at the same year looks the same everywhere.</p>
+      <p class="c3d__note">Everything here is drawn from the record: the same city at the same year looks the same everywhere.</p>
     </>
   );
 }
@@ -380,7 +380,7 @@ function CityIndex() {
   return (
     <div class="c3d-index">
       <h1 class="h-page">Cities in 3D</h1>
-      <p class="c3d-index__lede">Any city of the record, at any year of its life, generated from what the record says: its population, its masters' age, its people, its faith, its harbour, its sacks.</p>
+      <p class="c3d-index__lede">Any city of the record, at any year of its life, built from what the record says: its population, its masters' age, its people, its faith, its harbour, its sacks.</p>
       {!d && <div class="center-load"><div class="spinner" /> Gathering the cities…</div>}
       <ol class="c3d-index__list">
         {list.map(({ s, peak }) => (

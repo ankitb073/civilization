@@ -95,7 +95,7 @@ function Intro() {
         <div class="wordmark wordmark--sm">{m?.title ?? 'Palimpsest'}</div>
         <div class="intro__now"><strong>{fmtYear(y)}</strong> · {era?.name}</div>
       </div>
-      <p class="intro__lede">{m?.subtitle ?? 'A 5,000-year archive of a civilization that never existed.'}</p>
+      <p class="intro__lede">{m?.subtitle ?? 'A 5,000-year archive.'}</p>
       {painted && <Suspense fallback={null}><HistoryCard /><TodayCard /></Suspense>}
       <ol class="hints">
         <li><span>1</span>Drag the timeline — borders, cities and events follow the year.</li>

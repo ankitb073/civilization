@@ -393,7 +393,7 @@ function Play({ s, sc, daily, list }: { s: Scenario; sc: TabletScript; daily: st
           {list.length > 1 && <button class="tb-btn tb-btn--ghost" onClick={another}>Another city</button>}
         </div>
         {prior && <p class="tb-prior tb-rise" style="--d:5">You were the scribe here once before: <i>{prior.fate}</i>. {prior.truth}% of the truth reached the future.</p>}
-        <p class="tb-note tb-rise" style="--d:5">Every name and figure comes from the record of {meta.value?.worldName ?? 'the archive'}, a world that never existed: the armies, the dead, the {s.outcome === 'treaty' ? 'treaty' : s.outcome === 'held' ? 'siege' : 'fall of the city'}, the chronicle that survived. Only your life and your choices are invented.</p>
+        <p class="tb-note tb-rise" style="--d:5">Every name and figure comes from the record of {meta.value?.worldName ?? 'the archive'}: the armies, the dead, the {s.outcome === 'treaty' ? 'treaty' : s.outcome === 'held' ? 'siege' : 'fall of the city'}, the chronicle that survived. Only your life and your choices are your own.</p>
       </section>
     );
   } else if (step.k === 'title') {

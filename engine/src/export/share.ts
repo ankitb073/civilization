@@ -132,8 +132,8 @@ export function writeSharePages(r: SimResult, a: Archive, dir: string, publicDir
 <meta name="twitter:description" content="${esc(desc)}">
 <meta name="twitter:image" content="${esc(SITE + img)}">
 <style>${CSS}</style>`;
-  const top = `<header><a href="../">Palimpsest</a> <span>· the archive of ${esc(world)}, a world that never existed</span></header>`;
-  const foot = `<footer><p>Palimpsest is a simulated history of five thousand years: every state, war, price and word comes from one seeded simulation, and every document is checked against its record. <a href="./">All sources and essays</a> · <a href="../">The atlas</a> · <a href="https://github.com/ankitb073/civilization/blob/main/docs/how-it-works.md">How it works</a></p></footer>`;
+  const top = `<header><a href="../">Palimpsest</a> <span>· the archive of ${esc(world)}</span></header>`;
+  const foot = `<footer><p>Palimpsest is an archive of five thousand years: every state, war, price and word comes from one record, and every document is checked against it. <a href="./">All sources and essays</a> · <a href="../">The atlas</a> · <a href="https://github.com/ankitb073/civilization/blob/main/docs/how-it-works.md">How it works</a></p></footer>`;
 
   let n = 0;
   const manifest: { id: string; kicker: string; title: string; quote: string; map: string }[] = [];
@@ -203,7 +203,7 @@ ${foot.replace(/href="\.\/"/, 'href="../"').replace('href="../">The atlas', 'hre
   }
 
   // the lying-chronicle game: a page to share, with its own card, that opens the game
-  const gameDesc = `Two palace scribes wrote down the same war, one for each side. Neither tells the truth. Guess how many really died: five wars a day from the archive of ${world}, a world that never existed.`;
+  const gameDesc = `Two palace scribes wrote down the same war, one for each side. Neither tells the truth. Guess how many really died: five wars a day from the archive of ${world}.`;
   manifest.push({ id: 'game', kicker: 'A game from the archive', title: 'Catch the lying chronicle', quote: 'Two palace scribes wrote down the same war, one for each side. Both survive. Neither tells the truth. How many really died?', map: 'og/ch08.jpg' });
   writeFileSync(join(dir, 'game.html'), `${head('Catch the lying chronicle', gameDesc, `${SITE}s/game.html`, cards ? 's/card/game.jpg' : 'og.png', 'website')}
 <meta http-equiv="refresh" content="0; url=../#/game">
@@ -214,7 +214,7 @@ ${foot}
 </body></html>
 `);
   // Clash of the Ages: a card game drawn from the record, with its own page and card
-  const clashDesc = `You and the archive are each dealt seven cards from the record of ${world}, a world that never existed: rulers, generals, states, cities and faiths, every number checkable. Pick a stat and the higher number wins; four rounds take the match. A new deal every day.`;
+  const clashDesc = `You and the archive are each dealt seven cards from the record of ${world}: rulers, generals, states, cities and faiths, every number checkable. Pick a stat and the higher number wins; four rounds take the match. A new deal every day.`;
   manifest.push({ id: 'clash', kicker: 'A card game from the archive', title: 'Clash of the Ages', quote: 'Seven cards each, drawn from five thousand years of record: reigns, wars won, battles, hosts, populations. Pick a stat. The higher number wins.', map: 'og/ch12.jpg' });
   writeFileSync(join(dir, 'cards.html'), `${head('Clash of the Ages', clashDesc, `${SITE}s/cards.html`, cards ? 's/card/clash.jpg' : 'og.png', 'website')}
 <meta http-equiv="refresh" content="0; url=../#/cards">
@@ -225,7 +225,7 @@ ${foot}
 </body></html>
 `);
   // The Tablet House: be the palace scribe of a city in the week it falls; a shared link (?c=sc-…) opens the same city
-  const tabletDesc = `You are the palace scribe of a city of ${world} in the week it falls or holds. Five days, one tablet, one king who wants smaller dead and bigger victories. In five thousand years your tablet is set beside the record, and the archaeologist decides what you were. Every figure comes from the simulated record.`;
+  const tabletDesc = `You are the palace scribe of a city of ${world} in the week it falls or holds. Five days, one tablet, one king who wants smaller dead and bigger victories. In five thousand years your tablet is set beside the record, and the archaeologist decides what you were. Every figure comes from the record.`;
   manifest.push({ id: 'tablet', kicker: 'A game from the archive', title: 'The Tablet House', quote: 'The king wants smaller dead and bigger victories. What will you press into the clay? In five thousand years, someone will check it against the record.', map: 'og/ch09.jpg' });
   writeFileSync(join(dir, 'tablet.html'), `${head('The Tablet House', tabletDesc, `${SITE}s/tablet.html`, cards ? 's/card/tablet.jpg' : 'og.png', 'website')}
 <script>(function(){var c=new URLSearchParams(location.search).get('c');if(c&&/^sc-[0-9]+$/.test(c))location.replace('../#/tablet/'+c);})();</script>
@@ -239,7 +239,7 @@ ${foot}
   writeFileSync(join(dir, 'cards.json'), JSON.stringify({ world, cards: manifest }));
 
   // contents
-  const desc = `The literary sources, Lives, essays and the narrative History of ${world}: ${n} documents from a five-thousand-year archive of a world that never existed.`;
+  const desc = `The literary sources, Lives, essays and the narrative History of ${world}: ${n} documents from a five-thousand-year archive.`;
   writeFileSync(join(dir, 'index.html'), `${head(`Sources, Lives and essays from the archive of ${world}`, desc, `${SITE}s/`, 'og.png', 'website')}
 </head><body>
 ${top}

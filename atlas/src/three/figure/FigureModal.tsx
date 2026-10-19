@@ -73,7 +73,7 @@ export function FigureModal({ source, year, onClose }: { source: FigureSource; y
             <button class="btn btn--ghost" type="button" onClick={save}>Save as PNG</button>
             <a class="btn btn--ghost" href={`#/figures?sel=${encodeURIComponent(spec.id)}`} onClick={onClose}>All figures</a>
           </div>
-          <p class="figm__small">Nothing here is invented: the piece is cut from this page’s record. No faces — a turned head of bare wood, like the pieces of an old board game.</p>
+          <p class="figm__small">The piece is cut from this page’s record. No faces — a turned head of bare wood, like the pieces of an old board game.</p>
         </div>
       </div>
     </div>

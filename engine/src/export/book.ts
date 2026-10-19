@@ -184,8 +184,8 @@ ${rest.length ? `<div class="apparatus">${render(rest.join('\n---\n'), false, 3)
     file: 'title.xhtml', title: 'Title page', toc: [],
     html: page(`The ${world} Reader`, `<section class="title" epub:type="titlepage">
 <h1>The ${esc(world)} Reader</h1>
-<p><em>Five thousand years of a world that never existed</em></p>
-<p class="small">From the Palimpsest archive: a fictional world simulated century by century from a single seed, and the documents it left behind.</p>
+<p><em>Five thousand years in its own words</em></p>
+<p class="small">From the Palimpsest archive: the documents five thousand years left behind.</p>
 <p class="small">${nDocs.toLocaleString('en-US')} surviving documents · world ${worldFingerprint(r)}${opts.facts ? ` · ${opts.facts.toLocaleString('en-US')} facts audited` : ''}</p>
 <p class="small">Every name links to its page in the online atlas:<br/><a href="${esc(SITE)}">${esc(SITE.replace(/^https?:\/\//, ''))}</a></p>
 </section>`),
@@ -263,7 +263,7 @@ ${entries.filter((e) => e.file !== 'title.xhtml').map((e) => `<li><a href="${e.f
 <dc:title>The ${esc(world)} Reader</dc:title>
 <dc:creator>Palimpsest</dc:creator>
 <dc:language>en</dc:language>
-<dc:description>Five thousand years of a world that never existed: a narrative history, literary sources, lives and essays from the Palimpsest archive.</dc:description>
+<dc:description>Five thousand years in its own words: a narrative history, literary sources, lives and essays from the Palimpsest archive.</dc:description>
 <dc:rights>MIT licence</dc:rights>
 <meta property="dcterms:modified">${MODIFIED}</meta>
 ${cover ? '<meta name="cover" content="cover-image"/>' : ''}

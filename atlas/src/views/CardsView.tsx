@@ -307,7 +307,7 @@ function HowCounted({ deck }: { deck: DeckJson }) {
   return (
     <details class="clash__how">
       <summary>How the numbers are counted</summary>
-      <p>Every number on every card is read straight from the simulated record, and each links back to its page in the archive. Nothing is rated or invented: these are counts and maxima you can check against the world database.</p>
+      <p>Every number on every card is read straight from the record, and each links back to its page in the archive. Nothing is rated or invented: these are counts and maxima you can check against the world database.</p>
       {deck.kinds.map((k) => (
         <dl>
           <dt>{plural(k.name)}</dt>

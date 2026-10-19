@@ -268,7 +268,7 @@ export function exportAtlas(r: SimResult, a: Archive, check: CheckReport | null,
   const worldName = worldNameOf(r, a);
   const meta: MetaJson = {
     title: 'Palimpsest',
-    subtitle: `A 5,000-year archive of ${worldName}, a world that never existed`,
+    subtitle: `A 5,000-year archive of ${worldName}`,
     worldName,
     seed: s.seed,
     engineVersion: ENGINE_VERSION,

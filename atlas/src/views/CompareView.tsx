@@ -75,9 +75,9 @@ export function CompareView({ id }: { id: string }) {
         <h1 class="reader__title">{page.title}</h1>
         <div class="reader__meta">{fmtSpan(page.t0, page.t1)} · <a href={`#/p/${page.id}`}>Event page</a></div>
         <p class="compare__lede">
-          The simulation knows what happened. The people who wrote it down did not — or would not say. Each surviving account is a projection
+          The record knows what happened. The people who wrote it down did not — or would not say. Each surviving account is a projection
           of the record through its author’s loyalties: casualties inflated or hidden, blame reversed, defeats omitted. Highlighted cells
-          disagree with the ground truth. <a href="#/game">Can you tell how far each scribe lies? Play the game →</a>
+          disagree with the record. <a href="#/game">Can you tell how far each scribe lies? Play the game →</a>
         </p>
       </header>
 
@@ -97,7 +97,7 @@ export function CompareView({ id }: { id: string }) {
           <thead>
             <tr>
               <th class="cmp__f">Field</th>
-              <th class="cmp__truth">Ground truth <span class="muted small">(the simulation)</span></th>
+              <th class="cmp__truth">The record</th>
               {acc.sources.map((s) => <th><a href={`#/p/${s.artifactId}`}>{T(s.artifactId)}</a><div class="muted small">{s.side}</div></th>)}
             </tr>
           </thead>

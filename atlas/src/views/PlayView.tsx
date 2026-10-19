@@ -27,8 +27,8 @@ export function PlayView() {
     <div class="play">
       <header class="play__head">
         <p class="eyebrow">Palimpsest</p>
-        <h1 class="h-page">Play with a world that never existed</h1>
-        <p class="play__lede">Everything here is generated from one simulated record of five thousand years, and nothing contradicts it.</p>
+        <h1 class="h-page">Step into five thousand years</h1>
+        <p class="play__lede">Everything here comes from one record of five thousand years, and nothing contradicts it.</p>
       </header>
       <ul class="play__grid">
         {TILES.map((t) => (

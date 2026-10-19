@@ -297,7 +297,7 @@ function OgPlate() {
   return (
     <div class="ogplate">
       <div class="wordmark ogplate__w">{m.title}</div>
-      <div class="ogplate__s">A 5,000-year archive of {m.worldName}, a world that never existed</div>
+      <div class="ogplate__s">A 5,000-year archive of {m.worldName}</div>
       <div class="ogplate__n">
         <div><strong>5,000</strong> years, decade by decade</div>
         <div><strong>{docs.toLocaleString('en-US')}</strong> primary sources</div>

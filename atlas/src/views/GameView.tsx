@@ -61,7 +61,7 @@ export function GameView() {
           <a class="btn btn--ghost" href="#/collections/spin">The most partisan chronicles</a>
           <a class="btn btn--ghost" href="#/cards">Play Clash of the Ages</a>
         </div>
-        <p class="game__note">Every war here was simulated, and both chronicles were generated from the record by scribes who lie in their own favour: they shrink their own dead, inflate the enemy's, and blame the other side. {data.rounds.length.toLocaleString('en-US')} wars in the archive are told by both sides.</p>
+        <p class="game__note">Every war here is in the record, and both chronicles were written by scribes who lie in their own favour: they shrink their own dead, inflate the enemy's, and blame the other side. {data.rounds.length.toLocaleString('en-US')} wars in the archive are told by both sides.</p>
       </div>
     );
   }
